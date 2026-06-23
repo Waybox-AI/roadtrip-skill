@@ -54,9 +54,17 @@ The agent auto-loads the skill when your request matches road-trip triggers
 drive, …*). No keys needed to run.
 </details>
 
-Then just ask your agent:
+Then just ask your agent in plain language:
 
 > *"Plan a 7-day Southwest national parks road trip from Las Vegas for 2 adults in September, gas SUV, loop."*
+
+The skill auto-loads when your request matches road-trip triggers. Prefer an
+explicit entry point? This plugin also ships a slash command that forces the
+same workflow:
+
+```text
+/roadtrip from Las Vegas, 7 days, 2 adults, gas SUV, Southwest loop
+```
 
 ## ✨ Why it's different
 

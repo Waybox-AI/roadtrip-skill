@@ -9,7 +9,7 @@
       "name": "roadtrip-navigator",
       "source": "./",
       "description": "Turn \"start + days\" or an existing route into a road trip you can actually drive: paced into days, with overnight stops, fuel/charging, park reservations, seasonal road risks, and a map-first single-file HTML page.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "travel",
       "keywords": [
         "road trip",

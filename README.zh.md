@@ -50,9 +50,16 @@ cp -r roadtrip-skill ~/.claude/skills/roadtrip-navigator   # 用户级
 RV trip、风景道…*）时，agent 会自动加载这个 skill。运行无需任何 Key。
 </details>
 
-然后直接对你的 agent 说：
+然后直接对你的 agent 说人话：
 
 > *"帮我规划一条从拉斯维加斯出发、7 天的西南国家公园自驾环线，2 个成人，9 月，燃油 SUV。"*
+
+命中自驾触发词时 skill 会自动加载。想要一个**显式入口**？本插件还附带一个
+slash 命令，强制调起同一套流程：
+
+```text
+/roadtrip 从拉斯维加斯出发，7 天，2 个成人，燃油 SUV，西南环线
+```
 
 ## ✨ 差异化在哪
 
