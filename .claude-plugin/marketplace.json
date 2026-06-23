@@ -1,0 +1,22 @@
+{
+  "name": "roadtrip-skill",
+  "owner": {
+    "name": "Waybox AI",
+    "url": "https://github.com/Waybox-AI"
+  },
+  "plugins": [
+    {
+      "name": "roadtrip-navigator",
+      "source": "./",
+      "description": "Turn \"start + days\" or an existing route into a road trip you can actually drive: paced into days, with overnight stops, fuel/charging, park reservations, seasonal road risks, and a map-first single-file HTML page.",
+      "version": "1.0.0",
+      "category": "travel",
+      "keywords": [
+        "road trip",
+        "travel",
+        "national parks",
+        "EV charging"
+      ]
+    }
+  ]
+}

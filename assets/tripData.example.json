@@ -1,0 +1,182 @@
+{
+  "title": "Southwest Loop · 7 Days",
+  "subtitle": "Las Vegas → Zion → Bryce → Page → Grand Canyon → Las Vegas",
+  "dateRange": "2026-09-12 ~ 2026-09-18",
+  "travelers": "2 adults",
+  "vehicle": { "type": "gas", "model": "Midsize SUV (rental)", "mpg": 26, "rangeMiles": null },
+  "loopType": "loop",
+  "totalMiles": 1180,
+  "drivingDays": 7,
+  "region": "desert",
+  "units": { "distance": "mi", "temp": "F", "currency": "USD" },
+  "days": [
+    {
+      "date": "09/12",
+      "title": "Las Vegas → Zion National Park",
+      "from": "Las Vegas, NV",
+      "to": "Springdale, UT",
+      "driveMiles": 165,
+      "driveTime": "2h45m",
+      "overnight": "Springdale, UT",
+      "timezoneNote": "PT → MT (+1h)",
+      "weather": { "icon": "sunny", "high": 88, "low": 60 },
+      "stops": [
+        { "name": "Las Vegas (start)", "type": "city", "lat": 36.1699, "lng": -115.1398, "note": "Pick up rental, fuel up, stock water & snacks." },
+        { "name": "Zion National Park", "type": "park", "lat": 37.2982, "lng": -113.0263, "timedEntry": false, "ticket": "park pass", "note": "Park at Springdale, ride free shuttle into the canyon." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ St. George, UT", "type": "gas", "lat": 37.0965, "lng": -113.5684, "note": "Last cheap fuel before the park." }
+      ],
+      "meal": { "name": "Oscar's Cafe, Springdale", "perPerson": 28 },
+      "risks": ["Springdale shuttle and town fill up by mid-morning in peak season — arrive early."]
+    },
+    {
+      "date": "09/13",
+      "title": "Zion: Canyon hikes",
+      "from": "Springdale, UT",
+      "to": "Springdale, UT",
+      "driveMiles": 20,
+      "driveTime": "0h40m",
+      "overnight": "Springdale, UT",
+      "weather": { "icon": "sunny", "high": 90, "low": 62 },
+      "stops": [
+        { "name": "Riverside Walk / Narrows", "type": "hike", "lat": 37.2853, "lng": -112.9479, "note": "Easy paved walk; The Narrows if water levels & weather allow." },
+        { "name": "Emerald Pools", "type": "hike", "lat": 37.2519, "lng": -112.9572, "note": "Moderate loop, shaded." }
+      ],
+      "fuelCharging": [],
+      "meal": { "name": "Picnic in the canyon", "perPerson": 15 },
+      "risks": ["Check flash-flood forecast before any Narrows attempt — never enter a slot canyon under flood watch."]
+    },
+    {
+      "date": "09/14",
+      "title": "Zion → Bryce Canyon",
+      "from": "Springdale, UT",
+      "to": "Bryce Canyon City, UT",
+      "driveMiles": 85,
+      "driveTime": "1h45m",
+      "overnight": "Bryce Canyon City, UT",
+      "weather": { "icon": "partly-cloudy", "high": 72, "low": 42 },
+      "stops": [
+        { "name": "Zion–Mt Carmel Tunnel", "type": "scenic", "lat": 37.2133, "lng": -112.9402, "note": "Historic 1.1-mi tunnel; oversized vehicles need a permit." },
+        { "name": "Bryce Canyon NP — Sunset Point", "type": "park", "lat": 37.6244, "lng": -112.1656, "ticket": "park pass", "note": "Walk part of the Navajo Loop into the hoodoos." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Mount Carmel Junction", "type": "gas", "lat": 37.2247, "lng": -112.6886, "note": "Top up; sparse stations ahead." }
+      ],
+      "meal": { "name": "Bryce Canyon Lodge dining", "perPerson": 32 },
+      "risks": ["Bryce sits at 8,000+ ft — nights are cold even in September; pack a warm layer."]
+    },
+    {
+      "date": "09/15",
+      "title": "Bryce → Page (Antelope Canyon / Horseshoe Bend)",
+      "from": "Bryce Canyon City, UT",
+      "to": "Page, AZ",
+      "driveMiles": 155,
+      "driveTime": "2h50m",
+      "overnight": "Page, AZ",
+      "timezoneNote": "AZ does not observe DST — clocks may differ from UT in summer",
+      "weather": { "icon": "sunny", "high": 91, "low": 64 },
+      "stops": [
+        { "name": "Antelope Canyon (guided tour)", "type": "tour", "lat": 36.8619, "lng": -111.3743, "timedEntry": true, "ticket": "guided tour required", "note": "Bookable only via authorized Navajo tour operators — reserve ahead." },
+        { "name": "Horseshoe Bend", "type": "scenic", "lat": 36.8791, "lng": -111.5104, "note": "0.75-mi walk from lot; best light late afternoon. $10 parking." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Page, AZ", "type": "gas", "lat": 36.9147, "lng": -111.4558, "note": "Full services in Page." }
+      ],
+      "meal": { "name": "Big John's Texas BBQ, Page", "perPerson": 24 },
+      "risks": ["Antelope Canyon sells out days/weeks ahead — without a tour booking you cannot enter."]
+    },
+    {
+      "date": "09/16",
+      "title": "Page → Grand Canyon (South Rim)",
+      "from": "Page, AZ",
+      "to": "Grand Canyon Village, AZ",
+      "driveMiles": 135,
+      "driveTime": "2h20m",
+      "overnight": "Grand Canyon Village (or Tusayan), AZ",
+      "weather": { "icon": "sunny", "high": 78, "low": 45 },
+      "stops": [
+        { "name": "Cameron Trading Post", "type": "scenic", "lat": 35.8530, "lng": -111.4160, "note": "Historic stop on US-89; good break point." },
+        { "name": "Grand Canyon South Rim — Desert View", "type": "park", "lat": 36.0441, "lng": -111.8266, "ticket": "park pass", "note": "Enter via east gate; Watchtower + first canyon views." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Cameron, AZ", "type": "gas", "lat": 35.8530, "lng": -111.4160, "note": "Fuel scarce near the rim — top up here." }
+      ],
+      "meal": { "name": "El Tovar Dining Room (reserve)", "perPerson": 45 },
+      "risks": ["South Rim lodging books out months ahead; if full, stay in Tusayan just outside the gate."]
+    },
+    {
+      "date": "09/17",
+      "title": "Grand Canyon: Rim Trail & viewpoints",
+      "from": "Grand Canyon Village, AZ",
+      "to": "Grand Canyon Village, AZ",
+      "driveMiles": 25,
+      "driveTime": "0h50m",
+      "overnight": "Grand Canyon Village (or Tusayan), AZ",
+      "weather": { "icon": "partly-cloudy", "high": 76, "low": 44 },
+      "stops": [
+        { "name": "Hermit Road viewpoints (shuttle)", "type": "scenic", "lat": 36.0668, "lng": -112.1399, "note": "Free shuttle along the west rim; cars restricted in season." },
+        { "name": "Mather Point sunrise/sunset", "type": "scenic", "lat": 36.0608, "lng": -112.1083, "note": "Iconic first view near the visitor center." }
+      ],
+      "fuelCharging": [],
+      "meal": { "name": "Bright Angel Restaurant", "perPerson": 30 },
+      "risks": ["Rim elevation ~7,000 ft + sun exposure — carry more water than you think you need."]
+    },
+    {
+      "date": "09/18",
+      "title": "Grand Canyon → Las Vegas (return)",
+      "from": "Grand Canyon Village, AZ",
+      "to": "Las Vegas, NV",
+      "driveMiles": 280,
+      "driveTime": "4h30m",
+      "overnight": null,
+      "timezoneNote": "AZ → PT (clock may shift -1h entering NV)",
+      "weather": { "icon": "sunny", "high": 95, "low": 70 },
+      "stops": [
+        { "name": "Route 66 / Williams, AZ", "type": "scenic", "lat": 35.2494, "lng": -112.1910, "note": "Classic Route 66 main street; lunch & legs stretch." },
+        { "name": "Hoover Dam (optional)", "type": "scenic", "lat": 36.0161, "lng": -114.7377, "note": "Short detour off US-93; allow time for the security checkpoint." },
+        { "name": "Las Vegas (end / drop rental)", "type": "city", "lat": 36.1699, "lng": -115.1398, "note": "Refuel before returning the car to avoid rental fuel fees." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Kingman, AZ", "type": "gas", "lat": 35.1894, "lng": -114.0530, "note": "Last good fuel before the desert run into NV." }
+      ],
+      "meal": { "name": "Lunch on Route 66, Williams", "perPerson": 22 },
+      "risks": ["Longest drive of the trip (~4.5h). Leave early to beat afternoon heat and Vegas traffic."]
+    }
+  ],
+  "lodging": [
+    { "name": "Cable Mountain Lodge", "area": "Springdale, UT (Zion)", "nights": 2, "pricePerNight": 245, "rating": "4.6", "booked": false },
+    { "name": "Bryce Canyon Grand Hotel", "area": "Bryce Canyon City, UT", "nights": 1, "pricePerNight": 190, "rating": "4.3", "booked": false },
+    { "name": "Lake Powell area hotel", "area": "Page, AZ", "nights": 1, "pricePerNight": 165, "rating": "4.2", "booked": false },
+    { "name": "Yavapai Lodge", "area": "Grand Canyon South Rim, AZ", "nights": 2, "pricePerNight": 230, "rating": "4.1", "booked": false }
+  ],
+  "bookingCountdown": [
+    { "item": "Antelope Canyon guided tour", "bookBy": "2026-08-12", "where": "Authorized Navajo tour operator", "priority": "high", "note": "Sells out weeks ahead in peak season." },
+    { "item": "Grand Canyon South Rim lodging (El Tovar / Yavapai)", "bookBy": "2026-03-18", "where": "Xanterra / GrandCanyonLodges.com", "priority": "high", "note": "In-park lodges can book ~13 months out." },
+    { "item": "El Tovar Dining Room reservation", "bookBy": "2026-08-18", "where": "GrandCanyonLodges.com", "priority": "medium", "note": "Dinner reservations open ahead of arrival." },
+    { "item": "Zion / Springdale hotel", "bookBy": "2026-06-12", "where": "Booking / hotel direct", "priority": "medium", "note": "Springdale is small; rooms tighten in fall." }
+  ],
+  "budget": {
+    "currency": "USD",
+    "items": [
+      { "label": "Fuel (~1,180 mi ÷ 26 MPG × $4.10/gal)", "amount": 186, "reliability": "estimate" },
+      { "label": "Lodging (6 nights)", "amount": 1365, "reliability": "reference" },
+      { "label": "National park entry (America the Beautiful annual pass)", "amount": 80, "reliability": "verified" },
+      { "label": "Antelope Canyon tour (2 pax)", "amount": 180, "reliability": "reference" },
+      { "label": "Food (7 days, 2 pax)", "amount": 700, "reliability": "estimate" },
+      { "label": "Rental car (7 days)", "amount": 560, "reliability": "reference" },
+      { "label": "Misc (parking, fees, water)", "amount": 120, "reliability": "estimate" }
+    ],
+    "total": 3191,
+    "perPerson": 1596
+  },
+  "tips": [
+    "Buy the $80 America the Beautiful annual pass — it covers Zion, Bryce, and Grand Canyon and pays for itself after ~3 parks.",
+    "Desert heat is real: carry at least 1 gallon of water per person per day and never rely on a single fuel stop.",
+    "Download offline maps for the whole loop — cell coverage drops between parks.",
+    "Arizona doesn't observe daylight saving time, so your phone clock can jump around at state lines in summer.",
+    "Start hikes and scenic drives early; afternoons bring heat, crowds, and (in late summer) monsoon thunderstorms."
+  ],
+  "disclaimer": "This itinerary was assembled by an AI from general knowledge and may be out of date. Prices, hours, road conditions, park alerts, and reservation rules change frequently — always confirm with official sources (nps.gov, recreation.gov, your navigation app) before and during your trip.",
+  "generationDate": "2026-06-16"
+}

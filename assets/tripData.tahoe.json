@@ -1,0 +1,111 @@
+{
+  "title": "Sunnyvale → Lake Tahoe · 3 Days",
+  "subtitle": "Sunnyvale → South Lake Tahoe (US-50) → around the lake → back via Truckee & I-80",
+  "dateRange": "2026-10-16 ~ 2026-10-18",
+  "travelers": "2 adults",
+  "vehicle": { "type": "gas", "model": "Gas car", "mpg": 30, "rangeMiles": null },
+  "loopType": "loop",
+  "totalMiles": 500,
+  "drivingDays": 3,
+  "region": "mountain",
+  "units": { "distance": "mi", "temp": "F", "currency": "USD" },
+  "days": [
+    {
+      "date": "10/16",
+      "title": "Sunnyvale → South Lake Tahoe (via US-50)",
+      "from": "Sunnyvale, CA",
+      "to": "South Lake Tahoe, CA",
+      "driveMiles": 235,
+      "driveTime": "3h50m",
+      "overnight": "South Lake Tahoe, CA",
+      "weather": { "icon": "partly-cloudy", "high": 60, "low": 33 },
+      "stops": [
+        { "name": "Sunnyvale (start)", "type": "city", "lat": 37.3688, "lng": -122.0363, "note": "Fuel up; Sacramento and Placerville have the last cheap gas before the climb." },
+        { "name": "Apple Hill, Placerville", "type": "scenic", "lat": 38.7296, "lng": -120.7985, "note": "October = apple/harvest season; orchards, cider, pie. Weekends get crowded — go early." },
+        { "name": "Heavenly Village, South Lake Tahoe", "type": "city", "lat": 38.9399, "lng": -119.9772, "note": "Arrive, check in, walk the lakefront at Lakeview Commons." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Placerville, CA", "type": "gas", "lat": 38.7296, "lng": -120.7985, "note": "Last good-value fuel before US-50 climbs to Echo Summit (7,382 ft)." }
+      ],
+      "meal": { "name": "Dinner in Heavenly Village", "perPerson": 35 },
+      "risks": [
+        "US-50 climbs over Echo Summit (~7,400 ft). By mid-October an early snowstorm is possible — check Caltrans QuickMap and carry chains; R2 chain controls can appear on short notice.",
+        "Leave by ~9am to clear the Sacramento area before traffic and reach Apple Hill before the weekend crowd."
+      ]
+    },
+    {
+      "date": "10/17",
+      "title": "Around the lake: Emerald Bay & East Shore",
+      "from": "South Lake Tahoe, CA",
+      "to": "South Lake Tahoe, CA",
+      "driveMiles": 75,
+      "driveTime": "2h00m",
+      "overnight": "South Lake Tahoe, CA",
+      "timezoneNote": "East shore (Sand Harbor) is in Nevada — same Pacific time, but you cross the state line",
+      "weather": { "icon": "sunny", "high": 62, "low": 34 },
+      "stops": [
+        { "name": "Emerald Bay / Vikingsholm", "type": "scenic", "lat": 38.9542, "lng": -120.1095, "note": "Iconic overlook; steep 1-mi trail down to Vikingsholm castle if you want the legs workout." },
+        { "name": "Eagle Falls Trailhead", "type": "hike", "lat": 38.9519, "lng": -120.1133, "ticket": "day-use parking fee", "note": "Short hike to the falls / Eagle Lake. Tiny lot — arrive before 9am or it's full." },
+        { "name": "Sand Harbor, NV (Lake Tahoe NV State Park)", "type": "scenic", "lat": 39.1986, "lng": -119.9301, "ticket": "NV state park day-use fee", "note": "Best swimming/boulders & clearest water. Parking lot closes when full (often mid-morning summer; easier in Oct)." }
+      ],
+      "fuelCharging": [],
+      "meal": { "name": "Picnic at Sand Harbor or lunch in Tahoe City", "perPerson": 22 },
+      "risks": [
+        "Emerald Bay's parking pullouts are small and fill fast on weekends — have a plan B viewpoint.",
+        "October water is cold and afternoons get windy; mornings are calmer for the lake."
+      ]
+    },
+    {
+      "date": "10/18",
+      "title": "North Shore → Truckee → Sunnyvale (I-80)",
+      "from": "South Lake Tahoe, CA",
+      "to": "Sunnyvale, CA",
+      "driveMiles": 245,
+      "driveTime": "4h10m",
+      "overnight": null,
+      "weather": { "icon": "partly-cloudy", "high": 58, "low": 31 },
+      "stops": [
+        { "name": "Tahoe City", "type": "city", "lat": 39.1677, "lng": -120.1435, "note": "Coffee + the Truckee River outlet; quick stop before heading to I-80." },
+        { "name": "Donner Memorial State Park, Truckee", "type": "scenic", "lat": 39.3236, "lng": -120.2336, "ticket": "state park day-use fee", "note": "Donner Lake, visitor center & the Pioneer Monument — history of Donner Pass." },
+        { "name": "Sunnyvale (end)", "type": "city", "lat": 37.3688, "lng": -122.0363, "note": "Refuel before returning home/rental." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Truckee, CA", "type": "gas", "lat": 39.3280, "lng": -120.1833, "note": "Top up before the Donner Pass descent and the long I-80 run west." }
+      ],
+      "meal": { "name": "Lunch in Truckee (historic downtown)", "perPerson": 28 },
+      "risks": [
+        "Donner Pass (I-80, ~7,000 ft) is the Sierra's biggest snow magnet. A mid-October storm can trigger chain controls or brief closures — check Caltrans before leaving Tahoe and don't push into an active storm.",
+        "Sunday afternoon I-80 westbound from Tahoe is the classic Bay Area return jam. Leave Tahoe by late morning to beat it."
+      ]
+    }
+  ],
+  "lodging": [
+    { "name": "South Lake Tahoe hotel / cabin", "area": "South Lake Tahoe, CA", "nights": 2, "pricePerNight": 190, "rating": "4.2", "booked": false }
+  ],
+  "bookingCountdown": [
+    { "item": "South Lake Tahoe lodging (weekend)", "bookBy": "2026-09-16", "where": "Booking / Airbnb / hotel direct", "priority": "high", "note": "Tahoe weekends sell out and surge-price; lock a refundable rate early." },
+    { "item": "Vikingsholm castle tour (if wanted)", "bookBy": "2026-10-01", "where": "Sierra State Parks / vikingsholm.com", "priority": "low", "note": "Seasonal tours often end by late Sept/Oct — confirm it's still running." },
+    { "item": "Campground (if camping instead): D.L. Bliss / Emerald Bay = ReserveCalifornia; Fallen Leaf = Recreation.gov", "bookBy": "2026-04-16", "where": "ReserveCalifornia.com (state) / Recreation.gov (USFS)", "priority": "medium", "note": "California STATE parks use ReserveCalifornia, NOT Recreation.gov. Both release ~6 months out. Many Tahoe campgrounds close for the season by mid-Oct." }
+  ],
+  "budget": {
+    "currency": "USD",
+    "items": [
+      { "label": "Fuel (~500 mi ÷ 30 MPG × $4.90/gal)", "amount": 82, "reliability": "estimate" },
+      { "label": "Lodging (2 nights, S. Lake Tahoe)", "amount": 380, "reliability": "reference" },
+      { "label": "State park day-use fees (Eagle Falls / Sand Harbor / Donner)", "amount": 35, "reliability": "reference" },
+      { "label": "Food (3 days, 2 adults)", "amount": 300, "reliability": "estimate" },
+      { "label": "Misc (parking, cider at Apple Hill, snacks)", "amount": 60, "reliability": "estimate" }
+    ],
+    "total": 857,
+    "perPerson": 429
+  },
+  "tips": [
+    "No national park here, so the $80 America the Beautiful pass is NOT needed — but Tahoe ringed by California + Nevada STATE parks (separate day-use fees). Carry a bit of cash/card for lot kiosks.",
+    "Mid-October is shoulder season: smaller crowds and fall color, but the first Sierra snow can arrive any time. Watch Caltrans QuickMap for chain controls on US-50 (Echo Summit) and I-80 (Donner Pass), and keep chains in the trunk.",
+    "Sand Harbor and Eagle Falls have tiny lots that fill by mid-morning even off-season — do the popular stops early, relax in the afternoon.",
+    "Going up US-50 and back via I-80/Truckee makes a natural loop so you see both the south and north shores without backtracking.",
+    "Cell coverage is patchy on US-50 over the summit and around the west shore — download offline maps for the whole loop."
+  ],
+  "disclaimer": "This itinerary was assembled by an AI from general knowledge and may be out of date. Sierra weather, road/chain controls, park hours and fees, and lodging prices change fast — confirm with official sources (Caltrans QuickMap, the park sites, ReserveCalifornia/Recreation.gov, your nav app) before and during your trip.",
+  "generationDate": "2026-06-16"
+}

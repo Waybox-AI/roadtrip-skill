@@ -1,0 +1,20 @@
+{
+  "name": "roadtrip-navigator",
+  "displayName": "RoadTrip Navigator",
+  "version": "1.0.0",
+  "description": "Generate North American road-trip itineraries as a map-first, offline-friendly single-file HTML page — daily driving segments, overnight stops, fuel/EV-charging, national-park reservations, seasonal road closures, and timezone/border crossings.",
+  "author": {
+    "name": "Waybox AI"
+  },
+  "homepage": "https://github.com/Waybox-AI/roadtrip-skill",
+  "repository": "https://github.com/Waybox-AI/roadtrip-skill",
+  "license": "MIT",
+  "keywords": [
+    "road trip",
+    "travel",
+    "itinerary",
+    "national parks",
+    "EV charging",
+    "navigation"
+  ]
+}

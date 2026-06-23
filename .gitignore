@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# generated itineraries (the bundled demo preview.html files are tracked on purpose)
+/trip.html
+/tripData.json

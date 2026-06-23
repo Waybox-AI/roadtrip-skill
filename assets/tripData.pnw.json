@@ -1,0 +1,502 @@
+{
+  "title": "Seattle → Vancouver & Whistler · 4 Days (EV, cross-border)",
+  "subtitle": "Seattle → Vancouver, BC → Whistler → back · electric, two border crossings",
+  "dateRange": "2026-05-15 ~ 2026-05-18",
+  "travelers": "2 adults",
+  "vehicle": {
+    "type": "EV",
+    "model": "EV (~280 mi range)",
+    "mpg": null,
+    "rangeMiles": 280
+  },
+  "loopType": "loop",
+  "totalMiles": 450,
+  "drivingDays": 4,
+  "region": "forest",
+  "units": {
+    "distance": "mi",
+    "temp": "F",
+    "currency": "USD"
+  },
+  "routeOptions": [
+    {
+      "name": "Sea-to-Sky loop (I-5 + Hwy 99)",
+      "miles": 450,
+      "days": 4,
+      "highlights": "Vancouver, Sea-to-Sky, Whistler",
+      "bestSeason": "year-round (Hwy 99 plowed)",
+      "estCost": 1680,
+      "pros": "open all year, fully EV-charged corridor",
+      "cons": "two border crossings",
+      "chosen": true,
+      "driveIntensity": "relaxed (~2.0h/day)"
+    },
+    {
+      "name": "+ North Cascades Hwy (SR-20) return",
+      "miles": 620,
+      "days": 5,
+      "highlights": "adds alpine SR-20 scenery",
+      "bestSeason": "Jun–Oct ONLY",
+      "estCost": 2100,
+      "pros": "spectacular mountain pass",
+      "cons": "SR-20 CLOSED in winter; sparse EV charging",
+      "driveIntensity": "relaxed (~2.3h/day)"
+    }
+  ],
+  "crossBorder": {
+    "crossings": [
+      {
+        "source": "rules",
+        "from": "US",
+        "to": "CA",
+        "docs": [
+          "Valid passport (or NEXUS / enhanced driver's license at land crossings)",
+          "Birth certificate + photo ID for minors; consent letter if a child travels without both parents"
+        ],
+        "vehicleDocs": [
+          "Vehicle registration",
+          "Driver's license",
+          "Rental agreement that EXPLICITLY permits crossing into Canada (many US rentals require a cross-border authorization letter)"
+        ],
+        "insuranceNote": "US auto insurance is generally valid in Canada — carry a Canadian Non-Resident Inter-Province Motor Vehicle Liability Insurance Card (ask your insurer) as proof. Confirm coverage before you go.",
+        "customsNotes": [
+          "Declare all food, alcohol, tobacco, and cash > CAD $10,000",
+          "Cannabis is illegal to carry across the border in EITHER direction",
+          "Firearms must be declared and most handguns are prohibited",
+          "Radar detectors are illegal in several provinces"
+        ],
+        "unitsAfter": {
+          "distance": "km",
+          "temp": "C",
+          "currency": "CAD",
+          "fuel": "litre"
+        },
+        "waitTimes": "CBSA Border Wait Times (cbsa-asfc.gc.ca)",
+        "estWaitNote": "Border waits swing from minutes to 2+ hours by port/time of day — check live before you go and avoid weekend/holiday peaks.",
+        "disclaimer": "Entry rules change frequently — confirm with CBP / CBSA / Mexican customs (Banjercito) before travel."
+      },
+      {
+        "source": "rules",
+        "from": "CA",
+        "to": "US",
+        "docs": [
+          "Valid passport / passport card / NEXUS / enhanced ID (WHTI-compliant)",
+          "Visa or ESTA if applicable to your nationality"
+        ],
+        "vehicleDocs": [
+          "Vehicle registration",
+          "Driver's license",
+          "Proof of insurance",
+          "Rental agreement permitting US entry"
+        ],
+        "insuranceNote": "Carry proof of US-valid auto insurance. If entering from Mexico, your Mexican policy will not cover you in the US.",
+        "customsNotes": [
+          "Declare all agricultural products, food, and cash > USD $10,000",
+          "Cannabis remains federally illegal to bring into the US",
+          "Have your CBP declaration ready; consider Global Entry to speed re-entry"
+        ],
+        "unitsAfter": {
+          "distance": "mi",
+          "temp": "F",
+          "currency": "USD",
+          "fuel": "gallon"
+        },
+        "waitTimes": "CBP Border Wait Times (bwt.cbp.gov) / CBP One app",
+        "estWaitNote": "Border waits swing from minutes to 2+ hours by port/time of day — check live before you go and avoid weekend/holiday peaks.",
+        "disclaimer": "Entry rules change frequently — confirm with CBP / CBSA / Mexican customs (Banjercito) before travel."
+      }
+    ],
+    "summary": "US→CA · CA→US"
+  },
+  "evPlan": {
+    "source": "model",
+    "usableRange": 280,
+    "effectiveRange": 280.0,
+    "winterDerate": 0.0,
+    "assumptions": {
+      "startSoC": 90,
+      "minSoC": 10,
+      "bufferSoC": 10,
+      "maxChargeSoC": 90
+    },
+    "legs": [
+      {
+        "to": "Bellingham, WA",
+        "miles": 90.0,
+        "departSoC": 90,
+        "arriveSoC": 58,
+        "ok": true,
+        "charger": true,
+        "chargerKW": 350
+      },
+      {
+        "to": "Vancouver, BC",
+        "miles": 55.0,
+        "departSoC": 58,
+        "arriveSoC": 38,
+        "ok": true,
+        "charger": true,
+        "chargerKW": 100,
+        "chargeTo": 49,
+        "chargeNote": "charge to ~49% (100kW) before the next leg"
+      },
+      {
+        "to": "Whistler, BC",
+        "miles": 80.0,
+        "departSoC": 49,
+        "arriveSoC": 20,
+        "ok": true,
+        "charger": true,
+        "chargerKW": 50,
+        "chargeTo": 34,
+        "chargeNote": "charge to ~34% (50kW) before the next leg"
+      },
+      {
+        "to": "Squamish, BC",
+        "miles": 40.0,
+        "departSoC": 34,
+        "arriveSoC": 20,
+        "ok": true,
+        "charger": true,
+        "chargerKW": 100,
+        "chargeTo": 54,
+        "chargeNote": "charge to ~54% (100kW) before the next leg"
+      },
+      {
+        "to": "Bellingham, WA",
+        "miles": 95.0,
+        "departSoC": 54,
+        "arriveSoC": 20,
+        "ok": true,
+        "charger": true,
+        "chargerKW": 150,
+        "chargeTo": 52,
+        "chargeNote": "charge to ~52% (150kW) before the next leg"
+      },
+      {
+        "to": "Seattle, WA",
+        "miles": 90.0,
+        "departSoC": 52,
+        "arriveSoC": 20,
+        "ok": true,
+        "charger": false,
+        "chargerKW": null
+      }
+    ],
+    "warnings": [],
+    "note": "Linear range model for planning only — verify with ABRP / the car's planner.",
+    "model": "EV · ~280 mi range"
+  },
+  "days": [
+    {
+      "date": "05/15",
+      "title": "Seattle → Vancouver, BC (cross border)",
+      "from": "Seattle, WA",
+      "to": "Vancouver, BC",
+      "driveMiles": 145,
+      "driveTime": "3h00m",
+      "overnight": "Vancouver, BC",
+      "timezoneNote": "Same timezone (PT); units switch to km/°C/CAD in Canada",
+      "weather": {
+        "icon": "rain",
+        "high": 61,
+        "low": 48
+      },
+      "stops": [
+        {
+          "name": "Seattle (start)",
+          "type": "city",
+          "lat": 47.6062,
+          "lng": -122.3321,
+          "note": "Charge to ~90% before leaving; fuel/charge cheaper on the US side."
+        },
+        {
+          "name": "Bellingham, WA (charge + lunch)",
+          "type": "city",
+          "lat": 48.7519,
+          "lng": -122.4787,
+          "note": "Last US charge stop; Fairhaven district for lunch."
+        },
+        {
+          "name": "Peace Arch / Blaine border",
+          "type": "scenic",
+          "lat": 49.0027,
+          "lng": -122.757,
+          "timedEntry": false,
+          "ticket": "passport required",
+          "note": "Busiest BC crossing — check live wait; Nexus lane if eligible."
+        },
+        {
+          "name": "Vancouver, BC",
+          "type": "city",
+          "lat": 49.2827,
+          "lng": -123.1207,
+          "note": "Check in; walk the seawall / Gastown."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Charge @ Bellingham (Electrify America)",
+          "type": "charge",
+          "lat": 48.7519,
+          "lng": -122.4787,
+          "powerKW": 350,
+          "note": "top up before the border; chargers are pricier/scarcer in the city core."
+        }
+      ],
+      "meal": {
+        "name": "Lunch in Fairhaven, Bellingham",
+        "perPerson": 24
+      },
+      "risks": [
+        "Peace Arch backups can exceed an hour on weekends/holidays — cross mid-morning weekday if you can.",
+        "Carry the rental's cross-border authorization letter; without it you can be turned back."
+      ]
+    },
+    {
+      "date": "05/16",
+      "title": "Vancouver city day",
+      "from": "Vancouver, BC",
+      "to": "Vancouver, BC",
+      "driveMiles": 20,
+      "driveTime": "0h50m",
+      "overnight": "Vancouver, BC",
+      "weather": {
+        "icon": "partly-cloudy",
+        "high": 64,
+        "low": 50
+      },
+      "stops": [
+        {
+          "name": "Stanley Park",
+          "type": "scenic",
+          "lat": 49.3019,
+          "lng": -123.1417,
+          "note": "Seawall loop by bike or car; totem poles."
+        },
+        {
+          "name": "Granville Island",
+          "type": "food",
+          "lat": 49.271,
+          "lng": -123.134,
+          "note": "Public market; lunch + local makers."
+        },
+        {
+          "name": "Capilano Suspension Bridge",
+          "type": "scenic",
+          "lat": 49.3429,
+          "lng": -123.1149,
+          "ticket": "timed ticket",
+          "note": "Buy timed tickets online to skip the line."
+        }
+      ],
+      "fuelCharging": [],
+      "meal": {
+        "name": "Granville Island Public Market",
+        "perPerson": 26
+      },
+      "risks": [
+        "Downtown Vancouver parking is expensive — transit/walk the core; some hotels charge nightly for charging."
+      ]
+    },
+    {
+      "date": "05/17",
+      "title": "Vancouver → Whistler (Sea-to-Sky Hwy 99)",
+      "from": "Vancouver, BC",
+      "to": "Whistler, BC",
+      "driveMiles": 80,
+      "driveTime": "2h00m",
+      "overnight": "Whistler, BC",
+      "weather": {
+        "icon": "partly-cloudy",
+        "high": 59,
+        "low": 42
+      },
+      "stops": [
+        {
+          "name": "Shannon Falls / Sea to Sky Gondola, Squamish",
+          "type": "scenic",
+          "lat": 49.6766,
+          "lng": -123.1556,
+          "ticket": "gondola ticket",
+          "note": "Stretch + huge falls; gondola for the view."
+        },
+        {
+          "name": "Whistler Village",
+          "type": "city",
+          "lat": 50.1163,
+          "lng": -122.9574,
+          "note": "Walk the village; off-season rates are far lower than winter."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Charge @ Squamish",
+          "type": "charge",
+          "lat": 49.7016,
+          "lng": -123.1558,
+          "powerKW": 100,
+          "note": "good mid-point charge on Hwy 99."
+        }
+      ],
+      "meal": {
+        "name": "Dinner in Whistler Village",
+        "perPerson": 40
+      },
+      "risks": [
+        "Sea-to-Sky is stunning but winding with rockslide zones — drive it in daylight.",
+        "Fewer fast chargers north of Squamish — arrive in Whistler with margin."
+      ]
+    },
+    {
+      "date": "05/18",
+      "title": "Whistler → Seattle (return, cross border)",
+      "from": "Whistler, BC",
+      "to": "Seattle, WA",
+      "driveMiles": 230,
+      "driveTime": "4h30m",
+      "overnight": null,
+      "timezoneNote": "Units switch back to mi/°F/USD after re-entering the US",
+      "weather": {
+        "icon": "rain",
+        "high": 60,
+        "low": 47
+      },
+      "stops": [
+        {
+          "name": "Squamish (charge)",
+          "type": "city",
+          "lat": 49.7016,
+          "lng": -123.1558,
+          "note": "Charge before the long run south."
+        },
+        {
+          "name": "Peace Arch / Blaine border (southbound)",
+          "type": "scenic",
+          "lat": 49.0027,
+          "lng": -122.757,
+          "ticket": "passport required",
+          "note": "Declare goods; US re-entry, have CBP declaration ready."
+        },
+        {
+          "name": "Seattle (end)",
+          "type": "city",
+          "lat": 47.6062,
+          "lng": -122.3321,
+          "note": "Charge near home/return rental."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Charge @ Bellingham (US side)",
+          "type": "charge",
+          "lat": 48.7519,
+          "lng": -122.4787,
+          "powerKW": 150,
+          "note": "final top-up after the border."
+        }
+      ],
+      "meal": {
+        "name": "Lunch en route (Bellingham)",
+        "perPerson": 22
+      },
+      "risks": [
+        "Longest drive of the trip + a border crossing — leave Whistler by late morning to beat afternoon border and I-5 traffic."
+      ]
+    }
+  ],
+  "lodging": [
+    {
+      "name": "Downtown Vancouver hotel",
+      "area": "Vancouver, BC",
+      "nights": 2,
+      "pricePerNight": 260,
+      "rating": "4.4",
+      "booked": false
+    },
+    {
+      "name": "Whistler Village (off-season)",
+      "area": "Whistler, BC",
+      "nights": 1,
+      "pricePerNight": 230,
+      "rating": "4.5",
+      "booked": false
+    }
+  ],
+  "bookingCountdown": [
+    {
+      "item": "Mexican/Canadian insurance — N/A; confirm US policy covers Canada",
+      "bookBy": "2026-05-08",
+      "where": "Your auto insurer",
+      "priority": "high",
+      "note": "Get the Canadian Non-Resident insurance card before departure."
+    },
+    {
+      "item": "Rental cross-border authorization letter",
+      "bookBy": "2026-05-08",
+      "where": "Rental company",
+      "priority": "high",
+      "note": "Must explicitly permit driving into Canada."
+    },
+    {
+      "item": "Vancouver + Whistler lodging",
+      "bookBy": "2026-03-15",
+      "where": "Booking / hotel direct",
+      "priority": "medium",
+      "note": "Whistler is cheap off-season but books up on weekends."
+    },
+    {
+      "item": "Capilano Suspension Bridge timed ticket",
+      "bookBy": "2026-05-14",
+      "where": "capbridge.com",
+      "priority": "low",
+      "note": "Reserve a time slot online."
+    }
+  ],
+  "budget": {
+    "currency": "USD",
+    "items": [
+      {
+        "label": "EV charging (~450 mi public DC, est.)",
+        "amount": 55,
+        "reliability": "estimate"
+      },
+      {
+        "label": "Lodging (3 nights: Vancouver ×2, Whistler ×1)",
+        "amount": 750,
+        "reliability": "reference"
+      },
+      {
+        "label": "Food (4 days, 2 adults)",
+        "amount": 420,
+        "reliability": "estimate"
+      },
+      {
+        "label": "Attractions (Capilano, gondola, parking)",
+        "amount": 160,
+        "reliability": "reference"
+      },
+      {
+        "label": "Mexican/Canadian auto insurance rider",
+        "amount": 0,
+        "reliability": "verified"
+      },
+      {
+        "label": "Misc (tolls/parking/border)",
+        "amount": 80,
+        "reliability": "estimate"
+      }
+    ],
+    "total": 1465,
+    "perPerson": 732
+  },
+  "tips": [
+    "US auto insurance is usually valid in Canada — but carry the Canadian Non-Resident Inter-Province insurance card as proof. (Mexico is the opposite: US insurance is NOT valid there.)",
+    "Cannabis cannot cross the border in either direction, even between two places where it's legal.",
+    "In Canada everything is km/°C/CAD and fuel/charging is sold per litre/kWh — the page flags the switch on the relevant days.",
+    "EV range drops ~20–25% in winter; this May plan keeps a 10% buffer per leg, but re-run the corridor with a winter derate if you go in the cold.",
+    "Sea-to-Sky (Hwy 99) is plowed year-round, but the scenic North Cascades Hwy (SR-20) alternative is CLOSED in winter — see the route comparison."
+  ],
+  "disclaimer": "AI-assembled from general knowledge; border rules, EV charger availability, prices, and road conditions change fast. Confirm with CBP/CBSA, your insurer, PlugShare/ABRP, and your nav app before and during the trip.",
+  "generationDate": "2026-06-16"
+}
