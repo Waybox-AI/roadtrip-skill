@@ -1,6 +1,5 @@
 {
   "name": "roadtrip-navigator",
-  "displayName": "RoadTrip Navigator",
   "version": "1.0.0",
   "description": "Generate North American road-trip itineraries as a map-first, offline-friendly single-file HTML page — daily driving segments, overnight stops, fuel/EV-charging, national-park reservations, seasonal road closures, and timezone/border crossings.",
   "author": {
