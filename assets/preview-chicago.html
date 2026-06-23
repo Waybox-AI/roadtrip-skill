@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoadTrip Navigator</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --ink: #2a2724;
+    --muted: #6b6258;
+    --line: #e7e1d6;
+    --accent: #c2641a;        /* desert orange default; overridden per region */
+    --accent-soft: #f6e7d6;
+    --ok: #2e7d4f;
+    --warn: #b3541e;
+    --danger: #b3261e;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.05);
+  }
+  [data-region="coast"]   { --accent:#1f6f8b; --accent-soft:#dceef2; }
+  [data-region="forest"]  { --accent:#3f7d3a; --accent-soft:#e3f0df; }
+  [data-region="autumn"]  { --accent:#b5531b; --accent-soft:#f6e3d4; }
+  [data-region="mountain"]{ --accent:#5a5c8a; --accent-soft:#e6e6f2; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 64px; }
+  a { color: var(--accent); }
+
+  header.hero {
+    background: linear-gradient(135deg, var(--accent), #00000022), var(--accent);
+    color: #fff; border-radius: 16px; padding: 24px 22px; box-shadow: var(--shadow);
+  }
+  header.hero h1 { margin: 0 0 6px; font-size: 1.7rem; }
+  header.hero .sub { opacity: .92; font-size: 1rem; margin-bottom: 14px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px; }
+  .fact { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25);
+    padding: 6px 12px; border-radius: 999px; font-size: .85rem; }
+
+  .section { margin-top: 26px; }
+  .section h2 { font-size: 1.15rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow); }
+
+  /* Booking countdown */
+  .countdown { border-left: 5px solid var(--warn); padding: 16px 18px; }
+  .countdown h2 { color: var(--warn); }
+  .cd-item { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline;
+    padding: 10px 0; border-bottom: 1px dashed var(--line); }
+  .cd-item:last-child { border-bottom: 0; }
+  .cd-by { font-weight: 700; color: var(--warn); white-space: nowrap; }
+  .cd-name { font-weight: 600; }
+  .cd-where { color: var(--muted); font-size: .88rem; }
+  .cd-note { color: var(--muted); font-size: .85rem; flex-basis: 100%; }
+  .pri-high { color: var(--danger); }
+
+  /* Map */
+  #map { height: 460px; border-radius: 14px; border: 1px solid var(--line); }
+  .map-fallback { padding: 16px; color: var(--muted); font-size: .9rem; }
+  .leaflet-popup-content { font-size: .9rem; }
+  .popup-actions { margin-top: 8px; display: flex; gap: 8px; }
+  .popup-actions a { font-size: .82rem; text-decoration: none; padding: 4px 8px;
+    border: 1px solid var(--line); border-radius: 8px; }
+
+  /* Days */
+  .day { padding: 16px 18px; margin-bottom: 14px; }
+  .day-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+  .day-badge { background: var(--accent); color: #fff; font-weight: 700; border-radius: 8px;
+    padding: 2px 10px; font-size: .85rem; }
+  .day-title { font-size: 1.05rem; font-weight: 700; }
+  .day-meta { color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 0; }
+  .day-meta b { color: var(--ink); }
+  .tznote { color: var(--warn); font-weight: 600; }
+  .stops { list-style: none; margin: 12px 0 0; padding: 0; }
+  .stops li { padding: 8px 0 8px 26px; position: relative; border-top: 1px solid var(--line); }
+  .stops li:before { content: ""; position: absolute; left: 6px; top: 14px; width: 9px; height: 9px;
+    border-radius: 50%; background: var(--accent); }
+  .stop-name { font-weight: 600; }
+  .tag { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: middle; }
+  .tag.timed { background: #fdecec; color: var(--danger); }
+  .stop-note { color: var(--muted); font-size: .87rem; }
+  .fuel-row, .meal-row { font-size: .87rem; color: var(--muted); margin-top: 8px; }
+  .risks { margin: 10px 0 0; padding: 10px 12px; background: #fff7ed; border: 1px solid #f3d9b8;
+    border-radius: 10px; font-size: .85rem; }
+  .risks b { color: var(--warn); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .num { text-align: right; white-space: nowrap; }
+  .rel { font-size: .72rem; padding: 1px 7px; border-radius: 999px; }
+  .rel.verified { background: #e3f0df; color: var(--ok); }
+  .rel.reference { background: var(--accent-soft); color: var(--accent); }
+  .rel.estimate { background: #f0ede8; color: var(--muted); }
+  tfoot td { font-weight: 700; border-top: 2px solid var(--ink); border-bottom: 0; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+  ul.tips { margin: 0; padding-left: 18px; }
+  ul.tips li { margin: 6px 0; }
+
+  .disclaimer { margin-top: 26px; font-size: .82rem; color: var(--muted);
+    background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; }
+  .footer-meta { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 14px; }
+
+  /* Route comparison */
+  .routes-table td.chosen-cell { font-weight: 700; }
+  .routes-table tr.chosen { background: var(--accent-soft); }
+  .chosen-badge { display: inline-block; font-size: .7rem; background: var(--accent);
+    color: #fff; border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+  .intensity-relaxed { color: var(--ok); }
+  .intensity-moderate { color: var(--warn); }
+  .intensity-intense { color: var(--danger); font-weight: 700; }
+
+  /* Cross-border */
+  .border-card { padding: 16px 18px; border-left: 5px solid var(--accent); }
+  .border-crossing { padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .border-crossing:last-child { border-bottom: 0; }
+  .border-route { font-weight: 700; font-size: 1rem; }
+  .border-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 8px; }
+  @media (min-width: 760px) { .border-grid { grid-template-columns: 1fr 1fr; } }
+  .border-block h4 { margin: 0 0 4px; font-size: .85rem; color: var(--muted); }
+  .border-block ul { margin: 0; padding-left: 18px; font-size: .85rem; }
+  .border-insurance { background: #fff7ed; border: 1px solid #f3d9b8; border-radius: 10px;
+    padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
+  .border-insurance.critical { background: #fdecec; border-color: #f3b8b8; }
+  .units-after { font-size: .82rem; color: var(--accent); margin-top: 6px; }
+
+  /* EV corridor */
+  .ev-card { padding: 6px 10px; }
+  .soc-cell { min-width: 130px; }
+  .soc-bar { position: relative; height: 16px; background: #eee; border-radius: 8px; overflow: hidden; }
+  .soc-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 8px; }
+  .soc-fill.good { background: var(--ok); }
+  .soc-fill.low { background: var(--warn); }
+  .soc-fill.bad { background: var(--danger); }
+  .soc-num { font-size: .78rem; color: var(--muted); }
+  .ev-warn { margin-top: 10px; padding: 10px 12px; background: #fdecec; border: 1px solid #f3b8b8;
+    border-radius: 10px; font-size: .85rem; }
+  .ev-assume { font-size: .78rem; color: var(--muted); margin-top: 8px; }
+  .charge-note { font-size: .8rem; color: var(--accent); }
+
+  .scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 14px 12px 48px; }
+    header.hero { padding: 18px 16px; border-radius: 14px; }
+    header.hero h1 { font-size: 1.4rem; }
+    header.hero .sub { font-size: .92rem; }
+    .facts { gap: 7px; }
+    .fact { font-size: .77rem; padding: 5px 10px; }
+    .section { margin-top: 20px; }
+    .section h2 { font-size: 1.05rem; }
+    #map { height: 300px; }
+    .day { padding: 14px 15px; }
+    .day-title { font-size: 1rem; }
+    .day-badge { font-size: .8rem; }
+    .stops li { padding-left: 24px; }
+    table { font-size: .84rem; }
+    th, td { padding: 7px 8px; }
+    .routes-table { min-width: 600px; }   /* keep columns legible; scroll within .scrollx */
+    .cd-by { white-space: normal; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    #map { height: 320px; }
+    .card, header.hero { box-shadow: none; }
+    .countdown { break-inside: avoid; }
+    .day { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="hero" id="hero"></header>
+  <div id="routes"></div>
+  <div id="countdown"></div>
+  <div id="crossborder"></div>
+  <div class="section">
+    <h2>🗺️ Route map</h2>
+    <div id="map"></div>
+    <div id="map-fallback" class="map-fallback" style="display:none">
+      Map could not load (offline?). Stop coordinates are listed in each day below.
+    </div>
+  </div>
+  <div id="evplan"></div>
+  <div class="section">
+    <h2>📅 Day by day</h2>
+    <div id="days"></div>
+  </div>
+  <div class="section grid2">
+    <div id="lodging"></div>
+    <div id="budget"></div>
+  </div>
+  <div id="tips" class="section"></div>
+  <div id="disclaimer"></div>
+  <div class="footer-meta" id="footer-meta"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+// ---- Trip data is injected here by generate.py ----
+var TRIP_DATA = {
+  "title": "Chicago Loop & Surrounds · 5 Days",
+  "subtitle": "Chicago → Indiana Dunes → Starved Rock → Oak Park → Chicago",
+  "dateRange": "2026-08-07 ~ 2026-08-11",
+  "travelers": "2 adults",
+  "vehicle": {
+    "type": "gas",
+    "model": "Compact sedan (own vehicle)",
+    "mpg": 32,
+    "rangeMiles": null
+  },
+  "loopType": "loop",
+  "totalMiles": 310,
+  "drivingDays": 5,
+  "region": "coast",
+  "units": {
+    "distance": "mi",
+    "temp": "F",
+    "currency": "USD"
+  },
+  "days": [
+    {
+      "date": "08/07",
+      "title": "Arrive Chicago — Riverwalk & Millennium Park",
+      "from": "Chicago O'Hare / home",
+      "to": "Chicago, IL (Downtown)",
+      "driveMiles": 25,
+      "driveTime": "0h40m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": {
+        "icon": "partly-cloudy",
+        "high": 82,
+        "low": 65
+      },
+      "stops": [
+        {
+          "name": "Millennium Park / Cloud Gate ('The Bean')",
+          "type": "scenic",
+          "lat": 41.8827,
+          "lng": -87.6233,
+          "note": "Free to enter; The Bean is the iconic photo stop — go early before crowds."
+        },
+        {
+          "name": "Chicago Riverwalk",
+          "type": "scenic",
+          "lat": 41.8876,
+          "lng": -87.6278,
+          "note": "Walk east from Lake St bridge to Lake Shore Dr — best views of the skyline from the water level."
+        },
+        {
+          "name": "Architecture Boat Tour (Chicago River)",
+          "type": "tour",
+          "lat": 41.8876,
+          "lng": -87.6273,
+          "timedEntry": true,
+          "ticket": "paid tour (~$50/person)",
+          "note": "Book a 90-min Chicago Architecture Foundation cruise ahead — the best way to see 50+ landmark buildings from the water."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Fuel @ O'Hare / Irving Park area",
+          "type": "gas",
+          "lat": 41.9742,
+          "lng": -87.8073,
+          "note": "Top off before heading into downtown where gas is pricier."
+        }
+      ],
+      "meal": {
+        "name": "Lou Malnati's Deep Dish (Wacker Dr)",
+        "perPerson": 28
+      },
+      "risks": [
+        "Downtown Chicago parking is expensive ($30–50/day) — choose a hotel with parking or use a Lower Wacker garage to save."
+      ]
+    },
+    {
+      "date": "08/08",
+      "title": "Chicago Neighborhoods — Lincoln Park, Wicker Park, Pilsen",
+      "from": "Chicago, IL",
+      "to": "Chicago, IL",
+      "driveMiles": 15,
+      "driveTime": "0h35m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": {
+        "icon": "sunny",
+        "high": 84,
+        "low": 67
+      },
+      "stops": [
+        {
+          "name": "Lincoln Park Zoo",
+          "type": "scenic",
+          "lat": 41.9214,
+          "lng": -87.6367,
+          "note": "Free admission year-round. The lakefront path alongside is great for a morning walk or bike ride."
+        },
+        {
+          "name": "Navy Pier",
+          "type": "scenic",
+          "lat": 41.8917,
+          "lng": -87.6086,
+          "note": "Centennial Wheel ($18), Chicago Shakespeare Theater, IMAX — great lakefront stroll and views."
+        },
+        {
+          "name": "Wicker Park / Bucktown",
+          "type": "city",
+          "lat": 41.9088,
+          "lng": -87.6786,
+          "note": "Best indie shops, street art, and cocktail bars in the city. Walk Milwaukee Ave and Damen Ave."
+        },
+        {
+          "name": "Pilsen Murals & National Museum of Mexican Art",
+          "type": "scenic",
+          "lat": 41.8558,
+          "lng": -87.6564,
+          "note": "Free museum; the outdoor murals along 16th St and Blue Island Ave are world-class."
+        }
+      ],
+      "fuelCharging": [],
+      "meal": {
+        "name": "Xoco by Rick Bayless, River North",
+        "perPerson": 22
+      },
+      "risks": [
+        "Use the CTA (L train/bus) or rideshare for neighborhood hopping today — parking in Wicker Park and Pilsen is extremely limited on weekends."
+      ]
+    },
+    {
+      "date": "08/09",
+      "title": "Day trip — Indiana Dunes National Park",
+      "from": "Chicago, IL",
+      "to": "Indiana Dunes, IN (return to Chicago overnight)",
+      "driveMiles": 75,
+      "driveTime": "1h20m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": {
+        "icon": "sunny",
+        "high": 86,
+        "low": 68
+      },
+      "stops": [
+        {
+          "name": "Indiana Dunes National Park Visitor Center",
+          "type": "park",
+          "lat": 41.6533,
+          "lng": -87.0524,
+          "timedEntry": false,
+          "ticket": "free (no entry fee)",
+          "note": "Pick up a trail map here. The dunes are taller than you'd expect — wear sunscreen and bring water."
+        },
+        {
+          "name": "Mount Baldy Dune",
+          "type": "hike",
+          "lat": 41.7253,
+          "lng": -86.8992,
+          "note": "Tallest dune at 126 ft; ranger-guided 1.5-mi hike is required for the summit. Check nps.gov for tour times."
+        },
+        {
+          "name": "West Beach",
+          "type": "scenic",
+          "lat": 41.6286,
+          "lng": -87.2295,
+          "note": "Best swimming beach in the park. On clear days you can see the Chicago skyline across Lake Michigan — stunning sunset view."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Fuel @ Portage / Merrillville, IN (I-94)",
+          "type": "gas",
+          "lat": 41.537,
+          "lng": -87.3291,
+          "note": "Gas is noticeably cheaper in Indiana than downtown Chicago — fill up here on the way out or back."
+        }
+      ],
+      "meal": {
+        "name": "Octave Grill, Chesterton, IN",
+        "perPerson": 24
+      },
+      "risks": [
+        "West Beach and Mount Baldy parking lots fill by 10 AM on summer weekends — arrive before 9 AM or take the South Shore rail line from Millennium Station.",
+        "Lake Michigan has strong rip currents and no lifeguards at several beaches — check NPS swim conditions before entering the water."
+      ]
+    },
+    {
+      "date": "08/10",
+      "title": "Day trip — Starved Rock State Park & Matthiessen",
+      "from": "Chicago, IL",
+      "to": "Utica, IL (return to Chicago overnight)",
+      "driveMiles": 120,
+      "driveTime": "1h50m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": {
+        "icon": "partly-cloudy",
+        "high": 80,
+        "low": 63
+      },
+      "stops": [
+        {
+          "name": "Starved Rock State Park Visitor Center",
+          "type": "park",
+          "lat": 41.3178,
+          "lng": -88.9934,
+          "timedEntry": false,
+          "ticket": "free (IL state park)",
+          "note": "Pick up a canyon map. 18 sandstone canyons and Illinois River bluffs make this one of the best hiking spots in the Midwest."
+        },
+        {
+          "name": "St. Louis Canyon",
+          "type": "hike",
+          "lat": 41.3178,
+          "lng": -88.9934,
+          "note": "Most spectacular canyon in the park — towering sandstone walls and a seasonal waterfall at the back."
+        },
+        {
+          "name": "Starved Rock Bluff",
+          "type": "hike",
+          "lat": 41.3195,
+          "lng": -88.9918,
+          "note": "Short 0.25-mi trail to the historic 125-ft bluff top with sweeping Illinois River views. Named from a 1769 Illiniwek siege."
+        },
+        {
+          "name": "Matthiessen State Park (adjacent)",
+          "type": "park",
+          "lat": 41.2986,
+          "lng": -89.0259,
+          "note": "Less crowded than Starved Rock with equally beautiful canyon scenery — highly recommended add-on; free admission."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Fuel @ Ottawa, IL (US-6 / I-80)",
+          "type": "gas",
+          "lat": 41.3456,
+          "lng": -88.8428,
+          "note": "Good fuel and food stop a few miles east of the parks."
+        }
+      ],
+      "meal": {
+        "name": "Starved Rock Lodge Restaurant",
+        "perPerson": 30
+      },
+      "risks": [
+        "Canyon trails are rocky and can be slippery after rain — wear closed-toe shoes with good grip.",
+        "If you ever plan to stay overnight, Starved Rock Lodge fills months ahead on summer weekends — day-trip from Chicago is the easier option."
+      ]
+    },
+    {
+      "date": "08/11",
+      "title": "Oak Park (Frank Lloyd Wright) → Depart",
+      "from": "Chicago, IL",
+      "to": "Chicago O'Hare / home",
+      "driveMiles": 35,
+      "driveTime": "0h50m",
+      "overnight": null,
+      "weather": {
+        "icon": "sunny",
+        "high": 83,
+        "low": 66
+      },
+      "stops": [
+        {
+          "name": "Frank Lloyd Wright Home & Studio, Oak Park",
+          "type": "tour",
+          "lat": 41.8858,
+          "lng": -87.7916,
+          "timedEntry": true,
+          "ticket": "timed ticket (~$22/person)",
+          "note": "America's densest collection of Wright architecture. Book a guided tour online at gowright.org — self-guided audio tours also available."
+        },
+        {
+          "name": "Oak Park Historic District (walking tour)",
+          "type": "scenic",
+          "lat": 41.886,
+          "lng": -87.7867,
+          "note": "Dozens of Prairie-style homes visible from the sidewalk; the free OPRF audio app guides you past 20+ sites in under an hour."
+        },
+        {
+          "name": "Ernest Hemingway Birthplace Museum, Oak Park",
+          "type": "scenic",
+          "lat": 41.8829,
+          "lng": -87.7881,
+          "ticket": "~$15/person",
+          "note": "Hemingway was born here in 1899. Pairs perfectly with the FLW tour for a full Oak Park cultural morning."
+        }
+      ],
+      "fuelCharging": [
+        {
+          "name": "Fuel @ Oak Park / I-290",
+          "type": "gas",
+          "lat": 41.8805,
+          "lng": -87.7882,
+          "note": "Fill up before heading to O'Hare to avoid rental-return fuel surcharges."
+        }
+      ],
+      "meal": {
+        "name": "Breakfast @ Buzz Cafe, Oak Park",
+        "perPerson": 18
+      },
+      "risks": [
+        "I-290 and I-90/94 can back up badly during morning rush — leave Oak Park by 11 AM to reach O'Hare comfortably for a midday flight."
+      ]
+    }
+  ],
+  "lodging": [
+    {
+      "name": "Loop / River North hotel",
+      "area": "Chicago, IL",
+      "nights": 4,
+      "pricePerNight": 195,
+      "rating": "4.3",
+      "booked": false
+    }
+  ],
+  "bookingCountdown": [
+    {
+      "item": "Chicago Architecture Foundation River Cruise",
+      "bookBy": "2026-07-01",
+      "where": "architecture.org",
+      "priority": "high",
+      "note": "Summer slots sell out weeks ahead; early-morning or evening tours are cooler and less crowded."
+    },
+    {
+      "item": "Chicago hotel (Loop or River North)",
+      "bookBy": "2026-06-07",
+      "where": "Booking / hotel direct",
+      "priority": "high",
+      "note": "August is peak summer season — rates and availability tighten fast."
+    },
+    {
+      "item": "Frank Lloyd Wright Home & Studio tour",
+      "bookBy": "2026-07-25",
+      "where": "gowright.org",
+      "priority": "medium",
+      "note": "Timed-entry tours; weekend slots book out fast in summer."
+    },
+    {
+      "item": "Shedd Aquarium / Museum of Science & Industry (optional rainy-day)",
+      "bookBy": "2026-07-15",
+      "where": "sheddaquarium.org / msichicago.org",
+      "priority": "low",
+      "note": "Timed tickets save long queues; worth adding if afternoon storms hit."
+    }
+  ],
+  "budget": {
+    "currency": "USD",
+    "items": [
+      {
+        "label": "Fuel (~310 mi ÷ 32 MPG × $3.80/gal)",
+        "amount": 37,
+        "reliability": "estimate"
+      },
+      {
+        "label": "Lodging (4 nights, Loop/River North avg)",
+        "amount": 780,
+        "reliability": "reference"
+      },
+      {
+        "label": "Parking (4 days downtown @ ~$35/day)",
+        "amount": 140,
+        "reliability": "estimate"
+      },
+      {
+        "label": "Food (5 days, 2 adults)",
+        "amount": 490,
+        "reliability": "estimate"
+      },
+      {
+        "label": "Architecture Boat Tour (2 pax)",
+        "amount": 100,
+        "reliability": "reference"
+      },
+      {
+        "label": "Frank Lloyd Wright tours (2 pax)",
+        "amount": 44,
+        "reliability": "reference"
+      },
+      {
+        "label": "Misc (Navy Pier, museums, tips, transit)",
+        "amount": 120,
+        "reliability": "estimate"
+      }
+    ],
+    "total": 1711,
+    "perPerson": 856
+  },
+  "tips": [
+    "Get a CTA Ventra card — the L train and buses link the Loop to every neighborhood and beat driving + parking every time.",
+    "The Chicago Architecture Center on Wacker Dr has a 1:400 scale skyline model and is worth $15 admission even before the boat tour.",
+    "Indiana Dunes and Starved Rock are free to enter — no annual pass needed unlike national parks.",
+    "August is prime thunderstorm season on the Great Lakes; build flexibility in the afternoon schedule, especially for the open-air parks.",
+    "Deep dish pizza takes 40 minutes to bake — call ahead or order online so it's ready when you arrive; Lou Malnati's, Giordano's, and Pequod's are the local favorites."
+  ],
+  "disclaimer": "This itinerary was assembled by an AI from general knowledge and may be out of date. Hours, prices, park alerts, timed-entry rules, and road conditions change frequently — always confirm with official sources (nps.gov, dnr.illinois.gov, choosechicago.com) before and during your trip.",
+  "generationDate": "2026-06-23"
+};
+// ---------------------------------------------------
+
+(function () {
+  "use strict";
+  var T = TRIP_DATA || {};
+  var U = (T.units || {});
+  var distUnit = U.distance || "mi";
+  var tempUnit = U.temp || "F";
+  var cur = (T.budget && T.budget.currency) || U.currency || "USD";
+  var curSym = ({ USD: "$", CAD: "C$", MXN: "MX$" })[cur] || "$";
+
+  function esc(s) {
+    if (s === null || s === undefined) return "";
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function el(id) { return document.getElementById(id); }
+  function money(n) { return curSym + Number(n || 0).toLocaleString("en-US"); }
+
+  var WEATHER_ICONS = {
+    "sunny": "☀️", "partly-cloudy": "⛅", "cloudy": "☁️",
+    "rain": "🌧️", "snow": "❄️", "storm": "⛈️", "windy": "💨", "fog": "🌫️"
+  };
+  var STOP_ICONS = {
+    park: "🏞️", hike: "🥾", scenic: "📸", city: "🏙️",
+    tour: "🎫", food: "🍽️", lodging: "🛏️", default: "📍"
+  };
+
+  document.documentElement.setAttribute("data-region", T.region || "desert");
+
+  // ---------- Header ----------
+  function renderHero() {
+    var f = [];
+    if (T.dateRange) f.push(fact("📆", T.dateRange));
+    if (T.travelers) f.push(fact("👥", T.travelers));
+    if (T.vehicle) f.push(fact(vehIcon(T.vehicle.type), vehLabel(T.vehicle)));
+    if (T.totalMiles) f.push(fact("🛣️", T.totalMiles.toLocaleString("en-US") + " " + distUnit));
+    if (T.drivingDays) f.push(fact("📍", T.drivingDays + " days"));
+    if (T.loopType) f.push(fact("🔁", T.loopType === "loop" ? "Loop" : "One-way"));
+    var h = "<h1>" + esc(T.title || "Road Trip") + "</h1>";
+    if (T.subtitle) h += '<div class="sub">' + esc(T.subtitle) + "</div>";
+    h += '<div class="facts">' + f.join("") + "</div>";
+    el("hero").innerHTML = h;
+  }
+  function fact(icon, text) { return '<span class="fact">' + icon + " " + esc(text) + "</span>"; }
+  function vehIcon(t) { return t === "EV" ? "🔌" : (t === "RV" ? "🚐" : "🚗"); }
+  function vehLabel(v) {
+    var parts = [v.model || v.type || "Vehicle"];
+    if (v.type === "EV" && v.rangeMiles) parts.push("~" + v.rangeMiles + distUnit + " range");
+    if (v.type === "gas" && v.mpg) parts.push(v.mpg + " MPG");
+    return parts.join(" · ");
+  }
+
+  // ---------- Route comparison (multi-route) ----------
+  function renderRoutes() {
+    var opts = T.routeOptions || [];
+    if (opts.length < 2) { el("routes").innerHTML = ""; return; }
+    var rows = opts.map(function (o) {
+      var intl = (o.driveIntensity || "").split(" ")[0];
+      var cls = "intensity-" + (["relaxed", "moderate", "intense"].indexOf(intl) >= 0 ? intl : "moderate");
+      var name = esc(o.name) + (o.chosen ? '<span class="chosen-badge">✓ chosen</span>' : "");
+      return '<tr class="' + (o.chosen ? "chosen" : "") + '">' +
+        '<td class="' + (o.chosen ? "chosen-cell" : "") + '">' + name + "</td>" +
+        "<td class='num'>" + (o.miles != null ? o.miles + " " + distUnit : "—") + "</td>" +
+        "<td class='num'>" + (o.days != null ? o.days + "d" : "—") + "</td>" +
+        '<td class="' + cls + '">' + esc(o.driveIntensity || "—") + "</td>" +
+        "<td>" + esc(o.highlights || "") + "</td>" +
+        "<td>" + esc(o.bestSeason || "") + "</td>" +
+        "<td class='num'>" + (o.estCost != null ? money(o.estCost) : "—") + "</td>" +
+        "</tr>";
+    }).join("");
+    var pc = opts.map(function (o) {
+      if (!o.pros && !o.cons) return "";
+      return "<div class='stop-note'><b>" + esc(o.name) + ":</b> " +
+        (o.pros ? "👍 " + esc(o.pros) : "") + (o.cons ? " &nbsp; 👎 " + esc(o.cons) : "") + "</div>";
+    }).join("");
+    el("routes").innerHTML =
+      '<div class="section"><h2>🧭 Route options compared</h2>' +
+      '<div class="card" style="padding:6px 10px"><div class="scrollx"><table class="routes-table"><thead><tr>' +
+      "<th>Route</th><th class='num'>Miles</th><th class='num'>Days</th><th>Driving</th>" +
+      "<th>Highlights</th><th>Best season</th><th class='num'>Est. cost</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div></div>" +
+      (pc ? "<div style='margin-top:8px'>" + pc + "</div>" : "") + "</div>";
+  }
+
+  // ---------- Cross-border ----------
+  function renderCrossBorder() {
+    var cb = T.crossBorder;
+    if (!cb || !cb.crossings || !cb.crossings.length) { el("crossborder").innerHTML = ""; return; }
+    var blocks = cb.crossings.map(function (c) {
+      if (c.source === "error") return "";
+      var s = '<div class="border-crossing">';
+      s += '<div class="border-route">🛂 ' + esc(c.from) + " → " + esc(c.to) + "</div>";
+      var crit = /not valid|critical/i.test(c.insuranceNote || "");
+      if (c.insuranceNote) {
+        s += '<div class="border-insurance' + (crit ? " critical" : "") + '">🛡️ ' +
+          esc(c.insuranceNote) + "</div>";
+      }
+      s += '<div class="border-grid">';
+      s += borderList("📄 Documents", c.docs);
+      s += borderList("🚗 Vehicle", c.vehicleDocs);
+      s += borderList("📦 Customs", c.customsNotes);
+      s += "</div>";
+      if (c.unitsAfter) {
+        s += '<div class="units-after">↔️ After crossing, switch to ' +
+          esc(c.unitsAfter.distance) + " / °" + esc(c.unitsAfter.temp) + " / " +
+          esc(c.unitsAfter.currency) + " (fuel by the " + esc(c.unitsAfter.fuel) + ")</div>";
+      }
+      if (c.waitTimes) {
+        s += "<div class='stop-note'>⏱️ Live wait times: " + esc(c.waitTimes) +
+          (c.estWaitNote ? " — " + esc(c.estWaitNote) : "") + "</div>";
+      }
+      return s + "</div>";
+    }).join("");
+    el("crossborder").innerHTML =
+      '<div class="section"><h2>🛂 Border crossing</h2>' +
+      '<div class="card border-card">' + blocks +
+      "<div class='stop-note' style='margin-top:8px'>⚠️ Entry rules change — confirm with " +
+      "CBP / CBSA / Mexican customs before you travel.</div></div></div>";
+  }
+  function borderList(title, items) {
+    if (!items || !items.length) return "";
+    return "<div class='border-block'><h4>" + esc(title) + "</h4><ul>" +
+      items.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+  }
+
+  // ---------- EV charging corridor ----------
+  function socClass(p) { return p == null ? "" : (p < 10 ? "bad" : (p < 20 ? "low" : "good")); }
+  function renderEvPlan() {
+    var ev = T.evPlan;
+    if (!ev || !ev.legs || !ev.legs.length) { el("evplan").innerHTML = ""; return; }
+    var rows = ev.legs.map(function (l) {
+      var p = l.arriveSoC;
+      var cls = socClass(p);
+      var w = Math.max(0, Math.min(100, p == null ? 0 : p));
+      var bar = '<div class="soc-cell"><div class="soc-bar"><div class="soc-fill ' + cls +
+        '" style="width:' + w + '%"></div></div><span class="soc-num">' +
+        (p == null ? "—" : "arrive " + p + "%") +
+        (l.chargeTo != null ? " → charge " + l.chargeTo + "%" : "") + "</span></div>";
+      var note = l.note ? "<div class='charge-note' style='color:var(--danger)'>⚠️ " + esc(l.note) + "</div>" : "";
+      note += l.chargeNote ? "<div class='charge-note'>🔌 " + esc(l.chargeNote) + "</div>" : "";
+      return "<tr><td>" + esc(l.to) + (l.ok ? "" : " ❗") + "</td>" +
+        "<td class='num'>" + (l.miles != null ? l.miles + " " + distUnit : "—") + "</td>" +
+        "<td>" + bar + note + "</td></tr>";
+    }).join("");
+    var warns = (ev.warnings || []).length
+      ? '<div class="ev-warn"><b>⚠️ Range alerts:</b><br>' + ev.warnings.map(esc).join("<br>") + "</div>"
+      : "";
+    var a = ev.assumptions || {};
+    var assume = '<div class="ev-assume">Assumptions: usable range ' +
+      esc(ev.usableRange) + distUnit +
+      (ev.winterDerate ? ", winter derate −" + Math.round(ev.winterDerate * 100) + "% (eff. " +
+        esc(ev.effectiveRange) + distUnit + ")" : "") +
+      ", start " + esc(a.startSoC) + "%, keep ≥ " + esc(a.minSoC) + "% buffer. " +
+      (ev.note || "") + "</div>";
+    el("evplan").innerHTML =
+      '<div class="section"><h2>⚡ EV charging corridor</h2>' +
+      '<div class="card ev-card"><table><thead><tr>' +
+      "<th>Arrive at</th><th class='num'>Leg</th><th>Battery on arrival → plan</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>" + warns + assume + "</div>";
+  }
+
+  // ---------- Booking countdown ----------
+  function renderCountdown() {
+    var list = T.bookingCountdown || [];
+    if (!list.length) { el("countdown").innerHTML = ""; return; }
+    var rows = list.map(function (c) {
+      var pri = c.priority === "high" ? " pri-high" : "";
+      var s = '<div class="cd-item">';
+      s += '<span class="cd-by' + pri + '">⏳ Book by ' + esc(c.bookBy) + "</span>";
+      s += '<span class="cd-name">' + esc(c.item) + "</span>";
+      if (c.where) s += '<span class="cd-where">via ' + esc(c.where) + "</span>";
+      if (c.note) s += '<span class="cd-note">' + esc(c.note) + "</span>";
+      s += "</div>";
+      return s;
+    }).join("");
+    el("countdown").innerHTML =
+      '<div class="section"><div class="card countdown">' +
+      "<h2>⚠️ Reservation countdown — book these before they sell out</h2>" +
+      rows + "</div></div>";
+  }
+
+  // ---------- Map ----------
+  function navLinks(lat, lng, name) {
+    var q = encodeURIComponent(name || (lat + "," + lng));
+    var g = "https://www.google.com/maps/search/?api=1&query=" + lat + "," + lng;
+    var a = "https://maps.apple.com/?q=" + q + "&ll=" + lat + "," + lng;
+    return '<div class="popup-actions">' +
+      '<a href="' + g + '" target="_blank" rel="noopener">Google Maps</a>' +
+      '<a href="' + a + '" target="_blank" rel="noopener">Apple Maps</a></div>';
+  }
+
+  function collectStops() {
+    var pts = [], n = 0;
+    (T.days || []).forEach(function (d) {
+      (d.stops || []).forEach(function (s) {
+        if (typeof s.lat === "number" && typeof s.lng === "number" && (s.lat || s.lng)) {
+          n++;
+          pts.push({ n: n, lat: s.lat, lng: s.lng, name: s.name, type: s.type, date: d.date });
+        }
+      });
+    });
+    return pts;
+  }
+
+  function renderMap() {
+    var pts = collectStops();
+    if (typeof L === "undefined" || !pts.length) {
+      el("map").style.display = "none";
+      el("map-fallback").style.display = "block";
+      return;
+    }
+    try {
+      var map = L.map("map", { scrollWheelZoom: false });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18, attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      var latlngs = [];
+      pts.forEach(function (p) {
+        latlngs.push([p.lat, p.lng]);
+        var icon = L.divIcon({
+          className: "", html:
+            '<div style="background:var(--accent);color:#fff;border-radius:50%;width:26px;height:26px;' +
+            'display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;' +
+            'box-shadow:0 1px 4px rgba(0,0,0,.4);border:2px solid #fff">' + p.n + "</div>",
+          iconSize: [26, 26], iconAnchor: [13, 13]
+        });
+        var pop = "<b>" + esc(p.n + ". " + p.name) + "</b><br><span style='color:#6b6258'>Day " +
+          esc(p.date) + "</span>" + navLinks(p.lat, p.lng, p.name);
+        L.marker([p.lat, p.lng], { icon: icon }).addTo(map).bindPopup(pop);
+      });
+      L.polyline(latlngs, { color: getComputedStyle(document.documentElement)
+        .getPropertyValue("--accent") || "#c2641a", weight: 3, opacity: .7, dashArray: "6 6" }).addTo(map);
+      map.fitBounds(L.latLngBounds(latlngs).pad(0.15));
+    } catch (e) {
+      el("map").style.display = "none";
+      el("map-fallback").style.display = "block";
+    }
+  }
+
+  // ---------- Days ----------
+  function renderDays() {
+    var html = (T.days || []).map(function (d, i) { return dayCard(d, i + 1); }).join("");
+    el("days").innerHTML = html;
+  }
+  function dayCard(d, idx) {
+    var s = '<div class="card day">';
+    s += '<div class="day-head"><span class="day-badge">Day ' + idx + " · " + esc(d.date) + "</span>";
+    s += '<span class="day-title">' + esc(d.title) + "</span></div>";
+
+    var meta = [];
+    if (typeof d.driveMiles === "number") meta.push("<span>🚗 <b>" + d.driveMiles + " " + distUnit +
+      "</b>" + (d.driveTime ? " · " + esc(d.driveTime) : "") + "</span>");
+    if (d.overnight) meta.push("<span>🛏️ Overnight: <b>" + esc(d.overnight) + "</b></span>");
+    if (d.weather) meta.push("<span>" + (WEATHER_ICONS[d.weather.icon] || "🌡️") + " " +
+      esc(d.weather.high) + "°/" + esc(d.weather.low) + "°" + tempUnit + "</span>");
+    if (d.timezoneNote) meta.push('<span class="tznote">🕒 ' + esc(d.timezoneNote) + "</span>");
+    s += '<div class="day-meta">' + meta.join("") + "</div>";
+
+    if (d.stops && d.stops.length) {
+      s += '<ul class="stops">' + d.stops.map(stopRow).join("") + "</ul>";
+    }
+    if (d.fuelCharging && d.fuelCharging.length) {
+      s += '<div class="fuel-row">' + d.fuelCharging.map(function (f) {
+        var ico = f.type === "charge" ? "🔌" : "⛽";
+        var pw = f.powerKW ? " (" + f.powerKW + "kW)" : "";
+        return ico + " " + esc(f.name) + pw + (f.note ? " — " + esc(f.note) : "");
+      }).join(" &nbsp;·&nbsp; ") + "</div>";
+    }
+    if (d.meal) {
+      s += '<div class="meal-row">🍽️ ' + esc(d.meal.name) +
+        (d.meal.perPerson ? " — ~" + money(d.meal.perPerson) + "/person" : "") + "</div>";
+    }
+    if (d.risks && d.risks.length) {
+      s += '<div class="risks"><b>⚠️ Watch out:</b> ' +
+        d.risks.map(esc).join("<br>⚠️ ") + "</div>";
+    }
+    s += "</div>";
+    return s;
+  }
+  function stopRow(s) {
+    var ico = STOP_ICONS[s.type] || STOP_ICONS.default;
+    var r = "<li><span class='stop-name'>" + ico + " " + esc(s.name) + "</span>";
+    if (s.timedEntry) r += '<span class="tag timed">timed entry</span>';
+    if (s.ticket) r += '<span class="tag">' + esc(s.ticket) + "</span>";
+    else if (s.type) r += '<span class="tag">' + esc(s.type) + "</span>";
+    if (s.note) r += "<div class='stop-note'>" + esc(s.note) + "</div>";
+    if (typeof s.lat === "number" && (s.lat || s.lng)) {
+      r += navLinks(s.lat, s.lng, s.name);
+    }
+    return r + "</li>";
+  }
+
+  // ---------- Lodging ----------
+  function renderLodging() {
+    var L = T.lodging || [];
+    if (!L.length) { el("lodging").innerHTML = ""; return; }
+    var rows = L.map(function (h) {
+      return "<tr><td>" + esc(h.name) + (h.booked ? " ✅" : "") +
+        "<div class='stop-note'>" + esc(h.area || "") + "</div></td>" +
+        "<td class='num'>" + (h.nights || 1) + "</td>" +
+        "<td class='num'>" + (h.rating ? "★ " + esc(h.rating) : "—") + "</td>" +
+        "<td class='num'>" + money(h.pricePerNight) + "</td></tr>";
+    }).join("");
+    el("lodging").innerHTML =
+      '<div><h2 style="font-size:1.15rem;margin:0 0 12px">🛏️ Lodging</h2>' +
+      '<div class="card" style="padding:6px 10px"><table><thead><tr>' +
+      "<th>Place</th><th class='num'>Nights</th><th class='num'>Rating</th><th class='num'>/night</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div></div>";
+  }
+
+  // ---------- Budget ----------
+  function renderBudget() {
+    var b = T.budget;
+    if (!b || !b.items) { el("budget").innerHTML = ""; return; }
+    var rows = b.items.map(function (it) {
+      var rel = (it.reliability || "estimate").toLowerCase();
+      var relLabel = ({ verified: "verified", reference: "~ reference", estimate: "≈ estimate" })[rel] || rel;
+      return "<tr><td>" + esc(it.label) + ' <span class="rel ' + esc(rel) + '">' + relLabel + "</span></td>" +
+        "<td class='num'>" + money(it.amount) + "</td></tr>";
+    }).join("");
+    var foot = "<tfoot><tr><td>Total</td><td class='num'>" + money(b.total) + "</td></tr>";
+    if (b.perPerson) foot += "<tr><td>Per person</td><td class='num'>" + money(b.perPerson) + "</td></tr>";
+    foot += "</tfoot>";
+    el("budget").innerHTML =
+      '<div><h2 style="font-size:1.15rem;margin:0 0 12px">💰 Budget estimate</h2>' +
+      '<div class="card" style="padding:6px 10px"><table><tbody>' + rows + "</tbody>" + foot +
+      "</table></div>" +
+      "<div class='stop-note' style='margin-top:8px'>Legend: <span class='rel verified'>verified</span> " +
+      "<span class='rel reference'>~ reference</span> <span class='rel estimate'>≈ estimate</span>. " +
+      "Fuel/lodging are dynamic — confirm before departure.</div></div>";
+  }
+
+  // ---------- Tips ----------
+  function renderTips() {
+    var t = T.tips || [];
+    if (!t.length) { el("tips").innerHTML = ""; return; }
+    el("tips").innerHTML = "<h2>💡 Tips & local know-how</h2><div class='card' style='padding:14px 18px'>" +
+      "<ul class='tips'>" + t.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+  }
+
+  // ---------- Disclaimer ----------
+  function renderDisclaimer() {
+    var d = T.disclaimer || "Information assembled by AI; verify with official sources before travel.";
+    el("disclaimer").innerHTML = '<div class="disclaimer">⚠️ ' + esc(d) + "</div>";
+    el("footer-meta").textContent = "Generated " + (T.generationDate || "") +
+      " · RoadTrip Navigator · map data © OpenStreetMap contributors";
+  }
+
+  // ---------- Boot ----------
+  try {
+    renderHero(); renderRoutes(); renderCountdown(); renderCrossBorder();
+    renderDays(); renderEvPlan();
+    renderLodging(); renderBudget(); renderTips(); renderDisclaimer();
+    renderMap();
+  } catch (err) {
+    el("app").insertAdjacentHTML("afterbegin",
+      "<div class='disclaimer'>Render error: " + esc(err.message) + "</div>");
+  }
+})();
+</script>
+</body>
+</html>
