@@ -26,6 +26,7 @@ DEMO_FILES = [
     "tripData.example.json",
     "tripData.tahoe.json",
     "tripData.pnw.json",
+    "tripData.chicago.json",
 ]
 
 # Warnings (stripped "[warn] ..." lines) that are acceptable in the demo files.
