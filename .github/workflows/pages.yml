@@ -1,0 +1,52 @@
+name: Deploy site to GitHub Pages
+
+# Builds the SEO/marketing site (scripts/build_site.py) and publishes ./docs.
+# One-time setup: repo Settings → Pages → Source: "GitHub Actions".
+# To serve from a custom domain (e.g. roadtripskill.dev), set it under
+# Settings → Pages and pass SITE_BASE_URL below to match.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "assets/**"
+      - "scripts/build_site.py"
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build site
+        env:
+          SITE_BASE_URL: https://roadtripskill.dev
+        run: python3 scripts/build_site.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

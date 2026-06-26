@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
+.venv/
+node_modules/
 # generated itineraries (the bundled demo preview.html files are tracked on purpose)
 /trip.html
 /tripData.json

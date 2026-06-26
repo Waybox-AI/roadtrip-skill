@@ -14,9 +14,11 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-7d3a13?style=flat-square)](#-参与贡献)
 
+**[🌐 在线 Demo 与示例行程](https://roadtripskill.dev)** · [⚡ 安装](#-安装) · [✨ 差异化在哪](#-差异化在哪)
+
 <br/>
 
-<img src="docs/og.png" alt="RoadTrip Navigator" width="860"/>
+<img src="docs/og.png" alt="RoadTrip Navigator — 地图优先、照着开就能走完的自驾行程" width="860"/>
 
 </div>
 
@@ -87,13 +89,23 @@ slash 命令，强制调起同一套流程：
 
 ## 🗺️ 样例行程
 
-打开内置的精选成品（在线 Demo 上也能点开）：
+打开内置的精选成品 —— **[在 roadtripskill.dev 在线浏览](https://roadtripskill.dev)**，或直接打开 HTML：
 
-| 行程 | 主题 | 亮点 |
-|---|---|---|
-| **西南大环线 · 7 天** | 沙漠 | 拉斯维加斯 → Zion → Bryce → Page → 大峡谷，门票/年票倒推 |
-| **Sunnyvale → 太浩湖 · 3 天** | 山地 | US-50/I-80 环线、ReserveCalifornia、Sierra 雪情/雪链风险 |
-| **西雅图 → 温哥华 EV · 4 天** | 森林 | 跨境清单 + EV 充电走廊 + 路线对比 |
+| 行程 | 主题 | 亮点 | 在线 |
+|---|---|---|---|
+| **西南大环线 · 7 天** | 沙漠 | 拉斯维加斯 → Zion → Bryce → Page → 大峡谷，门票/年票倒推 | [打开](https://roadtripskill.dev/trips/southwest-national-parks-road-trip-7-days.html) |
+| **Sunnyvale → 太浩湖 · 3 天** | 山地 | US-50/I-80 环线、ReserveCalifornia、Sierra 雪情/雪链风险 | [打开](https://roadtripskill.dev/trips/sunnyvale-lake-tahoe-road-trip-3-days.html) |
+| **西雅图 → 温哥华 EV · 4 天** | 森林 | 跨境清单 + EV 充电走廊 + 路线对比 | [打开](https://roadtripskill.dev/trips/seattle-vancouver-whistler-ev-road-trip-4-days.html) |
+
+### 实际效果
+
+普通"景点清单"会跳过的三件事 —— 带日期的预订倒计时、逐段 EV 充电走廊、逐日车程校验：
+
+| 预订倒计时 | EV 充电走廊 | 逐日车程 |
+|:---:|:---:|:---:|
+| <img src="docs/img/southwest-countdown.png" alt="带精确 book-by 日期的预订倒计时" width="260"/> | <img src="docs/img/pnw-evplan.png" alt="逐段 EV 充电走廊与到达电量" width="260"/> | <img src="docs/img/southwest-days.png" alt="逐日车程切分" width="260"/> |
+
+<sub>用 `node scripts/capture_demo.js` 可重新生成这些图（含在线路线地图）。</sub>
 
 ## ⚙️ 工作原理
 

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoadTrip Navigator — AI road-trip itineraries you can actually drive</title>
+<meta name="description" content="A free, open-source Claude Code skill that turns 'start + days' into a drivable North American road trip: daily driving segments, overnight stops, fuel/EV charging, national-park reservations, seasonal closures and border crossings — as a map-first single-file HTML page." />
+<meta name="keywords" content="ai road trip planner, road trip itinerary generator, national park road trip, ev road trip planner, claude code skill" />
+<link rel="canonical" href="https://roadtripskill.dev/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="RoadTrip Navigator — AI road-trip itineraries you can actually drive" />
+<meta property="og:description" content="Turn 'start + days' into a drivable North American road trip. Free, open-source Claude Code skill." />
+<meta property="og:url" content="https://roadtripskill.dev/" />
+<meta property="og:image" content="https://roadtripskill.dev/img/southwest-og.png" />
+<meta property="og:site_name" content="RoadTrip Navigator" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="RoadTrip Navigator" />
+<meta name="twitter:description" content="AI road-trip itineraries you can actually drive. Free, open-source Claude Code skill." />
+<meta name="twitter:image" content="https://roadtripskill.dev/img/southwest-og.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "RoadTrip Navigator",
+  "applicationCategory": "TravelApplication",
+  "operatingSystem": "Claude Code (macOS, Windows, Linux, Web)",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "url": "https://roadtripskill.dev/",
+  "description": "An open-source Claude Code skill that turns a start point and a number of days into a drivable North American road-trip itinerary."
+}
+</script>
+<style>
+  :root { --bg:#f7f5f0; --card:#fff; --ink:#2a2724; --muted:#6b6258; --line:#e7e1d6; --accent:#c2641a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); line-height:1.6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif; }
+  a { color:var(--accent); }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 18px; }
+  header.hero { background:linear-gradient(135deg,#c2641a,#8f3f12); color:#fff; padding:64px 18px 56px; text-align:center; }
+  header.hero h1 { font-size:2.5rem; margin:.2em 0; }
+  header.hero p { font-size:1.2rem; max-width:680px; margin:.4em auto 1.4em; opacity:.95; }
+  .cta { display:inline-flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .btn { background:#fff; color:#8f3f12; border-radius:8px; padding:11px 20px; font-weight:700; text-decoration:none; }
+  .btn.ghost { background:transparent; color:#fff; border:1.5px solid #ffffff88; }
+  section { padding:48px 0; }
+  h2 { font-size:1.7rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    text-decoration:none; color:inherit; display:flex; flex-direction:column; transition:transform .12s, box-shadow .12s; }
+  .card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(0,0,0,.10); }
+  .card img { width:100%; aspect-ratio:1200/630; object-fit:cover; border-bottom:1px solid var(--line); background:#eee; }
+  .card-body { padding:16px 18px 20px; }
+  .card-body h3 { margin:.1em 0 .3em; font-size:1.12rem; }
+  .meta { color:var(--muted); font-size:.9rem; margin:.1em 0 .7em; }
+  .more { color:var(--accent); font-weight:600; }
+  .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; }
+  .feature { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+  .feature h3 { margin:.1em 0 .4em; font-size:1.05rem; }
+  pre { background:#1f2a30; color:#e8edf0; padding:16px 18px; border-radius:10px; overflow:auto; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em; }
+  footer { border-top:1px solid var(--line); padding:32px 18px; text-align:center; color:var(--muted); font-size:.92rem; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <h1>🚗 Road trips you can actually drive</h1>
+    <p>RoadTrip Navigator turns <strong>“start + days”</strong> into a North American road trip — paced into daily drives, with overnight stops, fuel/EV charging, national-park reservations, seasonal closures and border crossings — as a map-first, offline-friendly single-file page.</p>
+    <div class="cta">
+      <a class="btn" href="https://github.com/Waybox-AI/roadtrip-skill#-install">Install the skill</a>
+      <a class="btn ghost" href="#samples">See sample trips</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="samples">
+    <h2>Sample itineraries</h2>
+    <p>Real, generated trips — open one on your phone, every stop has one-tap Google/Apple Maps links.</p>
+    <div class="grid">
+    <a class="card" href="trips/southwest-national-parks-road-trip-7-days.html">
+      <img loading="lazy" src="img/southwest-og.png" alt="7-Day Southwest National Parks Road Trip Itinerary (Las Vegas Loop)" />
+      <div class="card-body">
+        <h3>7-Day Southwest National Parks Road Trip Itinerary (Las Vegas Loop)</h3>
+        <p class="meta">1180 mi · 7 days · 2026-09-12 ~ 2026-09-18</p>
+        <p>A relaxed week-long loop out of Las Vegas hitting four of the Southwest&#x27;s headline parks. Paced so no day is a slog, with the must-book-early reservations (Antelope Canyon tour, Grand Canyon South Rim lodging) called out as a dated countdown.</p>
+        <span class="more">View the itinerary →</span>
+      </div>
+    </a>
+    <a class="card" href="trips/sunnyvale-lake-tahoe-road-trip-3-days.html">
+      <img loading="lazy" src="img/tahoe-og.png" alt="3-Day Lake Tahoe Road Trip from the Bay Area (Sunnyvale Loop)" />
+      <div class="card-body">
+        <h3>3-Day Lake Tahoe Road Trip from the Bay Area (Sunnyvale Loop)</h3>
+        <p class="meta">500 mi · 3 days · 2026-10-16 ~ 2026-10-18</p>
+        <p>A long-weekend escape from the Bay Area to South Lake Tahoe and back. Short driving days, ReserveCalifornia booking windows, and an honest read on Sierra snow and chain-control season.</p>
+        <span class="more">View the itinerary →</span>
+      </div>
+    </a>
+    <a class="card" href="trips/seattle-vancouver-whistler-ev-road-trip-4-days.html">
+      <img loading="lazy" src="img/pnw-og.png" alt="4-Day Seattle to Vancouver &amp; Whistler EV Road Trip (Cross-Border)" />
+      <div class="card-body">
+        <h3>4-Day Seattle to Vancouver &amp; Whistler EV Road Trip (Cross-Border)</h3>
+        <p class="meta">450 mi · 4 days · 2026-05-15 ~ 2026-05-18</p>
+        <p>A four-day electric loop from Seattle up to Vancouver and the Sea-to-Sky highway to Whistler. Includes a per-leg charging corridor with state-of-charge planning and a two-crossing border checklist (US insurance is valid in Canada — but not Mexico).</p>
+        <span class="more">View the itinerary →</span>
+      </div>
+    </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why it’s different from a generic AI itinerary</h2>
+    <div class="features">
+      <div class="feature"><h3>🛣️ Daily driving segmentation</h3><p>The route is sliced into days under a sane drive limit, with overnight towns and “arrive before dark / no closed gate” checks — not just a wishlist of stops.</p></div>
+      <div class="feature"><h3>⏳ Reservation countdown</h3><p>Exact “book by” dates on the right system (Recreation.gov, ReserveCalifornia, Parks Canada): campgrounds ~6 months out, in-park lodges up to ~13 months.</p></div>
+      <div class="feature"><h3>⚡ Fuel &amp; EV charging</h3><p>Long empty-stretch warnings for gas; a per-leg charging corridor with state-of-charge and a winter-range derate for EVs.</p></div>
+      <div class="feature"><h3>❄️ Season &amp; closures</h3><p>Closure-aware: winter passes (Going-to-the-Sun, Tioga, Trail Ridge), wildfire and snow — it down-ranks or reroutes and says so.</p></div>
+      <div class="feature"><h3>🛂 Borders &amp; timezones</h3><p>Timezone-corrected arrivals and a US↔Canada↔Mexico documents / insurance / wait checklist.</p></div>
+      <div class="feature"><h3>📊 Reliability-graded budget</h3><p>Every figure tagged verified / reference / estimate, so you know what to double-check before you leave.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Get started in two commands</h2>
+    <p>Install it into <a href="https://github.com/Waybox-AI/roadtrip-skill">Claude Code</a> as a plugin — no API key required:</p>
+    <pre><code>/plugin marketplace add Waybox-AI/roadtrip-skill
+/plugin install roadtrip-navigator@roadtrip-skill</code></pre>
+    <p>Then just ask in plain language: <em>“Plan a 7-day Southwest national parks road trip from Las Vegas for 2 adults in September, gas SUV, loop.”</em></p>
+    <p><a class="more" href="https://github.com/Waybox-AI/roadtrip-skill">Read the docs &amp; source on GitHub →</a></p>
+  </section>
+</main>
+
+<footer>
+  <p>RoadTrip Navigator is free and open-source (MIT). Itineraries are AI-assembled and may be out of date — always verify with official sources before you drive.</p>
+  <p><a href="https://github.com/Waybox-AI/roadtrip-skill">GitHub</a> · <a href="https://roadtripskill.dev/">https://roadtripskill.dev</a></p>
+</footer>
+</body>
+</html>

@@ -14,9 +14,11 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-7d3a13?style=flat-square)](#-contributing)
 
+**[🌐 Live demo &amp; sample trips](https://roadtripskill.dev)** · [⚡ Install](#-install) · [✨ Why it's different](#-why-its-different) · [🗺️ Samples](#-sample-itineraries)
+
 <br/>
 
-<img src="docs/og.png" alt="RoadTrip Navigator" width="860"/>
+<img src="docs/og.png" alt="RoadTrip Navigator — map-first road-trip itineraries you can actually drive" width="860"/>
 
 </div>
 
@@ -99,13 +101,24 @@ countdown**, and a **reliability-graded budget** — fully offline-friendly.
 
 ## 🗺️ Sample itineraries
 
-Open the curated, pre-generated examples:
+Open the curated, pre-generated examples — **[browse them live at roadtripskill.dev](https://roadtripskill.dev)** or open the HTML directly:
 
-| Trip | Theme | Highlights |
-|---|---|---|
-| **Southwest Loop · 7 days** | desert | Vegas → Zion → Bryce → Page → Grand Canyon, park-pass countdown |
-| **Sunnyvale → Lake Tahoe · 3 days** | mountain | US-50/I-80 loop, ReserveCalifornia, Sierra snow/chain risk |
-| **Seattle → Vancouver EV · 4 days** | forest | cross-border checklist + EV corridor + route comparison |
+| Trip | Theme | Highlights | Live |
+|---|---|---|---|
+| **Southwest Loop · 7 days** | desert | Vegas → Zion → Bryce → Page → Grand Canyon, park-pass countdown | [open](https://roadtripskill.dev/trips/southwest-national-parks-road-trip-7-days.html) |
+| **Sunnyvale → Lake Tahoe · 3 days** | mountain | US-50/I-80 loop, ReserveCalifornia, Sierra snow/chain risk | [open](https://roadtripskill.dev/trips/sunnyvale-lake-tahoe-road-trip-3-days.html) |
+| **Seattle → Vancouver EV · 4 days** | forest | cross-border checklist + EV corridor + route comparison | [open](https://roadtripskill.dev/trips/seattle-vancouver-whistler-ev-road-trip-4-days.html) |
+
+### See it in action
+
+The things a generic "list of attractions" skips — a dated reservation countdown, a
+per-leg EV charging corridor, and validated day-by-day driving:
+
+| Reservation countdown | EV charging corridor | Day-by-day driving |
+|:---:|:---:|:---:|
+| <img src="docs/img/southwest-countdown.png" alt="Reservation countdown with exact book-by dates" width="260"/> | <img src="docs/img/pnw-evplan.png" alt="Per-leg EV charging corridor with state-of-charge" width="260"/> | <img src="docs/img/southwest-days.png" alt="Day-by-day driving segmentation" width="260"/> |
+
+<sub>Regenerate these (with the live route map) via `node scripts/capture_demo.js`.</sub>
 
 ## ⚙️ How it works
 
