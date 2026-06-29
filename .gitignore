@@ -3,3 +3,9 @@ __pycache__/
 # generated itineraries (the bundled demo preview.html files are tracked on purpose)
 /trip.html
 /tripData.json
+
+# gemini-cli settings
+.gemini/
+
+# GitHub App credentials
+gha-creds-*.json
