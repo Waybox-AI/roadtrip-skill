@@ -8,8 +8,6 @@ on:
     types:
       - 'submitted'
   pull_request:
-    types:
-      - 'opened'
   issues:
     types:
       - 'opened'
