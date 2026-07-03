@@ -42,6 +42,58 @@ These are where pure-model answers fail and where the skill earns its keep:
 5. **Timezones & borders.** Timezone-corrected arrivals; US↔CA↔MX documents /
    insurance / customs / wait-time checklist.
 
+## Positioning (how this wins)
+
+- **Tagline:** *"An AI agent skill that turns 'start + days' into a road trip you can
+  actually drive."* Think of it as a **compiler from an idea to a drivable itinerary** —
+  the depth is in feasibility checking, not attraction discovery.
+- It is deliberately **not** a better Roadtrippers/Wanderlog (consumer apps with live
+  data and booking flows) and **not** a broader generic travel-planner skill. The moat
+  is the five feasibility concerns above, plus: zero-key trial, offline single-file
+  output, MIT + honesty boundaries, reliability grading, and the SKILL.md open
+  standard (Claude Code plus other compatible agent tools).
+- The **single-file `trip.html` is the shareable artifact** — every generated trip is
+  something users forward to co-travelers or post publicly. Output polish is part of
+  the product, not cosmetics.
+- The biggest real-world alternative is *just asking ChatGPT/Claude directly*. The
+  answer to that is executability (drive-time sanity, closures, book-by dates, SoC
+  simulation) — never "more attractions".
+
+## Product structure — two channels, one brand
+
+- **The skill (this repo)** — for users of Claude Code and other SKILL.md-compatible
+  agents. Two-command install, zero API keys.
+- **The web version (roadtripskill.dev)** — no-install browser generation for
+  non-developers; early access, free for now. This is the "external webapp" that
+  imports `scripts/routes.py` (see [DEVELOPMENT.md](DEVELOPMENT.md)) — another reason
+  that module's public API stays stable.
+- Parent brand: **Waybox** (waybox.ai, maker of the in-car AI companion OMO) — hence
+  the `Waybox-AI` GitHub org. The driving-scenario narrative is shared across products.
+
+## Who uses this
+
+- **Developers** — Claude Code power users collecting skills, and devs studying
+  SKILL.md engineering. The repo doubles as a teaching artifact (7-step workflow,
+  data/view separation, reliability grading), so docs quality *is* product quality.
+- **Coding road-trippers** — tech workers planning national-park / cross-state / EV
+  trips. They validate the skill on real trips and share the generated HTML.
+- **Mass-market travelers** — reach the product through the web version only; they
+  never see this repo.
+
+## Vision: region-by-region expansion
+
+The long-term product is a **driving-feasibility copilot for any region**, with
+destinations opened as data matures. Live today: North America (US/CA/MX). Roadmap
+candidates (order undecided): Europe/Alps, Australia/NZ, Japan. The three universal
+pain classes (scarce bookings, energy/range, seasonal closures) hold everywhere, but
+each region has different "dirty details" to encode:
+
+| Region | Scarce bookings | Energy | Roads / rules |
+|--------|----------------|--------|---------------|
+| Europe | hot campgrounds, Dolomites parking quotas | fragmented charging networks per country | Alpine pass closures, Italian ZTL zones, AT/CH vignettes |
+| AUS/NZ | state park systems (NPWS etc.) | outback stretches with no services | dusk wildlife, one-lane bridges, wet-season roads |
+| Japan | Mt. Fuji access control, mountain parking | ETC toll costs (often underestimated) | IDP / license-translation rules, winter mountain closures |
+
 ## Domain terminology
 
 - **Entry mode** — *Light* ("plan it for me" from start + region + days) vs. *Heavy*
@@ -70,6 +122,12 @@ charger occupancy, minute-level traffic, live campground availability, or replac
 turn-by-turn navigation. For these it points the user to the official app /
 Recreation.gov / their nav app. Every generated page carries a disclaimer that it is
 AI-assembled and may be out of date — verify with official sources before departure.
+
+Also deliberate: **no whole-route export to a nav app and no GPX/KML.** Batch waypoint
+import has (in similar projects) routed users onto seasonally closed roads, and origin
+parameters start from the wrong place. Instead, every stop carries its own Google/Apple
+Maps deep link for leg-by-leg navigation. Treat this as a design decision to preserve,
+not a missing feature.
 
 ## Units convention
 
