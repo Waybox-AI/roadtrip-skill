@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Manifest set:** domain knowledge lives in [CONTEXT.md](CONTEXT.md), vendor-agnostic technical rules in [AGENTS.md](AGENTS.md), and Gemini-specific tweaks in [GEMINI.md](GEMINI.md). This file is the Claude-specific companion and keeps a full copy of the load-bearing rules for convenience.
+
 ## What this repo is
 
 This is **not a running application** — it is a **Claude Code plugin / agent skill** ("RoadTrip Navigator"). The deliverable is `SKILL.md` (the workflow an agent follows) plus a set of small, dependency-light Python helpers in `scripts/`, `tools/`, and `assets/` that the agent shells out to while planning a road trip. The final artifact a user receives is a single self-contained `trip.html` file.
