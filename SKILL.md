@@ -95,6 +95,9 @@ driving days for the shortlist and drop any "can't be driven in N days" option.
 5. Surface risks explicitly in the day, e.g. "no fast charger for 180 mi on this
    leg — charge to full before leaving."
 
+Rule of thumb: **plan by daylight, not by odometer** — a day that ends after
+dark fails at the trailhead, not on the map.
+
 ### Step 4 — Parallel research (sub-agents)
 Fan out (one concern per sub-agent, run concurrently): weather (per day),
 lodging/campgrounds (price + booking difficulty), fuel/charging points,
@@ -142,7 +145,8 @@ food. Force a bottom disclaimer: prices are dynamic, confirm before departure.
 Do **not** promise: exact live fuel/electricity prices, live charger occupancy,
 minute-level traffic, live campground availability, or replacing turn-by-turn
 navigation. For these, tell the user to confirm via the official app /
-Recreation.gov / their navigation app in real time.
+Recreation.gov / their navigation app in real time. The page's job is to be
+right the morning you leave, not merely impressive the night it was generated.
 
 ## Files
 
