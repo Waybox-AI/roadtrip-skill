@@ -18,6 +18,9 @@ first. This file only adds Gemini-specific prompting preferences.
 - **Keep `generate.py` warnings non-fatal.** Do not "fix" `[warn]` lines by raising.
 - **Never fabricate live data** (fuel prices, charger occupancy, traffic, campground
   availability). Point to the official app and tag figures with the reliability grade.
+- **`ANTHROPIC_API_KEY` is webapp-only.** It's read solely by `scripts/routes.py` for
+  the external webapp — the skill itself is run *by* an LLM and never needs it. Don't
+  wire API-key logic into `SKILL.md` or treat the key as a run prerequisite.
 
 ## Response format preferences
 - When proposing code, show a **minimal diff or the changed function only** — do not

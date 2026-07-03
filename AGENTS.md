@@ -41,6 +41,52 @@ Run the tests locally after **any** code change — the Python must stay green. 
 (`.github/workflows/ci-cd.yml`) runs pytest on 3.12, then a PR-agent review, then a
 Feishu notification.
 
+## Orientation map
+
+New here? Read this section first — it's the fastest way to build a mental model.
+
+### The pipeline (data flows one direction)
+
+```
+user request
+  └─ scripts/helper.py      slot-fill + entry-mode/region detection (hints, not truth)
+       └─ tools/*.py         fetch each data concern (route, parks, weather, EV, …)
+            └─ tripData.json  the ONE canonical data object (schema: reference.md §1)
+                 └─ assets/generate.py   inject into the __TRIP_DATA__ token
+                      └─ assets/template.html   Leaflet map + timeline + budget (all view logic)
+                           └─ trip.html   the single self-contained file the user receives
+```
+
+Planning never emits HTML — it only produces `tripData.json`. Everything downstream
+is deterministic rendering. (See "Data / view separation" below.)
+
+### File → role
+
+| File | One-line job |
+|------|--------------|
+| `SKILL.md` | The 7-step workflow the agent follows. Load-bearing "source code" of behavior. |
+| `reference.md` | Companion spec: schema (§1), reliability grades (§2), tool-routing table (§3), drive limits (§4), seasonal closures (§5). |
+| `examples.md` | Worked prompt→response examples for the two entry modes. |
+| `scripts/helper.py` | Regex slot-filling from the user's request; entry-mode + region detection; `compare_routes()` / `drive_intensity()`. Output is *hints*. |
+| `scripts/routes.py` | Two candidate routes for the **external webapp** (live model call or offline sample fallback). Not used by the skill workflow. |
+| `tools/*.py` | One data client per concern (routing, parks, weather, charging, fuel, lodging, border). Free/official API first, else a web-search `fallback(...)`. Never crash. |
+| `tools/web_search.py` | Defines the `fallback(reason, queries, sources)` shape every client degrades to. |
+| `assets/generate.py` | Validates (non-fatally) and injects `tripData.json` into `template.html` → `trip.html`. |
+| `assets/template.html` | The browser view: map, day timeline, budget. All view logic lives here. |
+| `assets/tripData.*.json` + `preview*.html` | Sample trips — double as test fixtures and living schema docs. |
+| `tests/` | pytest suite (stdlib + pytest only). CI runs exactly this. |
+
+### "I need to… → start here"
+
+| Task | Where to start | Don't forget |
+|------|----------------|--------------|
+| Change the tripData schema | producing Python **+** `template.html` reader **+** `reference.md §1` | update the sample `tripData.*.json` too |
+| Add a new data source | new `tools/<x>_client.py` | follow the client contract, add a `tests/` file |
+| Change how requests are parsed | `scripts/helper.py` | it emits hints, not authoritative parsing |
+| Add a sample trip | `assets/tripData.<name>.json` + matching `preview*.html` | wire keyword match in `routes.demo_routes()` if webapp should pick it |
+| Edit the rendered page | `assets/template.html` (+ `generate.py` if injection changes) | keep the `__TRIP_DATA__` escaping |
+| Change the workflow itself | `SKILL.md` | keep `SKILL.md` / `reference.md` / Python in sync |
+
 ## Architecture rules
 
 ### Data / view separation (the central design rule)
