@@ -87,6 +87,19 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
   API stable: `plan_routes`, `demo_routes`, `payload_to_text`, `extract_json`,
   `haversine_km`.
 
+### `scripts/routes.py` live / offline dual-mode (webapp-only)
+`plan_routes()` runs in one of two modes, chosen by `_live_mode()`:
+- **Live:** `ANTHROPIC_API_KEY` is set **and** the `anthropic` package is importable →
+  one fast model call (`ROADTRIP_MODEL`, default `claude-sonnet-4-6`) proposes two
+  candidate routes.
+- **Offline:** missing key or missing package → `demo_routes()` fallback: pick a curated
+  sample by keyword-matching `start + destination` (e.g. tahoe / pnw, else the default
+  example), then derive two variants (Scenic / Highlights) from it.
+
+This is the webapp's Phase-1 step and is **not** part of the agent's `SKILL.md` workflow.
+The skill itself is run *by* an LLM, so it never reads `ANTHROPIC_API_KEY` — consistent
+with the zero-required-keys constraint above. Keep the offline branch crash-free.
+
 ## Conventions
 
 - **Units:** miles / °F / MPG / USD by default; km / °C / local currency on
