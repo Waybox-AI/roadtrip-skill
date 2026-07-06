@@ -18,7 +18,7 @@ English · [简体中文](README.zh.md)
 </div>
 
 <!-- TODO: 30–45s demo per launch checklist: install → prompt → itinerary streams out → one edit → web version outro -->
-![Demo: one prompt to a drivable itinerary](assets/demo.gif)
+![Demo: one prompt to a drivable itinerary](docs/og.png)
 
 A North American road trip is won or lost in the car, not at the airport: how far do we drive today, where do we sleep, will the charge last, is the pass even open? RoadTrip Navigator plans around exactly those questions, then hands you the answer as **a single HTML file** — a map-first, day-by-day itinerary that opens on your phone with no signal.
 
@@ -144,7 +144,7 @@ For inspiration, absolutely do. But a raw prompt won't cap your daily driving, c
 Fair question: skills can execute code in your environment, so only install ones you can read. This one is MIT-licensed, runs without keys, and phones nothing home — audit it first; that's what the license is for.
 
 **I found a mistake in a plan.**
-Please [open an issue](../../issues). Route bugs — a wrong closure date, a bad booking window — are the most valuable reports we get, and they usually ship as data fixes within a release or two.
+Please [open an issue](https://github.com/Waybox-AI/roadtrip-skill/issues). Route bugs — a wrong closure date, a bad booking window — are the most valuable reports we get, and they usually ship as data fixes within a release or two.
 
 ## Contributing
 
