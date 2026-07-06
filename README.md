@@ -8,6 +8,7 @@
 
 **English** · [简体中文](README.zh.md)
 
+[![CI](https://img.shields.io/github/actions/workflow/status/Waybox-AI/roadtrip-skill/ci-cd.yml?branch=main&style=flat-square&label=CI)](https://github.com/Waybox-AI/roadtrip-skill/actions/workflows/ci-cd.yml)
 [![install: /plugin marketplace add](https://img.shields.io/badge/install-%2Fplugin%20marketplace%20add-c2641a?style=flat-square)](#-install)
 [![works with Claude Code + 16 agents](https://img.shields.io/badge/works%20with-Claude%20Code%20%2B%2016%20agents-1f6f8b?style=flat-square)](#-install)
 [![no API key required](https://img.shields.io/badge/API%20key-not%20required-2e7d4f?style=flat-square)](#optional-api-keys)
