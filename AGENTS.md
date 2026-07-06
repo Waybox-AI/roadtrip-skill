@@ -38,8 +38,8 @@ python3 tools/routing_client.py 36.17,-115.14 37.30,-113.03
 ```
 
 Run the tests locally after **any** code change — the Python must stay green. CI
-(`.github/workflows/ci-cd.yml`) runs pytest on 3.12, then a PR-agent review, then a
-Feishu notification.
+(`.github/workflows/ci-cd.yml`) runs a lychee link check (markdown links) that gates
+pytest on 3.12, then a PR-agent review, then a Feishu notification.
 
 ## Orientation map
 

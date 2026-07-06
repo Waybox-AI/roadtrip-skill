@@ -8,8 +8,24 @@ on:
   issue_comment:
 
 jobs:
-  test:
+  link-check:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Markdown only: template/preview HTML contain Leaflet tile URL
+      # placeholders ({s}.tile.openstreetmap.org/...) that are not real links.
+      - name: Link Checker (lychee)
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+       
+
+  test:
+    needs: link-check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
