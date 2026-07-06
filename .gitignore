@@ -9,3 +9,6 @@ __pycache__/
 
 # GitHub App credentials
 gha-creds-*.json
+
+.venv
+.DS_Store
