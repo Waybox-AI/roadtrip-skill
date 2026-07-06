@@ -18,7 +18,10 @@ English · [简体中文](README.zh.md)
 </div>
 
 <!-- TODO: 30–45s demo per launch checklist: install → prompt → itinerary streams out → one edit → web version outro -->
-![Demo: one prompt to a drivable itinerary](assets/demo.gif)
+
+<div align="center">
+    <img src="assets/demo." />
+</div>
 
 A North American road trip is won or lost in the car, not at the airport: how far do we drive today, where do we sleep, will the charge last, is the pass even open? RoadTrip Navigator plans around exactly those questions, then hands you the answer as **a single HTML file** — a map-first, day-by-day itinerary that opens on your phone with no signal.
 
