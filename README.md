@@ -10,7 +10,7 @@
 English · [简体中文](README.zh.md)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Claude Code + 16 agents](https://img.shields.io/badge/works%20with-Claude%20Code%20%2B%2016%20agents-blue.svg)](INSTALL.md)
+[![Claude Code + 16 agents](https://img.shields.io/badge/works%20with-Claude%20Code%20%2B%2016%20agents-blue.svg)](#quick-start)
 [![No API keys required](https://img.shields.io/badge/API%20keys-none%20required-brightgreen.svg)](#how-it-works)
 [![Try it in your browser](https://img.shields.io/badge/web%20version-roadtripskill.dev-orange.svg)](https://roadtripskill.dev)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet.svg)](CONTRIBUTING.md)
@@ -55,7 +55,7 @@ Refine the plan the way you'd talk to a friend: "add a winery stop," "we're brin
 npx skills add Waybox-AI/roadtrip-skill
 ```
 
-See [INSTALL.md](INSTALL.md) for manual setup and per-agent notes.
+See [AGENTS.md](AGENTS.md#installing-manually-outside-the-plugin-marketplace) for manual setup and per-agent notes.
 </details>
 
 ## What it checks that a chatbot won't

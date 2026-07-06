@@ -64,7 +64,7 @@ These are where pure-model answers fail and where the skill earns its keep:
   agents. Two-command install, zero API keys.
 - **The web version (roadtripskill.dev)** — no-install browser generation for
   non-developers; early access, free for now. This is the "external webapp" that
-  imports `scripts/routes.py` (see [DEVELOPMENT.md](DEVELOPMENT.md)) — another reason
+  imports `scripts/routes.py` (see [AGENTS.md](AGENTS.md#two-consumers-of-this-repo)) — another reason
   that module's public API stays stable.
 - Parent brand: **Waybox** (waybox.ai, maker of the in-car AI companion OMO) — hence
   the `Waybox-AI` GitHub org. The driving-scenario narrative is shared across products.
