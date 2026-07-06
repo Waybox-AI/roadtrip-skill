@@ -10,6 +10,7 @@ from scripts.planner import (
     fix_endpoints,
     generate_trip,
     plan_demo,
+    plan_live,
     regenerate_day,
 )
 
@@ -125,10 +126,59 @@ class TestGenerateTripDemo:
         assert trip["lang"] == "zh"
         assert "AI" not in trip["disclaimer"][:2]  # Chinese disclaimer, not the English one
 
-    def test_step_cb_is_invoked(self):
+    def test_on_progress_is_invoked(self):
         seen = []
-        generate_trip({"start": "Las Vegas, NV"}, live=False, step_cb=seen.append)
+        generate_trip({"start": "Las Vegas, NV"}, live=False, on_progress=seen.append)
         assert seen  # demo mode walks steps 1-4
+        assert all("step" in e for e in seen)
+
+
+def _fake_streaming_anthropic_module(chunks):
+    """Build a minimal fake `anthropic` module good enough for plan_live's
+    `client.messages.stream(...)` context-manager usage."""
+    usage = types.SimpleNamespace(input_tokens=10, output_tokens=5,
+                                   cache_creation_input_tokens=0, cache_read_input_tokens=0)
+    full_text = "".join(chunks)
+    final_message = types.SimpleNamespace(usage=usage)
+
+    class FakeStream:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        @property
+        def text_stream(self):
+            return iter(chunks)
+
+        def get_final_message(self):
+            return final_message
+
+    class FakeMessages:
+        def stream(self, **kwargs):
+            return FakeStream()
+
+    class FakeAnthropic:
+        def __init__(self, *a, **kw):
+            self.messages = FakeMessages()
+
+    mod = types.ModuleType("anthropic")
+    mod.Anthropic = FakeAnthropic
+    return mod, full_text
+
+
+class TestPlanLive:
+    def test_on_progress_reports_chars_and_steps(self, monkeypatch):
+        trip_json = json.dumps({"title": "Live Trip", "days": []})
+        mod, _ = _fake_streaming_anthropic_module([trip_json])
+        monkeypatch.setitem(sys.modules, "anthropic", mod)
+        events = []
+        trip = plan_live({"start": "Las Vegas, NV", "days": 5}, "desert", on_progress=events.append)
+        assert trip["title"] == "Live Trip"
+        assert {"expectedChars": 5500} in events
+        assert any("charsReceived" in e for e in events)
+        assert any(e.get("step") == 1 for e in events)
 
 
 def _fake_anthropic_module(response_text):

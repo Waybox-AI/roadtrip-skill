@@ -10,14 +10,15 @@ Public API
 ----------
 live_mode() -> bool
     True when ANTHROPIC_API_KEY is set and the anthropic package is importable.
-generate_trip(payload, live, step_cb=None, log_fn=None) -> dict
+generate_trip(payload, live, on_progress=None, log_fn=None) -> dict
     Full flow: plan (live or demo) + schema defaults + endpoint/pin fixups.
     This is the one call the webapp needs — pass it a form payload and get
     back a tripData dict ready for generate.py to render.
-plan_live(payload, region, step_cb=None, log_fn=None) -> dict
+plan_live(payload, region, on_progress=None, log_fn=None) -> dict
     One streaming Claude call, framed by SKILL.md + reference.md, that emits
-    the full tripData JSON.
-plan_demo(payload, region, step_cb=None) -> dict
+    the full tripData JSON. `on_progress` receives {"step"|"expectedChars"|
+    "charsReceived": ...} events a caller can use to drive a progress UI.
+plan_demo(payload, region, on_progress=None) -> dict
     Offline fallback: serve the closest curated sample tripData.
 regenerate_day(trip, day_index, comment_body, log_fn=None) -> dict
     Rewrite a single day of an existing trip per a commenter's request.
@@ -337,35 +338,54 @@ def build_user(payload, region):
     )
 
 
-def plan_live(payload, region, step_cb=None, log_fn=None):
+def plan_live(payload, region, on_progress=None, log_fn=None):
     """Live phase-2 generation: one streaming Claude call framed by the skill's
-    own docs. `step_cb(idx)` (if given) is called as JSON streams in so a caller
-    can reflect coarse progress; `log_fn(usage)` (if given) receives the final
-    token-usage object."""
+    own docs. `on_progress(event)` (if given) is called with small dicts as JSON
+    streams in so a caller can reflect progress:
+      - {"expectedChars": n}  once, before streaming starts
+      - {"charsReceived": n}  on every chunk (fine-grained ETA signal)
+      - {"step": idx}         when a coarse phase threshold is crossed
+    `log_fn(usage)` (if given) receives the final token-usage object."""
     import anthropic
     client = anthropic.Anthropic()
     system, prompt = build_messages(payload, region)
     text = ""
-    if step_cb:
-        step_cb(1)
-    # advance status as the JSON streams in (token-count milestones = real signal)
-    # rough total ~ 6000 chars; map to steps route->segment->research->budget
-    thresholds = [(900, 2), (2200, 3), (4000, 4)]
+
+    def emit(event):
+        if on_progress:
+            on_progress(event)
+
+    emit({"step": 1})
+    # advance status as the JSON streams in (token-count milestones = real signal).
+    # Expected length scales with day count so the thresholds — and therefore the
+    # ETA derived from charsReceived/expectedChars — stay meaningful for both a
+    # quick 2-day trip and a sprawling 3-week one.
+    try:
+        n_days = max(1, min(21, int(payload.get("days") or 5)))
+    except (TypeError, ValueError):
+        n_days = 5
+    expected_chars = n_days * 1100           # e.g. 5d→5500, 7d→7700, 14d→15400
+    thresholds = [
+        (int(expected_chars * 0.15), 2),     # route (~15% in)
+        (int(expected_chars * 0.37), 3),     # segment (~37% in)
+        (int(expected_chars * 0.67), 4),     # budget/research (~67% in)
+    ]
+    emit({"expectedChars": expected_chars})
     with client.messages.stream(model=_MODEL, max_tokens=16000, system=system,
                                 messages=[{"role": "user", "content": prompt}]) as stream:
         for chunk in stream.text_stream:
             text += chunk
-            if step_cb:
-                for n, step in thresholds:
-                    if len(text) >= n:
-                        step_cb(step)
+            emit({"charsReceived": len(text)})
+            for n, step in thresholds:
+                if len(text) >= n:
+                    emit({"step": step})
         final = stream.get_final_message()   # carries the authoritative token usage
     if log_fn:
         log_fn(final.usage)
     return _routes.extract_json(text)
 
 
-def plan_demo(payload, region, step_cb=None):
+def plan_demo(payload, region, on_progress=None):
     """No API key: serve the closest curated demo so the page always works."""
     dest = (payload.get("destination", "") + " " + payload.get("start", "")).lower()
     if any(w in dest for w in ["tahoe", "sacramento", "sierra"]):
@@ -380,8 +400,8 @@ def plan_demo(payload, region, step_cb=None):
         trip = json.load(f)
     # walk the status steps so the UX is visible
     for i in range(1, 5):
-        if step_cb:
-            step_cb(i)
+        if on_progress:
+            on_progress({"step": i})
         time.sleep(1.0)
     trip["_demoNote"] = ("Demo mode: showing a curated sample itinerary. Set an "
                          "ANTHROPIC_API_KEY to generate a fresh plan for your exact input.")
@@ -392,7 +412,7 @@ def plan_demo(payload, region, step_cb=None):
     return trip
 
 
-def generate_trip(payload, live, step_cb=None, log_fn=None):
+def generate_trip(payload, live, on_progress=None, log_fn=None):
     """The one call a caller needs: plan (live or demo), stamp schema defaults
     (language, generation date, disclaimer), and apply endpoint/pin post-
     processing. Returns a tripData dict ready for generate.py to render."""
@@ -405,9 +425,9 @@ def generate_trip(payload, live, step_cb=None, log_fn=None):
     region = region or "desert"
 
     if live:
-        trip = plan_live(payload, region, step_cb=step_cb, log_fn=log_fn)
+        trip = plan_live(payload, region, on_progress=on_progress, log_fn=log_fn)
     else:
-        trip = plan_demo(payload, region, step_cb=step_cb)
+        trip = plan_demo(payload, region, on_progress=on_progress)
 
     # Stamp the generation language so shared pages render in the same language.
     trip_lang = (payload.get("lang") or "en").lower()
