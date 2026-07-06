@@ -144,7 +144,8 @@ Tag every researched figure so the user knows how much to trust it:
 | `estimate` | grey `≈` | computed or rough | fuel cost, food totals, "misc" |
 
 Default to the **lowest** grade you can honestly claim. Never label something
-`verified` unless this run actually confirmed it.
+`verified` unless this run actually confirmed it. An honest ≈ outranks a
+borrowed ✓.
 
 ## 3. Tool routing table
 

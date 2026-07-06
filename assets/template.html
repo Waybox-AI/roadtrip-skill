@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="generator" content="RoadTrip Navigator · Waybox AI · rtn-2607" />
 <title>RoadTrip Navigator</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -112,6 +113,7 @@
   .disclaimer { margin-top: 26px; font-size: .82rem; color: var(--muted);
     background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; }
   .footer-meta { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 14px; }
+  .footer-meta a { color: inherit; }
 
   /* Route comparison */
   .routes-table td.chosen-cell { font-weight: 700; }
@@ -559,8 +561,9 @@ var TRIP_DATA = __TRIP_DATA__;
   function renderDisclaimer() {
     var d = T.disclaimer || "Information assembled by AI; verify with official sources before travel.";
     el("disclaimer").innerHTML = '<div class="disclaimer">⚠️ ' + esc(d) + "</div>";
-    el("footer-meta").textContent = "Generated " + (T.generationDate || "") +
-      " · RoadTrip Navigator · map data © OpenStreetMap contributors";
+    el("footer-meta").innerHTML = "Generated " + esc(T.generationDate || "") +
+      " · <a href='https://github.com/Waybox-AI/roadtrip-skill' rel='generator'>RoadTrip Navigator</a>" +
+      " · map data © OpenStreetMap contributors";
   }
 
   // ---------- Boot ----------

@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Manifest set:** domain knowledge lives in [CONTEXT.md](CONTEXT.md), vendor-agnostic technical rules in [AGENTS.md](AGENTS.md), and Gemini-specific tweaks in [GEMINI.md](GEMINI.md). This file is the Claude-specific companion and keeps a full copy of the load-bearing rules for convenience.
+
 ## What this repo is
 
 This is **not a running application** — it is a **Claude Code plugin / agent skill** ("RoadTrip Navigator"). The deliverable is `SKILL.md` (the workflow an agent follows) plus a set of small, dependency-light Python helpers in `scripts/`, `tools/`, and `assets/` that the agent shells out to while planning a road trip. The final artifact a user receives is a single self-contained `trip.html` file.
@@ -9,6 +11,25 @@ This is **not a running application** — it is a **Claude Code plugin / agent s
 When editing, remember the two audiences:
 - **The agent** reads `SKILL.md` / `reference.md` / `examples.md` as instructions. These are the "source code" of the skill's behavior — keep them accurate; they are load-bearing, not docs.
 - **The Python** is glue the agent calls. It must run with **zero required API keys** and **no third-party pip packages** (stdlib only — `urllib`, `json`, `re`, `math`). Do not add runtime dependencies.
+
+## Working here (Claude)
+
+Read in this order before touching anything:
+1. [CONTEXT.md](CONTEXT.md) — what this skill is + domain vocabulary.
+2. This file's Architecture section (below) — the load-bearing technical rules.
+3. `SKILL.md` + `reference.md` — the agent instructions and the tripData schema.
+
+For a file map and "task → where to start", see [AGENTS.md](AGENTS.md) "Orientation map".
+
+Invariants this repo will punish you for breaking (all detailed below):
+- **stdlib only, zero required keys** — no `requests`/`pandas`/`jinja2`; use `urllib`.
+- **Planning emits `tripData.json`, never HTML** — `generate.py` does the rendering.
+- **`generate.py` warnings stay non-fatal** — don't "fix" `[warn]` by raising.
+- **Data clients never crash** — degrade to `web_search.fallback(...)`.
+- **Schema changes touch three places** — producing Python, `template.html`'s reader, and `reference.md` (plus the sample `tripData.*.json`).
+- **Don't rename `scripts/routes.py`'s public API** — an external webapp imports it.
+
+After any code change, run and report `python3 -m pytest tests/ -v`; add a matching test in `tests/` for new clients/features. Be terse and technical — skip preambles.
 
 ## Commands
 
