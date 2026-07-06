@@ -15,7 +15,10 @@
 </div>
 
 <!-- TODO: 按发射清单录制 30–45 秒演示：安装 → 一句话生成 → 行程流出 → 改一句需求 → 网页版收尾 -->
-![30 秒演示](assets/demo.gif)
+
+<div align="center">
+    <img src="assets/demo.gif" />
+</div>
 
 ---
 
