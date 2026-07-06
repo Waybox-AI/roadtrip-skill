@@ -81,7 +81,7 @@ for f in tools/*.py; do echo "== $f =="; python3 "$f" >/dev/null && echo ok; don
 roadtrip-navigator/
 ├── SKILL.md                 entry: triggers, two modes, 7-step workflow
 ├── reference.md             tripData schema, reliability grading, tool routing
-├── examples.md              worked prompts (light/heavy/EV/cross-border)
+├── AGENTS.md                technical rules + worked prompts (light/heavy/EV/cross-border)
 ├── INSTALL.md               this file
 ├── assets/
 │   ├── template.html        single-file HTML renderer (Leaflet + timeline)

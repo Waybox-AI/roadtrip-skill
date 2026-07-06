@@ -10,8 +10,9 @@ small, dependency-light Python helpers the agent shells out to while planning. T
 final artifact a user receives is a single self-contained **`trip.html`** file.
 
 Two audiences share this repo:
-- **The agent** reads `SKILL.md`, `reference.md`, and `examples.md` as *instructions*
-  — these are the load-bearing "source code" of the skill's behavior.
+- **The agent** reads `SKILL.md` and `reference.md` as *instructions* — these are
+  the load-bearing "source code" of the skill's behavior. `AGENTS.md`'s "Worked
+  examples" section shows the shape of a full run.
 - **The Python** (`scripts/`, `tools/`, `assets/`) is glue the agent calls.
 
 ## The problem it solves

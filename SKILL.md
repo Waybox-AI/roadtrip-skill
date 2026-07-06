@@ -166,7 +166,7 @@ right the morning you leave, not merely impressive the night it was generated.
 ## Files
 
 - `reference.md` — tripData schema, reliability grading, tool routing table.
-- `examples.md` — typical prompts and expected outputs.
+- `AGENTS.md` ("Worked examples") — typical prompts and expected outputs.
 - `assets/generate.py` — `tripData.json` → single-file HTML.
 - `assets/template.html` — the HTML/JS renderer (Leaflet map + timeline).
 - `assets/tripData.example.json` / `assets/preview.html` — Southwest 7-day demo.

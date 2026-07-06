@@ -20,14 +20,10 @@ English · [简体中文](README.zh.md)
 <!-- TODO: 30–45s demo per launch checklist: install → prompt → itinerary streams out → one edit → web version outro -->
 
 <div align="center">
-    <img src="assets/demo." />
+    <img src="assets/demo.gif" />
 </div>
 
 A North American road trip is won or lost in the car, not at the airport: how far do we drive today, where do we sleep, will the charge last, is the pass even open? RoadTrip Navigator plans around exactly those questions, then hands you the answer as **a single HTML file** — a map-first, day-by-day itinerary that opens on your phone with no signal.
-
-**See a finished trip before you install:**
-<!-- TODO: confirm sample URLs before launch -->
-[Southwest loop, 7 days](https://roadtripskill.dev/api/sample?name=sw) · [Sunnyvale → Lake Tahoe, 3 days](https://roadtripskill.dev/api/sample?name=tahoe) · [Seattle → Vancouver EV, 4 days](https://roadtripskill.dev/api/sample?name=pnw)
 
 Or skip the install entirely: the free web version at **[roadtripskill.dev](https://roadtripskill.dev)** plans the same trips in your browser.
 
@@ -130,7 +126,7 @@ No live fuel or electricity prices, no live charger occupancy or campground avai
 .claude-plugin/    Plugin + marketplace manifests (Claude Code)
 SKILL.md           Entry point: triggers, plan/verify modes, the 7-step workflow
 reference.md       tripData schema, reliability grading, tool routing
-examples.md        Worked prompts — plan, verify, EV, cross-border
+AGENTS.md          Technical rules + worked prompts — plan, verify, EV, cross-border
 assets/            generate.py, template.html, three demo trips
 scripts/helper.py  Slot filling, mode and region detection, route comparison
 tools/             One client per data source, each with a web-search fallback
