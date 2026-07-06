@@ -1,158 +1,117 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="logo" width="76"/>
+<img src="assets/logo.png" width="88" alt="RoadTrip Navigator logo" />
 
-# 🚗 RoadTrip Navigator · 北美自驾规划
+# RoadTrip Navigator
 
-### 一个把"起点 + 天数"变成照着开就能走完的自驾行程的 AI Agent Skill。
+**一个把「起点 + 天数」变成一份真正能照着开的自驾行程的 AI Agent 技能。**
 
-[English](README.md) · **简体中文**
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![SKILL.md](https://img.shields.io/badge/SKILL.md-开放标准-blue.svg)](https://agentskills.io)
+[![网页版](https://img.shields.io/badge/免装试用-roadtripskill.dev-orange.svg)](https://roadtripskill.dev)
 
-[![install: /plugin marketplace add](https://img.shields.io/badge/install-%2Fplugin%20marketplace%20add-c2641a?style=flat-square)](#-安装)
-[![works with Claude Code + 16 agents](https://img.shields.io/badge/支持-Claude%20Code%20%2B%2016%20种%20agent-1f6f8b?style=flat-square)](#-安装)
-[![no API key required](https://img.shields.io/badge/API%20Key-无需-2e7d4f?style=flat-square)](#可选-api-key)
-[![license: MIT](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-7d3a13?style=flat-square)](#-参与贡献)
+[**网页版直接试**](https://roadtripskill.dev) · [**安装**](#安装) · [**English**](README.md)
 
-<br/>
+</div>
 
-<img src="docs/og.png" alt="RoadTrip Navigator" width="860"/>
+<!-- TODO: 按发射清单录制 30–45 秒演示：安装 → 一句话生成 → 行程流出 → 改一句需求 → 网页版收尾 -->
 
+<div align="center">
+    <img src="assets/demo.gif" />
 </div>
 
 ---
 
-北美自驾的核心是**车**，不是航班：*今天开几个小时、晚上睡哪、油/电够不够、路通不通。*
-RoadTrip Navigator 就是围绕这几件事来规划，并生成一份**地图优先、可离线、手机可打开**的单文件 HTML 行程页。
+大多数 AI 行程规划给你的是一张景点愿望清单。真正握上方向盘那一刻，清单就散架了：第二天要开九个小时、营地五个月前就订完了、山口十月就封了、电车两个充电站之间只有一片荒漠。
 
-> ⚡ **在 Claude Code 安装：** `/plugin marketplace add Waybox-AI/roadtrip-skill` → `/plugin install roadtrip-navigator@roadtrip-skill`
+RoadTrip Navigator 干的是那些无聊但致命的活儿。对它说：
 
-## ⚡ 安装
+> 从拉斯维加斯出发，7 天，2 个大人，油车 SUV，西南环线。
 
-作为插件装进 **Claude Code** —— 两条命令，无需任何 Key：
+它会还给你**一份离线可用的单文件 HTML 行程**：
 
-```text
+- Leaflet / OpenStreetMap 路线地图，停靠点逐一编号——每个点都带 Google / Apple Maps 一键跳转链接，逐段导航。
+- 路线按合理驾驶上限切分到天，安排好过夜城镇，每天都做「天黑前到达」「园门未关」校验。
+- 一份**预订倒计时清单**：精确到日期的 book-by 待办，并指向正确的预订系统（Recreation.gov / ReserveCalifornia / Parks Canada）。营地约提前 6 个月放票、园内旅馆约 13 个月、限时进入许可各有各的时间表——这笔账它替你算好。
+- 长距离无补给路段预警；电车模式下逐段模拟电量（SoC）、给出建议充电目标值，可选冬季续航衰减。
+- 感知季节性封路（Going-to-the-Sun、Tioga、Trail Ridge……）并自动改线；美加墨跨境证件与保险清单；到达时间做过时区校正。
+- 一份预算表，每个数字都标注可信度 **verified / reference / estimate**——哪些要自己复核，一目了然。
+
+不需要任何 API key，不需要注册账号，断网也能降级运行。MIT 开源——把代码读一遍，再决定要不要把假期交给它。
+
+**不想装任何东西？**直接用网页版 **[roadtripskill.dev](https://roadtripskill.dev)**——输入起点、终点和日期，在浏览器里生成同样的行程。目前是 early access，前期免费、不限次数。
+
+## 安装
+
+Claude Code 里两条命令：
+
+```
 /plugin marketplace add Waybox-AI/roadtrip-skill
 /plugin install roadtrip-navigator@roadtrip-skill
 ```
 
-<details>
-<summary>其他安装方式</summary>
-
-```bash
-# 手动 —— 直接放进 skills 目录
-git clone https://github.com/Waybox-AI/roadtrip-skill
-cp -r roadtrip-skill ~/.claude/skills/roadtrip-navigator   # 用户级
-# 或放到 .claude/skills/ 供单个项目使用
-```
-
-当你的需求命中自驾相关触发词（*road trip、self-drive、自驾、国家公园、EV road trip、
-RV trip、风景道…*）时，agent 会自动加载这个 skill。运行无需任何 Key。
-</details>
-
-然后直接对你的 agent 说人话：
-
-> *"帮我规划一条从拉斯维加斯出发、7 天的西南国家公园自驾环线，2 个成人，9 月，燃油 SUV。"*
-
-命中自驾触发词时 skill 会自动加载。想要一个**显式入口**？本插件还附带一个
-slash 命令，强制调起同一套流程：
-
-```text
-/roadtrip 从拉斯维加斯出发，7 天，2 个成人，燃油 SUV，西南环线
-```
-
-## ✨ 差异化在哪
-
-大多数"AI 行程规划"只给你一堆景点清单。这个 skill 把纯模型最容易翻车的**五件事**做对了：
-
-| | 普通 AI 行程 | **RoadTrip Navigator** |
-|---|---|---|
-| **每日驾驶** | 一串景点愿望清单 | 按合理日驾上限**切分成天**、安排过夜城，并校验*"天黑前到"*、*"不撞景点关门"* |
-| **预约** | "记得早点订！" | **倒推待办清单**——精确到*"几号前订"*（营地约 6 个月、园内住宿约 13 个月、timed-entry），并指向**正确的系统**（Recreation.gov / ReserveCalifornia / Parks Canada） |
-| **油 / 电** | 直接忽略 | 长无人区补能提醒；EV 给出**逐段充电走廊** + 电量(SoC)模拟 + 冬季掉电 |
-| **季节** | 笼统天气 | **识别封路**——冬季山口（Going-to-the-Sun、Tioga、Trail Ridge）、野火/暴雪 → 改线 |
-| **时区 / 跨境** | 到达时间算错 | **跨时区校正**到达时间；US↔CA↔MX **证件 / 保险 / 等待**清单 |
-
-产出是一份单文件 HTML：**Leaflet/OpenStreetMap 路线图**（编号停靠点 + 一键跳 Google/Apple
-导航）、**每日时间轴**、**预约倒推**、**带可靠度分级的预算**——完全离线友好。
-
-## 🧭 功能
-
-- **两种入口** —— *轻*（给"起点 + 区域 + 天数"让它规划）或 *重*（丢一份现成路线让它核实补全）。
-- **多路线对比** —— A/B 对比表（里程、天数、驾驶强度、最佳季节、花费），高亮选中路线。
-- **跨境模块** —— 每个口岸的证件、保险（美国保险在加拿大有效、在墨西哥**无效**）、海关、单位切换（mi/°F/USD ⇄ km/°C/CAD）。
-- **EV 充电走廊** —— 逐段电量模拟、建议充到几 %、充电桩功率、冬季掉电选项。
-- **可靠度分级** —— 每个数字标注 *实查 / 参考 / 估算*。
-- **零 Key、可离线运行** —— 每个数据源都有 web search 兜底，地图也会优雅降级。
-
-## 🗺️ 样例行程
-
-打开内置的精选成品（在线 Demo 上也能点开）：
-
-| 行程 | 主题 | 亮点 |
-|---|---|---|
-| **西南大环线 · 7 天** | 沙漠 | 拉斯维加斯 → Zion → Bryce → Page → 大峡谷，门票/年票倒推 |
-| **Sunnyvale → 太浩湖 · 3 天** | 山地 | US-50/I-80 环线、ReserveCalifornia、Sierra 雪情/雪链风险 |
-| **西雅图 → 温哥华 EV · 4 天** | 森林 | 跨境清单 + EV 充电走廊 + 路线对比 |
-
-## ⚙️ 工作原理
+用 Codex、Cursor 或其他支持 SKILL.md 开放标准的工具（目前 16+ 种）：
 
 ```
-请求 ──► scripts/helper.py ──► 7 步工作流 (SKILL.md)
-           (要素/模式/区域)      ├─ 路线 + 每日分段
-                                ├─ 并行调研 (tools/、web search)
-                                ├─ 预约倒推
-                                └─ 预算（分级）
-                                     │
-                     tripData.json ──┴──► assets/generate.py ──► trip.html
+npx skills add Waybox-AI/roadtrip-skill
 ```
 
-- **数据/视图分离** —— 数据先落 `tripData.json`，再由 `generate.py` 注入
-  `assets/template.html`，可随时改数据重渲染。
-- **子 agent 调研** —— 优先调官方/免费 API（NPS、NWS、Recreation.gov、Open Charge Map），失败再退回 web search。
+然后用大白话提需求就行。改行程也像跟朋友聊天：「加一个酒庄」「我们带狗」「第 4 天开短一点」。
 
-本地试跑：
+## 它校验的，恰好是通用规划不管的
 
-```bash
-python3 assets/generate.py assets/tripData.example.json -o trip.html   # 西南 7 天
-python3 scripts/helper.py "from Las Vegas, 7 days, 2 adults, gas, southwest loop"
-python3 tools/charging_client.py --corridor                            # EV 电量模拟
-```
+| 真上路时要命的事 | 通用 AI 行程 | RoadTrip Navigator |
+| --- | --- | --- |
+| **逐日驾驶** | 一串景点愿望单 | 按驾驶上限切分到天、安排过夜城镇、校验天黑前到达 |
+| **预约** | 「记得早点订」 | 精确 book-by 日期倒计时，并指向正确的预订系统 |
+| **油量 / 电量** | 完全忽略 | 无补给路段预警；逐段 SoC 模拟，含冬季衰减 |
+| **季节** | 泛泛的天气建议 | 感知冬季封路的路线规划，野火 / 降雪改线 |
+| **跨境与时区** | 到达时间经常算错 | 时区校正；美加墨证件、保险与通关清单 |
 
-### 可选 API Key
+如果你的行程会毁在错过预约窗口、荒段没电、或山口封路上——它就是为这些失败模式造的。
 
-全部可选，没有时自动退回 web search。
+## 它刻意不做的事
 
-| 变量 | 用于 | 免费申请 |
-|---|---|---|
-| `NPS_API_KEY` | 国家公园信息 | nps.gov/subjects/developer |
-| `OCM_API_KEY` | EV 充电桩 | openchargemap.org |
-| `OPENWEATHER_API_KEY` | 天气兜底 | openweathermap.org |
+宁可现在说清，不要等你上了路才发现：
 
-NWS 天气、OSRM 路线、OpenStreetMap 瓦片、Recreation.gov 链接均**无需 Key**。
+- **无实时数据，不做预订** 它不抓当日油价和实时空位，也不替你下单。它负责规划与校验，最终以官方渠道为准——这正是每个数字都带可信度标注的原因。
+- **不支持整条路线导出（GPX / KML）**有意为之：实测中批量途经点导入可能把人导上季节性封闭道路，起点还常常漂移。所以每个停靠点给独立的一键地图链接——更稳，也不需要任何账号授权。
+- **技能版需要 Agent 环境**（Claude Code 或兼容工具）。如果你不用这些，[网页版](https://roadtripskill.dev)就是零门槛的同款。
 
-## 🧱 项目结构
+## 它是怎么实现的
 
-```
-.claude-plugin/   plugin.json + marketplace.json（Claude Code 插件清单）
-SKILL.md          入口：触发词、两种模式、7 步工作流
-reference.md      tripData schema、可靠度分级、工具路由表
-examples.md       典型问法示例（轻/重/EV/跨境）
-assets/           generate.py + template.html + 3 个 demo 行程
-scripts/helper.py 要素解析、模式/区域识别、路线对比
-tools/            各数据源 client，每个都有 web search 兜底
-```
+如果你正在学怎么写 agent skill，这个仓库本身就是一份可运行的教材：
 
-## 🙅 诚实边界
+- [`SKILL.md`](SKILL.md) 定义了从约束解析到最终渲染的 7 步规划工作流。
+- 调研任务分发给并行子代理（路线、预约、封路、充电），再汇总合并。
+- 严格的数据 / 视图分离：行程是结构化数据，渲染进一个自包含的 HTML 模板。
+- 三级可信度标注（`verified` / `reference` / `estimate`）写进 schema 本身，不是事后补的免责声明。
+- 明确的「诚实边界」规则：模型无法核实的信息一律降级或标记，绝不编造。
 
-它**不承诺**：实时油价/电价精确、充电桩实时占用、分钟级实时路况、营地实时余位、替代导航。
-这些请以官方 App / Recreation.gov / 导航实时为准。每份行程都带免责声明，提示出行前核实官方信息。
+## 常见问题
 
-## 🤝 参与贡献
+**为什么不直接问 ChatGPT / Claude？**
+找灵感请直接问，它们真的很擅长。但裸问不会控制你的单日驾驶时长、不查封路、不算预约窗口、不模拟电量，聊天记录也没法递给副驾。差距通常从第二天开始显现。
 
-欢迎提 Issue / PR —— 新增区域配色、某州 DOT 封路数据、新的 `tools/` client，或一条样例行程。
-skill 无需任何 Key 即可运行，非常好上手。
+**AI 生成的数据敢信吗？**
+把它当成一份做过功课的草稿。每个数字都带可信度分级，行程里会明确告诉你哪些要去官方网站复核。「AI 会出错」是我们的设计前提，不是公关危机。
 
-## 📄 许可证
+**装第三方技能安全吗？**
+问得好——技能可以在你的环境里执行代码，所以只装你读得懂的。本项目完全开源（MIT）、零外部密钥、不回传任何数据。先审计再运行，开源协议就是干这个用的。
+
+**我发现行程里有错。**
+请[提一个 issue](https://github.com/Waybox-AI/roadtrip-skill/issues)。路线类 bug（封路日期不对、预约窗口有误）是我们收到的最有价值的反馈，通常一两个版本内就能以数据修复的形式上线。
+
+## 参与贡献
+
+欢迎提 Issue 和 PR——补一个地区主题、某个州 DOT 的封路数据、一个新的 `tools/` 客户端，或一条示例行程。这个技能零 key 即可运行，上手改造很容易。
+
+## License
 
 [MIT](LICENSE) © yang-hong
+
+---
+
+<div align="center">
+<sub>由 <a href="https://waybox.ai">Waybox</a> 出品——我们也造 OMO，一台车载 AI 陪伴机器人。RoadTrip Navigator 负责出发前，OMO 负责路上。</sub>
+</div>

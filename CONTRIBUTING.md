@@ -89,7 +89,7 @@ bug, add a corresponding test.
 roadtrip-navigator/
 ├── SKILL.md          Agent entry point: triggers, two modes, 7-step workflow
 ├── reference.md      tripData schema, reliability grading, tool routing table
-├── examples.md       Worked prompts (light / heavy / EV / cross-border)
+├── AGENTS.md         Technical rules + worked prompts (light / heavy / EV / cross-border)
 ├── assets/
 │   ├── generate.py           tripData JSON → single-file HTML itinerary
 │   ├── template.html         Leaflet map + timeline renderer
@@ -158,7 +158,8 @@ here affect all users, so:
 
 - Open an issue describing the problem and your proposed fix before writing code
 - Keep `reference.md` consistent with any schema changes in `generate.py`
-- Update `examples.md` if new behaviour is best shown with a worked prompt
+- Update `AGENTS.md`'s "Worked examples" section if new behaviour is best shown
+  with a worked prompt
 
 ---
 

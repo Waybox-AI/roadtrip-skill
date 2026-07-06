@@ -35,9 +35,19 @@ python3 scripts/helper.py "from Las Vegas, 7 days, 2 adults, gas, southwest loop
 python3 scripts/helper.py --compare
 python3 tools/charging_client.py --corridor
 python3 tools/routing_client.py 36.17,-115.14 37.30,-113.03
+
+# Render the other bundled demo trips
+python3 assets/generate.py assets/tripData.tahoe.json -o assets/preview-tahoe.html
+python3 assets/generate.py assets/tripData.pnw.json   -o assets/preview-pnw.html
+
+# Probe other data sources directly
+python3 tools/border_client.py US MX --rental
+python3 tools/parks_client.py --countdown 2026-09-12
+python3 tools/charging_client.py --leg 165 280
 ```
 
-Run the tests locally after **any** code change — the Python must stay green. CI
+Run the tests locally after **any** code change and report the result; add a matching
+test in `tests/` for new clients/features — the Python must stay green. CI
 (`.github/workflows/ci-cd.yml`) runs a lychee link check (markdown links) that gates
 pytest on 3.12, then a PR-agent review, then a Feishu notification.
 
@@ -66,7 +76,6 @@ is deterministic rendering. (See "Data / view separation" below.)
 |------|--------------|
 | `SKILL.md` | The 7-step workflow the agent follows. Load-bearing "source code" of behavior. |
 | `reference.md` | Companion spec: schema (§1), reliability grades (§2), tool-routing table (§3), drive limits (§4), seasonal closures (§5). |
-| `examples.md` | Worked prompt→response examples for the two entry modes. |
 | `scripts/helper.py` | Regex slot-filling from the user's request; entry-mode + region detection; `compare_routes()` / `drive_intensity()`. Output is *hints*. |
 | `scripts/routes.py` | Two candidate routes for the **external webapp** (live model call or offline sample fallback). Not used by the skill workflow. |
 | `tools/*.py` | One data client per concern (routing, parks, weather, charging, fuel, lodging, border). Free/official API first, else a web-search `fallback(...)`. Never crash. |
@@ -146,6 +155,56 @@ This is the webapp's Phase-1 step and is **not** part of the agent's `SKILL.md` 
 The skill itself is run *by* an LLM, so it never reads `ANTHROPIC_API_KEY` — consistent
 with the zero-required-keys constraint above. Keep the offline branch crash-free.
 
+## Worked examples
+
+Illustrative prompt → agent-flow walkthroughs, one per notable path through the
+workflow. Adapt these, don't follow them verbatim.
+
+### Light mode — plan it for me
+> "Plan a 7-day road trip from Las Vegas through the Southwest national parks
+> for 2 adults in mid-September. Renting a gas SUV, want a loop back to Vegas."
+
+`scripts/helper.py` → mode=light, region=desert, all slots present. Draft two
+route candidates and let the user pick (e.g. "Grand Circle Classic" ≈1,180 mi
+vs. "Fast Loop" ≈820 mi), segment into days under the drive limit, run
+parallel research (weather, lodging, fuel, park passes), build the
+reservation countdown (timed-entry tours ~T-30d, in-park lodges ~T-13mo),
+grade the budget, then emit `tripData.json` + `trip.html`. See
+`assets/preview.html` for this exact trip rendered.
+
+### Heavy mode — verify my route
+> "Here's my plan, can you check it and make a page? Day 1: Seattle → Port
+> Angeles. Day 2: Olympic NP. Day 3: → Forks → coast. Day 4: → Seattle. 4 days,
+> 2 adults + 1 kid, gas, late October."
+
+`helper.py` detects mode=heavy from multiple "Day N" lines. Parse their days
+into the schema instead of re-planning; verify each leg against the
+with-kids drive limit, ferry logistics, and daylight; fill gaps (fuel stops,
+weather, lodging); flag seasonal closures (e.g. a mountain road that closes on
+snow days) with an alternative; call out anything that didn't check out (e.g.
+"Day 3 as written is ~5.5h driving with a kid — suggest splitting").
+
+### EV corridor
+> "EV road trip, Tesla-ish ~280 mi range, San Francisco to LA via Highway 1, 3
+> days, couple."
+
+Run `tools/charging_client.corridor(legs, 280, winter_derate=0.25)` for a
+per-leg state-of-charge table with recommended charge-to levels, written to
+`evPlan` — sparse stretches (e.g. Big Sur) surface as a low-arrival-SoC
+warning. `fuel_client.ev_cost(...)` feeds the budget. See
+`assets/preview-pnw.html` for a rendered EV corridor.
+
+### Cross-border
+> "Seattle to Banff and Jasper, 6 days, 2 adults, gas."
+
+`crossBorder=true` → `tools/border_client.trip_section([("US","CA",rental),
+("CA","US",rental)])` builds a per-crossing documents/insurance/customs/
+unit-switch checklist. Switch to km/°C/CAD on the Canadian legs. Use Parks
+Canada (not Recreation.gov) for reservations. Key asymmetry the tool encodes:
+US insurance usually works in Canada, but Mexico always requires buying local
+insurance. See `assets/preview-pnw.html` for a rendered cross-border + EV +
+route-comparison page.
+
 ## Conventions
 
 - **Units:** miles / °F / MPG / USD by default; km / °C / local currency on
@@ -157,3 +216,5 @@ with the zero-required-keys constraint above. Keep the offline branch crash-free
   fixtures and living schema documentation — update them when the schema changes.
 - Follow the surrounding file's style: 4-space indent, single quotes where the file
   uses them, lines under ~100 chars where practical. No linter is enforced.
+- **Be terse and technical when reporting work.** No sycophantic preambles or
+  restating the task — state what changed and the verification command you ran.
