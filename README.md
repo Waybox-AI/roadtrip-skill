@@ -1,175 +1,161 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="logo" width="76"/>
+<!-- Keep whatever logo path the repo currently uses -->
+<img src="assets/logo.png" width="88" alt="RoadTrip Navigator" />
 
-# 🚗 RoadTrip Navigator
+# RoadTrip Navigator
 
-### An AI agent skill that turns *"start + days"* into a road trip you can actually drive.
+**An AI agent skill that turns "start + days" into a road trip you can actually drive.**
 
-**English** · [简体中文](README.zh.md)
+English · [简体中文](README.zh.md)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Waybox-AI/roadtrip-skill/ci-cd.yml?branch=main&style=flat-square&label=CI)](https://github.com/Waybox-AI/roadtrip-skill/actions/workflows/ci-cd.yml)
-[![install: /plugin marketplace add](https://img.shields.io/badge/install-%2Fplugin%20marketplace%20add-c2641a?style=flat-square)](#-install)
-[![works with Claude Code + 16 agents](https://img.shields.io/badge/works%20with-Claude%20Code%20%2B%2016%20agents-1f6f8b?style=flat-square)](#-install)
-[![no API key required](https://img.shields.io/badge/API%20key-not%20required-2e7d4f?style=flat-square)](#optional-api-keys)
-[![license: MIT](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-7d3a13?style=flat-square)](#-contributing)
-
-<br/>
-
-<img src="docs/og.png" alt="RoadTrip Navigator" width="860"/>
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Claude Code + 16 agents](https://img.shields.io/badge/works%20with-Claude%20Code%20%2B%2016%20agents-blue.svg)](INSTALL.md)
+[![No API keys required](https://img.shields.io/badge/API%20keys-none%20required-brightgreen.svg)](#how-it-works)
+[![Try it in your browser](https://img.shields.io/badge/web%20version-roadtripskill.dev-orange.svg)](https://roadtripskill.dev)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet.svg)](CONTRIBUTING.md)
 
 </div>
 
----
+<!-- TODO: 30–45s demo per launch checklist: install → prompt → itinerary streams out → one edit → web version outro -->
+![Demo: one prompt to a drivable itinerary](assets/demo.gif)
 
-North American road trips revolve around the **car**, not flights: *how many hours
-do we drive today, where do we sleep, will we make it on the fuel/charge we have,
-and is the road even open.* RoadTrip Navigator plans around exactly those
-questions and renders a **map-first, offline-friendly single-file HTML** itinerary
-you can open on your phone.
+A North American road trip is won or lost in the car, not at the airport: how far do we drive today, where do we sleep, will the charge last, is the pass even open? RoadTrip Navigator plans around exactly those questions, then hands you the answer as **a single HTML file** — a map-first, day-by-day itinerary that opens on your phone with no signal.
 
-> ⚡ **Install in Claude Code:** `/plugin marketplace add Waybox-AI/roadtrip-skill` → `/plugin install roadtrip-navigator@roadtrip-skill`
+**See a finished trip before you install:**
+<!-- TODO: confirm sample URLs before launch -->
+[Southwest loop, 7 days](https://waybox-ai.github.io/roadtrip-skill/samples/southwest-loop.html) · [Sunnyvale → Lake Tahoe, 3 days](https://waybox-ai.github.io/roadtrip-skill/samples/tahoe-3-day.html) · [Seattle → Vancouver EV, 4 days](https://waybox-ai.github.io/roadtrip-skill/samples/seattle-vancouver-ev.html)
 
-## ⚡ Install
+Or skip the install entirely: the free web version at **[roadtripskill.dev](https://roadtripskill.dev)** plans the same trips in your browser.
 
-Install it into **Claude Code** as a plugin — two commands, no API key:
+## Quick start
 
-```text
+Two commands in Claude Code, no API keys:
+
+```
 /plugin marketplace add Waybox-AI/roadtrip-skill
 /plugin install roadtrip-navigator@roadtrip-skill
 ```
 
-<details>
-<summary>Other ways to install</summary>
+Then ask in plain English:
 
-```bash
-# Manual — drop it in the skills folder
-git clone https://github.com/Waybox-AI/roadtrip-skill
-cp -r roadtrip-skill ~/.claude/skills/roadtrip-navigator   # user-level
-# or  .claude/skills/  for a single project
+> Plan a 7-day Southwest national-parks loop from Las Vegas — 2 adults, gas SUV, September.
+
+The skill activates on its own when it spots a road-trip request. Prefer to be explicit? There's a slash command that forces the same workflow:
+
 ```
-
-The agent auto-loads the skill when your request matches road-trip triggers
-(*road trip, self-drive, 自驾, national park, EV road trip, RV trip, scenic
-drive, …*). No keys needed to run.
-</details>
-
-Then just ask your agent in plain language:
-
-> *"Plan a 7-day Southwest national parks road trip from Las Vegas for 2 adults in September, gas SUV, loop."*
-
-The skill auto-loads when your request matches road-trip triggers. Prefer an
-explicit entry point? This plugin also ships a slash command that forces the
-same workflow:
-
-```text
 /roadtrip from Las Vegas, 7 days, 2 adults, gas SUV, Southwest loop
 ```
 
-## ✨ Why it's different
+Refine the plan the way you'd talk to a friend: "add a winery stop," "we're bringing the dog," "make day 4 shorter."
 
-Most "AI trip planners" hand you a list of attractions. This one does the five
-hard things pure-model answers usually get wrong:
+<details>
+<summary><b>Other ways to install</b> — Codex, Cursor, and any agent that speaks the open SKILL.md standard</summary>
 
-| | Generic AI itinerary | **RoadTrip Navigator** |
-|---|---|---|
-| **Daily driving** | a wishlist of stops | route **sliced into days** under a sane drive limit, with overnight towns, *"arrive before dark"* + *"no closed gate"* checks |
-| **Reservations** | "book early!" | a **countdown to-do list** — exact *"book by"* dates (campgrounds ~6mo, in-park lodges ~13mo, timed-entry permits) on the **right system** (Recreation.gov / ReserveCalifornia / Parks Canada) |
-| **Fuel / EV** | ignored | long empty-stretch warnings; for EVs a **per-leg charging corridor** with state-of-charge + winter-range derate |
-| **Seasons** | generic weather | **closure-aware** — winter passes (Going-to-the-Sun, Tioga, Trail Ridge), wildfire/snow → reroute |
-| **Borders & zones** | wrong arrival times | **timezone-corrected** arrivals; US↔CA↔MX **documents / insurance / wait** checklist |
+```
+npx skills add Waybox-AI/roadtrip-skill
+```
 
-The output is one HTML file: **Leaflet/OpenStreetMap route map** (numbered stops +
-one-tap Google/Apple Maps links), a **day-by-day timeline**, the **reservation
-countdown**, and a **reliability-graded budget** — fully offline-friendly.
+See [INSTALL.md](INSTALL.md) for manual setup and per-agent notes.
+</details>
 
-## 🧭 Features
+## What it checks that a chatbot won't
 
-- **Two entry modes** — *light* ("plan it for me" from start + region + days) or
-  *heavy* ("verify my route" from a pasted/linked itinerary).
-- **Multi-route comparison** — A-vs-B table (miles, days, drive intensity, best
-  season, cost) with the chosen route flagged.
-- **Cross-border module** — per-crossing documents, insurance (US insurance works
-  in Canada but **not** Mexico), customs, and unit switch (mi/°F/USD ⇄ km/°C/CAD).
-- **EV charging corridor** — leg-by-leg state-of-charge simulation, recommended
-  charge-to levels, charger power, and a winter-derate option.
-- **Reliability grading** — every figure tagged *verified / reference / estimate*.
-- **Runs with zero keys, even offline** — each data client falls back to a
-  web-search instruction; the map degrades gracefully.
+Most AI trip planners hand you a wishlist of attractions. The wishlist falls apart around day two. This fixes the five places where it breaks:
 
-## 🗺️ Sample itineraries
+| | Generic AI itinerary | RoadTrip Navigator |
+| --- | --- | --- |
+| **Daily driving** | A pile of stops | Route sliced into days under a sane drive limit — overnight towns picked, arrive-before-dark and gate-hours checks on each day |
+| **Reservations** | "Book early!" | A countdown with exact book-by dates on the right system (Recreation.gov / ReserveCalifornia / Parks Canada) — campgrounds open ~6 months out, in-park lodges ~13 |
+| **Fuel / EV range** | Ignored | Warnings on long empty stretches; for EVs, a leg-by-leg state-of-charge simulation with winter derate |
+| **Seasons** | Generic weather advice | Closure-aware routing — winter passes like Going-to-the-Sun, Tioga, and Trail Ridge; wildfire and snow reroutes |
+| **Borders & time zones** | Arrival times that don't add up | Time-zone-corrected arrivals; US–CA–MX document, insurance, and crossing checklists |
 
-Open the curated, pre-generated examples:
+Everything lands in one offline-friendly HTML file: a Leaflet / OpenStreetMap route map with numbered stops (each with a one-tap Google or Apple Maps link), a day-by-day timeline, the reservation countdown, and a budget in which every figure is graded **verified / reference / estimate** — so you know exactly what to double-check.
 
-| Trip | Theme | Highlights |
-|---|---|---|
-| **Southwest Loop · 7 days** | desert | Vegas → Zion → Bryce → Page → Grand Canyon, park-pass countdown |
-| **Sunnyvale → Lake Tahoe · 3 days** | mountain | US-50/I-80 loop, ReserveCalifornia, Sierra snow/chain risk |
-| **Seattle → Vancouver EV · 4 days** | forest | cross-border checklist + EV corridor + route comparison |
+## Features
 
-## ⚙️ How it works
+- **Plan or verify.** Start from scratch ("plan it for me" — start, region, days), or paste an itinerary you already have and let it stress-test the drive times, bookings, and closures.
+- **Route comparison.** When two routes are viable, you get an A/B table — miles, days, drive intensity, best season, cost — with the recommendation flagged.
+- **EV mode.** A per-leg charging corridor: state of charge, suggested charge-to levels, charger power, and an optional winter-range derate.
+- **Cross-border module.** Per-crossing documents and customs notes, insurance rules (US policies work in Canada, not in Mexico), and mi/°F/USD ⇄ km/°C/CAD switching.
+- **Reliability grading.** Every number is tagged verified, reference, or estimate. No confident nonsense.
+- **Zero keys, works offline.** Each data client falls back to web search when it has no key, and the map degrades gracefully with no network at all.
+
+## How it works
 
 ```
 request ──► scripts/helper.py ──► 7-step workflow (SKILL.md)
-              (slots, mode,         ├─ route + daily segmentation
+              (slots, mode,        ├─ route + daily segmentation
                region)             ├─ parallel research (tools/, web search)
                                    ├─ reservation countdown
-                                   └─ budget (graded)
+                                   └─ graded budget
                                         │
                         tripData.json ──┴──► assets/generate.py ──► trip.html
 ```
 
-- **Data/view separation** — everything lands in `tripData.json`, then
-  `generate.py` injects it into `assets/template.html`. Edit & re-render anytime.
-- **Sub-agent research** — fans out to official/free APIs first (NPS, NWS,
-  Recreation.gov, Open Charge Map), web search as fallback.
+- **Data and view stay separate.** Everything lands in `tripData.json`; `generate.py` injects it into `assets/template.html`. Edit the JSON, re-render, done.
+- **Research fans out.** Sub-agents hit official and free APIs first (NPS, NWS, Recreation.gov, Open Charge Map), with web search as the fallback.
 
-Try it locally:
+Poke at it locally:
 
 ```bash
-python3 assets/generate.py assets/tripData.example.json -o trip.html   # Southwest 7-day
+python3 assets/generate.py assets/tripData.example.json -o trip.html   # render the Southwest sample
 python3 scripts/helper.py "from Las Vegas, 7 days, 2 adults, gas, southwest loop"
-python3 tools/charging_client.py --corridor                            # EV SoC sim
+python3 tools/charging_client.py --corridor                            # EV state-of-charge sim
 ```
 
-### Optional API keys
+<details>
+<summary><b>Optional API keys</b> — all optional; without them, clients fall back to web search</summary>
 
-All optional — without them, clients fall back to web search.
+| Variable | Used for | Free key |
+| --- | --- | --- |
+| `NPS_API_KEY` | National-park info | [nps.gov/subjects/developer](https://www.nps.gov/subjects/developer/) |
+| `OCM_API_KEY` | EV chargers | [openchargemap.org](https://openchargemap.org) |
+| `OPENWEATHER_API_KEY` | Weather fallback | [openweathermap.org](https://openweathermap.org) |
 
-| Variable | Used by | Free from |
-|---|---|---|
-| `NPS_API_KEY` | national park info | nps.gov/subjects/developer |
-| `OCM_API_KEY` | EV chargers | openchargemap.org |
-| `OPENWEATHER_API_KEY` | weather fallback | openweathermap.org |
+NWS weather, OSRM routing, OpenStreetMap tiles, and Recreation.gov links need no key at all.
+</details>
 
-No key needed for NWS weather, OSRM routing, OpenStreetMap tiles, or Recreation.gov links.
+## What it won't do (on purpose)
 
-## 🧱 Project structure
+No live fuel or electricity prices, no live charger occupancy or campground availability, no minute-by-minute traffic, and no turn-by-turn navigation — for those it points you to the official app, Recreation.gov, or the nav of your choice. There's also no bulk GPX/KML export: in testing, batch waypoint imports could route drivers onto seasonally closed roads, so every stop gets its own one-tap maps link instead. Each itinerary ships with a reminder to confirm the critical details against official sources.
+
+## Project layout
 
 ```
-.claude-plugin/   plugin.json + marketplace.json (Claude Code plugin manifest)
-SKILL.md          entry: triggers, two modes, 7-step workflow
-reference.md      tripData schema, reliability grading, tool routing
-examples.md       worked prompts (light / heavy / EV / cross-border)
-assets/           generate.py + template.html + 3 demo trips
-scripts/helper.py slot filling, mode/region detection, route compare
-tools/            per-source clients, each with a web-search fallback
+.claude-plugin/    Plugin + marketplace manifests (Claude Code)
+SKILL.md           Entry point: triggers, plan/verify modes, the 7-step workflow
+reference.md       tripData schema, reliability grading, tool routing
+examples.md        Worked prompts — plan, verify, EV, cross-border
+assets/            generate.py, template.html, three demo trips
+scripts/helper.py  Slot filling, mode and region detection, route comparison
+tools/             One client per data source, each with a web-search fallback
 ```
 
-## 🙅 Honesty boundaries
+If you're learning to write agent skills, this repo doubles as a worked example — start with [SKILL.md](SKILL.md).
 
-It does **not** promise exact live fuel/electricity prices, live charger
-occupancy, minute-level traffic, live campground availability, or turn-by-turn
-navigation. For those it points you to the official app / Recreation.gov / your
-nav. Every itinerary carries a disclaimer to verify with official sources.
+## FAQ
 
-## 🤝 Contributing
+**Why not just ask Claude or ChatGPT directly?**
+For inspiration, absolutely do. But a raw prompt won't cap your daily driving, check pass closures, compute booking windows, or simulate charge state — and you can't hand a chat transcript to the person in the passenger seat.
 
-Issues and PRs welcome — add a region theme, a state DOT's closure data, a new
-`tools/` client, or a sample itinerary. The skill runs with no keys, so it's easy
-to hack on.
+**Is it safe to install a third-party skill?**
+Fair question: skills can execute code in your environment, so only install ones you can read. This one is MIT-licensed, runs without keys, and phones nothing home — audit it first; that's what the license is for.
+
+**I found a mistake in a plan.**
+Please [open an issue](../../issues). Route bugs — a wrong closure date, a bad booking window — are the most valuable reports we get, and they usually ship as data fixes within a release or two.
+
+## Contributing
+
+Issues and PRs welcome — add a region theme, a state DOT's closure data, a new `tools/` client, or a sample itinerary. The skill runs with no keys, so it's easy to hack on.
 
 ## 📄 License
 
 [MIT](LICENSE) © yang-hong
+
+---
+
+<div align="center">
+<sub>Built by <a href="https://waybox.ai">Waybox</a> — we also make OMO, an in-car AI companion. RoadTrip Navigator plans the trip; OMO rides along.</sub>
+</div>
