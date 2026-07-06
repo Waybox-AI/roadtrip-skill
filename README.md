@@ -24,7 +24,7 @@ A North American road trip is won or lost in the car, not at the airport: how fa
 
 **See a finished trip before you install:**
 <!-- TODO: confirm sample URLs before launch -->
-[Southwest loop, 7 days](https://waybox-ai.github.io/roadtrip-skill/samples/southwest-loop.html) · [Sunnyvale → Lake Tahoe, 3 days](https://waybox-ai.github.io/roadtrip-skill/samples/tahoe-3-day.html) · [Seattle → Vancouver EV, 4 days](https://waybox-ai.github.io/roadtrip-skill/samples/seattle-vancouver-ev.html)
+[Southwest loop, 7 days](https://roadtripskill.dev/api/sample?name=sw) · [Sunnyvale → Lake Tahoe, 3 days](https://roadtripskill.dev/api/sample?name=tahoe) · [Seattle → Vancouver EV, 4 days](https://roadtripskill.dev/api/sample?name=pnw)
 
 Or skip the install entirely: the free web version at **[roadtripskill.dev](https://roadtripskill.dev)** plans the same trips in your browser.
 
