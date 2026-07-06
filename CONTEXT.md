@@ -1,8 +1,6 @@
 # CONTEXT.md — Domain Knowledge
 
 Product vision, problem framing, and domain terminology for **RoadTrip Navigator**.
-For technical/build rules see [AGENTS.md](AGENTS.md); for model-specific prompting
-see [CLAUDE.md](CLAUDE.md) / [GEMINI.md](GEMINI.md).
 
 ## What this is
 

@@ -37,7 +37,8 @@ python3 tools/charging_client.py --corridor
 python3 tools/routing_client.py 36.17,-115.14 37.30,-113.03
 ```
 
-Run the tests locally after **any** code change — the Python must stay green. CI
+Run the tests locally after **any** code change and report the result; add a matching
+test in `tests/` for new clients/features — the Python must stay green. CI
 (`.github/workflows/ci-cd.yml`) runs a lychee link check (markdown links) that gates
 pytest on 3.12, then a PR-agent review, then a Feishu notification.
 
@@ -157,3 +158,5 @@ with the zero-required-keys constraint above. Keep the offline branch crash-free
   fixtures and living schema documentation — update them when the schema changes.
 - Follow the surrounding file's style: 4-space indent, single quotes where the file
   uses them, lines under ~100 chars where practical. No linter is enforced.
+- **Be terse and technical when reporting work.** No sycophantic preambles or
+  restating the task — state what changed and the verification command you ran.
