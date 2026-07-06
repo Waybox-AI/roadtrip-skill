@@ -56,7 +56,7 @@ python3 tools/charging_client.py --corridor      # EV state-of-charge sim demo
 python3 tools/routing_client.py 36.17,-115.14 37.30,-113.03
 ```
 
-CI (`.github/workflows/ci-cd.yml`): runs pytest on 3.12, then a PR-agent code review, then a Feishu notification. Run the tests locally after any code change (per the project convention) — the Python must stay green.
+CI (`.github/workflows/ci-cd.yml`): a lychee link check (markdown links) gates pytest on 3.12, then a PR-agent code review, then a Feishu notification. Run the tests locally after any code change (per the project convention) — the Python must stay green.
 
 ## Architecture
 
