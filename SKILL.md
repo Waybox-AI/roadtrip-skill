@@ -84,6 +84,21 @@ For region-level input ("the Southwest", "Pacific Northwest"): search
 candidates → seasonal & closure check → shortlist. Compute rough total miles /
 driving days for the shortlist and drop any "can't be driven in N days" option.
 
+**Present two candidate routes before committing (light mode only).** Once the
+shortlist is down to viable options, draft **exactly two** genuinely distinct
+routes yourself — e.g. a faster direct corridor vs. a scenic detour, or two
+different geographic loops — each with a short label, a one-line summary, and
+rough total miles/driving days. Show both to the user and ask them to pick
+(or say "surprise me") before moving to Step 3. This is a single short
+question, same spirit as the required-slot follow-up in Step 1 — don't
+draft a full itinerary for either option first. If the conversation is
+one-shot and no reply is possible, pick the better-rated option yourself,
+proceed, and note the alternative you didn't take. Skip this entirely in
+heavy mode (the user already supplied a route) or once the user has already
+chosen. Carry both options into `scripts/helper.compare_routes()` to populate
+`routeOptions[]` (Phase-3 module below) so the rendered page shows the
+comparison table with the chosen route flagged.
+
 ### Step 3 — Daily driving segmentation (core; see five-things #1)
 1. Split by a **daily drive limit** (default: relaxed adults ≤ 4–5h;
    with kids/seniors ≤ 3–4h; user-adjustable).
@@ -165,7 +180,7 @@ right the morning you leave, not merely impressive the night it was generated.
 These render as extra sections when their data is present (see `reference.md`):
 
 - **Multi-route comparison** — `scripts/helper.compare_routes(options, party)`
-  → `routeOptions[]`. Use when you offer the user A-vs-B routes; it auto-rates
+  → `routeOptions[]`. Feeds from the Step 2 two-route pick above; it auto-rates
   drive intensity and renders a comparison table with the chosen route flagged.
 - **Cross-border** — `tools/border_client.trip_section([("US","CA",rental),...])`
   → `crossBorder`. Per-crossing documents / insurance / customs / unit-switch

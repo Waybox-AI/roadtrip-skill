@@ -14,8 +14,11 @@ should adapt, not follow verbatim.
 **Agent flow:**
 1. `python3 scripts/helper.py "..."` → mode=light, region=desert, all required
    slots present (start=Las Vegas, days=7, party=2 adults, vehicle=gas, date=Sep).
-2. **Route (Step 2):** loop confirmed → Vegas → Zion → Bryce → Page → Grand
-   Canyon → Vegas. Rough total ≈ 1,180 mi — drivable in 7 days. ✓
+2. **Route (Step 2):** loop confirmed. Draft two candidates and ask the user to
+   pick: (A) "Grand Circle Classic" — Vegas → Zion → Bryce → Page → Grand
+   Canyon → Vegas, ≈1,180 mi, scenic-heavy; (B) "Fast Loop" — Vegas → Zion →
+   Grand Canyon → Vegas, ≈820 mi, skips Bryce/Page for a lighter pace. User
+   picks (A).
 3. **Segmentation (Step 3):** split into days, each drive ≤ ~4.5h (longest is the
    final 280-mi / 4.5h return — flagged). Overnights: Springdale ×2, Bryce, Page,
    Grand Canyon ×2.
