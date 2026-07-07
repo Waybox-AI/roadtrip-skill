@@ -1,7 +1,6 @@
 <div align="center">
 
-<!-- Keep whatever logo path the repo currently uses -->
-<img src="assets/logo.png" width="88" alt="RoadTrip Navigator" />
+<img src="assets/readme-hero.png" alt="RoadTrip Navigator" />
 
 # RoadTrip Navigator
 
