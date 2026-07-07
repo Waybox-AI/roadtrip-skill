@@ -186,6 +186,11 @@ These render as extra sections when their data is present (see `reference.md`):
   → `crossBorder`. Per-crossing documents / insurance / customs / unit-switch
   checklist for US↔CA↔MX. Note the key asymmetry it encodes: US insurance is
   usually valid in **Canada** but **never in Mexico** (buy Mexican insurance).
+- **Duty-free exemption** — `tools/customs_client.personal_exemption(residence,
+  hours_abroad, used_within_30_days=False)` → the per-person allowance quoted in
+  `crossBorder` customs notes. Encodes the 24h/48h tiers (US: USD 800 at 48h+,
+  once per 30 days, else USD 200; CA: 0 / CAD 200 / CAD 800; MX land: USD 300)
+  with EN + 中文 note strings — quote the tool, never recall these amounts.
 - **EV charging corridor** — `tools/charging_client.corridor(legs, usableRange,
   winter_derate=...)` → `evPlan`. Simulates state-of-charge leg by leg, sets a
   recommended charge-to at each stop, and flags legs that won't make the buffer.

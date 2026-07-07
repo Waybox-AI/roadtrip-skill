@@ -163,6 +163,7 @@ hit official/free APIs first and fall back to web search only on failure.
 | EV charging | Open Charge Map (free), PlugShare, ABRP idea | `tools/charging_client.py` | search chargers |
 | EV corridor (SoC精算) | linear range model | `tools/charging_client.corridor()` | `leg_ok()` quick check |
 | Cross-border checklist | CBP / CBSA / Banjercito rules | `tools/border_client.py` | search current rules |
+| Duty-free exemption (免税额) | CBP / CBSA / SAT rules table | `tools/customs_client.py` | search current allowances |
 | Multi-route compare | computed | `scripts/helper.compare_routes()` | — |
 | Fuel price | GasBuddy | `tools/fuel_client.py` | regional average estimate |
 | Lodging / campgrounds | Booking/Expedia/Airbnb, KOA/Hipcamp | `tools/lodging_client.py` | search reference price |
