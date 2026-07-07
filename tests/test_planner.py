@@ -109,6 +109,10 @@ class TestPlanDemo:
         trip = plan_demo({"start": "Sacramento, CA", "destination": "Lake Tahoe"}, "mountain")
         assert "Tahoe" in trip.get("title", "") or "tahoe" in json.dumps(trip).lower()
 
+    def test_matches_chicago_keyword(self):
+        trip = plan_demo({"start": "Chicago, IL", "destination": "Chicago loop"}, "midwest")
+        assert "chicago" in json.dumps(trip).lower()
+
     def test_falls_back_to_default_sample(self):
         trip = plan_demo({"start": "Nowhereville", "destination": "Somewhere Else"}, "desert")
         assert trip.get("_demoNote", "").startswith("Demo mode")

@@ -1,0 +1,152 @@
+{
+  "title": "Chicago Loop & Surrounds · 5 Days",
+  "subtitle": "Chicago → Indiana Dunes → Starved Rock → Oak Park → Chicago",
+  "dateRange": "2026-08-07 ~ 2026-08-11",
+  "travelers": "2 adults",
+  "vehicle": { "type": "gas", "model": "Compact sedan (own vehicle)", "mpg": 32, "rangeMiles": null },
+  "loopType": "loop",
+  "totalMiles": 310,
+  "drivingDays": 5,
+  "region": "coast",
+  "units": { "distance": "mi", "temp": "F", "currency": "USD" },
+  "days": [
+    {
+      "date": "08/07",
+      "title": "Arrive Chicago — Riverwalk & Millennium Park",
+      "from": "Chicago O'Hare / home",
+      "to": "Chicago, IL (Downtown)",
+      "driveMiles": 25,
+      "driveTime": "0h40m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": { "icon": "partly-cloudy", "high": 82, "low": 65 },
+      "stops": [
+        { "name": "Millennium Park / Cloud Gate ('The Bean')", "type": "scenic", "lat": 41.8827, "lng": -87.6233, "note": "Free to enter; The Bean is the iconic photo stop — go early before crowds." },
+        { "name": "Chicago Riverwalk", "type": "scenic", "lat": 41.8876, "lng": -87.6278, "note": "Walk east from Lake St bridge to Lake Shore Dr — best views of the skyline from the water level." },
+        { "name": "Architecture Boat Tour (Chicago River)", "type": "tour", "lat": 41.8876, "lng": -87.6273, "timedEntry": true, "ticket": "paid tour (~$50/person)", "note": "Book a 90-min Chicago Architecture Foundation cruise ahead — the best way to see 50+ landmark buildings from the water." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ O'Hare / Irving Park area", "type": "gas", "lat": 41.9742, "lng": -87.8073, "note": "Top off before heading into downtown where gas is pricier." }
+      ],
+      "meal": { "name": "Lou Malnati's Deep Dish (Wacker Dr)", "perPerson": 28 },
+      "risks": ["Downtown Chicago parking is expensive ($30–50/day) — choose a hotel with parking or use a Lower Wacker garage to save."]
+    },
+    {
+      "date": "08/08",
+      "title": "Chicago Neighborhoods — Lincoln Park, Wicker Park, Pilsen",
+      "from": "Chicago, IL",
+      "to": "Chicago, IL",
+      "driveMiles": 15,
+      "driveTime": "0h35m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": { "icon": "sunny", "high": 84, "low": 67 },
+      "stops": [
+        { "name": "Lincoln Park Zoo", "type": "scenic", "lat": 41.9214, "lng": -87.6367, "note": "Free admission year-round. The lakefront path alongside is great for a morning walk or bike ride." },
+        { "name": "Navy Pier", "type": "scenic", "lat": 41.8917, "lng": -87.6086, "note": "Centennial Wheel ($18), Chicago Shakespeare Theater, IMAX — great lakefront stroll and views." },
+        { "name": "Wicker Park / Bucktown", "type": "city", "lat": 41.9088, "lng": -87.6786, "note": "Best indie shops, street art, and cocktail bars in the city. Walk Milwaukee Ave and Damen Ave." },
+        { "name": "Pilsen Murals & National Museum of Mexican Art", "type": "scenic", "lat": 41.8558, "lng": -87.6564, "note": "Free museum; the outdoor murals along 16th St and Blue Island Ave are world-class." }
+      ],
+      "fuelCharging": [],
+      "meal": { "name": "Xoco by Rick Bayless, River North", "perPerson": 22 },
+      "risks": ["Use the CTA (L train/bus) or rideshare for neighborhood hopping today — parking in Wicker Park and Pilsen is extremely limited on weekends."]
+    },
+    {
+      "date": "08/09",
+      "title": "Day trip — Indiana Dunes National Park",
+      "from": "Chicago, IL",
+      "to": "Indiana Dunes, IN (return to Chicago overnight)",
+      "driveMiles": 75,
+      "driveTime": "1h20m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": { "icon": "sunny", "high": 86, "low": 68 },
+      "stops": [
+        { "name": "Indiana Dunes National Park Visitor Center", "type": "park", "lat": 41.6533, "lng": -87.0524, "timedEntry": false, "ticket": "free (no entry fee)", "note": "Pick up a trail map here. The dunes are taller than you'd expect — wear sunscreen and bring water." },
+        { "name": "Mount Baldy Dune", "type": "hike", "lat": 41.7253, "lng": -86.8992, "note": "Tallest dune at 126 ft; ranger-guided 1.5-mi hike is required for the summit. Check nps.gov for tour times." },
+        { "name": "West Beach", "type": "scenic", "lat": 41.6286, "lng": -87.2295, "note": "Best swimming beach in the park. On clear days you can see the Chicago skyline across Lake Michigan — stunning sunset view." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Portage / Merrillville, IN (I-94)", "type": "gas", "lat": 41.5370, "lng": -87.3291, "note": "Gas is noticeably cheaper in Indiana than downtown Chicago — fill up here on the way out or back." }
+      ],
+      "meal": { "name": "Octave Grill, Chesterton, IN", "perPerson": 24 },
+      "risks": [
+        "West Beach and Mount Baldy parking lots fill by 10 AM on summer weekends — arrive before 9 AM or take the South Shore rail line from Millennium Station.",
+        "Lake Michigan has strong rip currents and no lifeguards at several beaches — check NPS swim conditions before entering the water."
+      ]
+    },
+    {
+      "date": "08/10",
+      "title": "Day trip — Starved Rock State Park & Matthiessen",
+      "from": "Chicago, IL",
+      "to": "Utica, IL (return to Chicago overnight)",
+      "driveMiles": 120,
+      "driveTime": "1h50m",
+      "overnight": "Chicago, IL (Loop or River North)",
+      "weather": { "icon": "partly-cloudy", "high": 80, "low": 63 },
+      "stops": [
+        { "name": "Starved Rock State Park Visitor Center", "type": "park", "lat": 41.3178, "lng": -88.9934, "timedEntry": false, "ticket": "free (IL state park)", "note": "Pick up a canyon map. 18 sandstone canyons and Illinois River bluffs make this one of the best hiking spots in the Midwest." },
+        { "name": "St. Louis Canyon", "type": "hike", "lat": 41.3178, "lng": -88.9934, "note": "Most spectacular canyon in the park — towering sandstone walls and a seasonal waterfall at the back." },
+        { "name": "Starved Rock Bluff", "type": "hike", "lat": 41.3195, "lng": -88.9918, "note": "Short 0.25-mi trail to the historic 125-ft bluff top with sweeping Illinois River views. Named from a 1769 Illiniwek siege." },
+        { "name": "Matthiessen State Park (adjacent)", "type": "park", "lat": 41.2986, "lng": -89.0259, "note": "Less crowded than Starved Rock with equally beautiful canyon scenery — highly recommended add-on; free admission." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Ottawa, IL (US-6 / I-80)", "type": "gas", "lat": 41.3456, "lng": -88.8428, "note": "Good fuel and food stop a few miles east of the parks." }
+      ],
+      "meal": { "name": "Starved Rock Lodge Restaurant", "perPerson": 30 },
+      "risks": [
+        "Canyon trails are rocky and can be slippery after rain — wear closed-toe shoes with good grip.",
+        "If you ever plan to stay overnight, Starved Rock Lodge fills months ahead on summer weekends — day-trip from Chicago is the easier option."
+      ]
+    },
+    {
+      "date": "08/11",
+      "title": "Oak Park (Frank Lloyd Wright) → Depart",
+      "from": "Chicago, IL",
+      "to": "Chicago O'Hare / home",
+      "driveMiles": 35,
+      "driveTime": "0h50m",
+      "overnight": null,
+      "weather": { "icon": "sunny", "high": 83, "low": 66 },
+      "stops": [
+        { "name": "Frank Lloyd Wright Home & Studio, Oak Park", "type": "tour", "lat": 41.8858, "lng": -87.7916, "timedEntry": true, "ticket": "timed ticket (~$22/person)", "note": "America's densest collection of Wright architecture. Book a guided tour online at gowright.org — self-guided audio tours also available." },
+        { "name": "Oak Park Historic District (walking tour)", "type": "scenic", "lat": 41.8860, "lng": -87.7867, "note": "Dozens of Prairie-style homes visible from the sidewalk; the free OPRF audio app guides you past 20+ sites in under an hour." },
+        { "name": "Ernest Hemingway Birthplace Museum, Oak Park", "type": "scenic", "lat": 41.8829, "lng": -87.7881, "ticket": "~$15/person", "note": "Hemingway was born here in 1899. Pairs perfectly with the FLW tour for a full Oak Park cultural morning." }
+      ],
+      "fuelCharging": [
+        { "name": "Fuel @ Oak Park / I-290", "type": "gas", "lat": 41.8805, "lng": -87.7882, "note": "Fill up before heading to O'Hare to avoid rental-return fuel surcharges." }
+      ],
+      "meal": { "name": "Breakfast @ Buzz Cafe, Oak Park", "perPerson": 18 },
+      "risks": ["I-290 and I-90/94 can back up badly during morning rush — leave Oak Park by 11 AM to reach O'Hare comfortably for a midday flight."]
+    }
+  ],
+  "lodging": [
+    { "name": "Loop / River North hotel", "area": "Chicago, IL", "nights": 4, "pricePerNight": 195, "rating": "4.3", "booked": false }
+  ],
+  "bookingCountdown": [
+    { "item": "Chicago Architecture Foundation River Cruise", "bookBy": "2026-07-01", "where": "architecture.org", "priority": "high", "note": "Summer slots sell out weeks ahead; early-morning or evening tours are cooler and less crowded." },
+    { "item": "Chicago hotel (Loop or River North)", "bookBy": "2026-06-07", "where": "Booking / hotel direct", "priority": "high", "note": "August is peak summer season — rates and availability tighten fast." },
+    { "item": "Frank Lloyd Wright Home & Studio tour", "bookBy": "2026-07-25", "where": "gowright.org", "priority": "medium", "note": "Timed-entry tours; weekend slots book out fast in summer." },
+    { "item": "Shedd Aquarium / Museum of Science & Industry (optional rainy-day)", "bookBy": "2026-07-15", "where": "sheddaquarium.org / msichicago.org", "priority": "low", "note": "Timed tickets save long queues; worth adding if afternoon storms hit." }
+  ],
+  "budget": {
+    "currency": "USD",
+    "items": [
+      { "label": "Fuel (~310 mi ÷ 32 MPG × $3.80/gal)", "amount": 37, "reliability": "estimate" },
+      { "label": "Lodging (4 nights, Loop/River North avg)", "amount": 780, "reliability": "reference" },
+      { "label": "Parking (4 days downtown @ ~$35/day)", "amount": 140, "reliability": "estimate" },
+      { "label": "Food (5 days, 2 adults)", "amount": 490, "reliability": "estimate" },
+      { "label": "Architecture Boat Tour (2 pax)", "amount": 100, "reliability": "reference" },
+      { "label": "Frank Lloyd Wright tours (2 pax)", "amount": 44, "reliability": "reference" },
+      { "label": "Misc (Navy Pier, museums, tips, transit)", "amount": 120, "reliability": "estimate" }
+    ],
+    "total": 1711,
+    "perPerson": 856
+  },
+  "tips": [
+    "Get a CTA Ventra card — the L train and buses link the Loop to every neighborhood and beat driving + parking every time.",
+    "The Chicago Architecture Center on Wacker Dr has a 1:400 scale skyline model and is worth $15 admission even before the boat tour.",
+    "Indiana Dunes and Starved Rock are free to enter — no annual pass needed unlike national parks.",
+    "August is prime thunderstorm season on the Great Lakes; build flexibility in the afternoon schedule, especially for the open-air parks.",
+    "Deep dish pizza takes 40 minutes to bake — call ahead or order online so it's ready when you arrive; Lou Malnati's, Giordano's, and Pequod's are the local favorites."
+  ],
+  "disclaimer": "This itinerary was assembled by an AI from general knowledge and may be out of date. Hours, prices, park alerts, timed-entry rules, and road conditions change frequently — always confirm with official sources (nps.gov, dnr.illinois.gov, choosechicago.com) before and during your trip.",
+  "generationDate": "2026-06-16"
+}

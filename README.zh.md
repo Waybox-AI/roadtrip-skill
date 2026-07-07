@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" width="88" alt="RoadTrip Navigator logo" />
+<img src="assets/readme-hero.png" alt="RoadTrip Navigator" />
 
 # RoadTrip Navigator
 
