@@ -4,7 +4,7 @@
 
 # RoadTrip Navigator
 
-**An AI agent skill that turns "start + days" into a road trip you can actually drive.**
+__An AI agent skill that turns "start + days" into a road trip you can actually drive.__
 
 English · [简体中文](README.zh.md)
 
