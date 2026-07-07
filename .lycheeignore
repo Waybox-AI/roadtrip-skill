@@ -1,0 +1,3 @@
+# The Chicago sample endpoint 500s until the tripData.chicago.json added in this
+# branch is merged and deployed to roadtripskill.dev — remove this line after that.
+https://roadtripskill\.dev/api/sample\?name=chicago$
