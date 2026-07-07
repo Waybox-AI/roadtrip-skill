@@ -28,7 +28,7 @@ A North American road trip is won or lost in the car, not at the airport: how fa
 See a finished trip before you install:
 
 
-[Southwest loop, 7 days](https://roadtripskill.dev/api/sample?name=sw) · [Sunnyvale → Lake Tahoe, 3 days](https://roadtripskill.dev/api/sample?name=tahoe) · [Seattle → Vancouver EV, 4 days](https://roadtripskill.dev/api/sample?name=pnw)
+[Southwest loop, 7 days](https://roadtripskill.dev/api/sample?name=sw) · [Sunnyvale → Lake Tahoe, 3 days](https://roadtripskill.dev/api/sample?name=tahoe) · [Seattle → Vancouver EV, 4 days](https://roadtripskill.dev/api/sample?name=pnw) · [Chicago loop, 5 days](https://roadtripskill.dev/api/sample?name=chicago)
 
 Or skip the install entirely: the free web version at **[roadtripskill.dev](https://roadtripskill.dev)** plans the same trips in your browser.
 
