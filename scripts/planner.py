@@ -22,6 +22,11 @@ plan_demo(payload, region, on_progress=None) -> dict
     Offline fallback: serve the closest curated sample tripData.
 regenerate_day(trip, day_index, comment_body, log_fn=None) -> dict
     Rewrite a single day of an existing trip per a commenter's request.
+remove_city(trip, day_start, day_end, city_name="", log_fn=None) -> dict
+    Trip edit: delete one overnight stop's days, regenerate the single joined
+    driving day (one model call), then resequence dates, refresh totals and —
+    where a real forecast covers the new dates — weather. Mutates only after
+    the model call succeeds; raises on an invalid span or model failure.
 fix_endpoints(trip, start, destination) -> None
     Snap the first/last stop coordinates to the real start/destination.
 despread_stops(trip) -> None
@@ -31,10 +36,12 @@ geocode_near(query, lat, lng, timeout=3.0) -> {"lat","lng"} | None
     Best-effort Photon geocoding (free, no key), the latter biased to a locale.
 """
 
+import datetime
 import functools
 import json
 import math
 import os
+import re
 import sys
 import time
 import urllib.parse
@@ -447,13 +454,10 @@ def generate_trip(payload, live, on_progress=None, log_fn=None):
     return trip
 
 
-def regenerate_day(trip, day_index, comment_body, log_fn=None):
-    """Ask the AI to rewrite a single trip day based on a commenter's suggestion.
-
-    Only the targeted day is regenerated; all other days remain unchanged.
-    Returns the updated day dict (same schema as an element of trip["days"]).
-    Raises on failure so callers can decide whether to surface or swallow the error.
-    """
+def _regenerate_day_with_instruction(trip, day_index, instruction, log_fn=None):
+    """Single-shot model call that rewrites one trip day per `instruction`
+    (a complete sentence describing the change). Shared by regenerate_day
+    (comments) and remove_city (trip editing). Raises on failure."""
     import anthropic
     client = anthropic.Anthropic()
     days = trip.get("days") or []
@@ -485,7 +489,7 @@ def regenerate_day(trip, day_index, comment_body, log_fn=None):
         "Trip: %s\n"
         "All days (for continuity context):\n%s\n\n"
         "Current Day %d:\n%s\n\n"
-        "A traveler requests this change: \"%s\"\n\n"
+        "%s\n\n"
         "Rewrite ONLY Day %d to honour this request. %s"
         "Keep the same 'date' value. Use accurate lat/lng for all stops. "
         "Output ONLY the JSON object for this single day — no prose, no markdown fences:\n%s\n"
@@ -495,7 +499,7 @@ def regenerate_day(trip, day_index, comment_body, log_fn=None):
         days_summary,
         day_index + 1,
         json.dumps(day, ensure_ascii=False, indent=2),
-        comment_body,
+        instruction,
         day_index + 1,
         continuity,
         schema,
@@ -510,3 +514,187 @@ def regenerate_day(trip, day_index, comment_body, log_fn=None):
     # Preserve the original date so the calendar doesn't drift.
     new_day["date"] = day.get("date", new_day.get("date", ""))
     return new_day
+
+
+def regenerate_day(trip, day_index, comment_body, log_fn=None):
+    """Ask the AI to rewrite a single trip day based on a commenter's suggestion.
+
+    Only the targeted day is regenerated; all other days remain unchanged.
+    Returns the updated day dict (same schema as an element of trip["days"]).
+    Raises on failure so callers can decide whether to surface or swallow the error.
+    """
+    return _regenerate_day_with_instruction(
+        trip, day_index,
+        "A traveler requests this change: \"%s\"" % comment_body,
+        log_fn=log_fn)
+
+
+# --------------------------------------------------------------------------- #
+# Trip editing (phase 3): remove one overnight stop from an existing trip
+# --------------------------------------------------------------------------- #
+
+def _trip_start_date(trip):
+    """datetime.date of Day 1, or None when it can't be derived. Month/day come
+    from days[0].date ('MM/DD'); the year from dateRange ('YYYY-MM-DD ~ …'),
+    falling back to generationDate."""
+    days = trip.get("days") or []
+    if not days:
+        return None
+    m = re.match(r"^\s*(\d{1,2})/(\d{1,2})", str(days[0].get("date") or ""))
+    if not m:
+        return None
+    year = None
+    for field in ("dateRange", "generationDate"):
+        ym = re.match(r"\s*(\d{4})-", str(trip.get(field) or ""))
+        if ym:
+            year = int(ym.group(1))
+            break
+    if not year:
+        return None
+    try:
+        return datetime.date(year, int(m.group(1)), int(m.group(2)))
+    except ValueError:
+        return None
+
+
+def _resequence_dates(trip):
+    """Rewrite every day's 'MM/DD' date as Day1+k and rebuild dateRange.
+    Returns the per-day ISO dates (aligned with trip['days']), or None when
+    the trip's dates can't be parsed — nothing is changed in that case."""
+    start = _trip_start_date(trip)
+    if not start:
+        return None
+    iso = []
+    for k, d in enumerate(trip.get("days") or []):
+        cur = start + datetime.timedelta(days=k)
+        d["date"] = cur.strftime("%m/%d")
+        iso.append(cur.strftime("%Y-%m-%d"))
+    if iso:
+        trip["dateRange"] = "%s ~ %s" % (iso[0], iso[-1])
+    return iso
+
+
+def _weather_forecast(lat, lng):
+    """Real per-day forecast via tools/weather_client (NWS, free, no key).
+    Returns the client's dict, or None on any failure — trip editing must keep
+    working fully offline."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import weather_client
+        return weather_client.forecast(lat, lng)
+    except Exception as e:
+        print("[warn] weather refresh unavailable: %s" % e, file=sys.stderr)
+        return None
+
+
+def _refresh_weather(trip, first_idx, iso_dates):
+    """Overwrite weather with a real forecast for every day from `first_idx` on
+    (their calendar dates just changed), where the forecast actually covers the
+    new date; other days keep the model's estimate. Best-effort, never raises."""
+    if not iso_dates:
+        return
+    days = trip.get("days") or []
+    cache = {}
+    for i in range(max(first_idx, 0), len(days)):
+        d = days[i]
+        stop = next((s for s in reversed(d.get("stops") or [])
+                     if isinstance(s.get("lat"), (int, float))
+                     and isinstance(s.get("lng"), (int, float))), None)
+        if not stop:
+            continue
+        key = (round(stop["lat"], 1), round(stop["lng"], 1))
+        if key not in cache:
+            cache[key] = _weather_forecast(stop["lat"], stop["lng"]) or {}
+        fc = cache[key]
+        if fc.get("source") != "nws":
+            continue   # fallback shape = no real data for this location
+        hit = next((x for x in (fc.get("days") or [])
+                    if x.get("date") == iso_dates[i]), None)
+        if not hit:
+            continue   # date beyond the forecast window — keep the estimate
+        w = d.get("weather") or {}
+        w["icon"] = hit.get("icon") or w.get("icon") or "partly-cloudy"
+        if isinstance(hit.get("high"), (int, float)):
+            w["high"] = int(hit["high"])
+        if isinstance(hit.get("low"), (int, float)):
+            w["low"] = int(hit["low"])
+        d["weather"] = w
+
+
+def _drop_city_references(trip, city_name):
+    """Drop lodging / booking-countdown lines that reference the removed city,
+    so the visible page doesn't keep advertising a hotel we no longer stay at."""
+    if not (city_name or "").strip():
+        return
+    needle = city_name.strip().lower()
+    core = needle.split(",")[0].strip()
+    word = re.compile(r"\b%s\b" % re.escape(core)) if core else None
+
+    def refers(text):
+        t = (text or "").lower()
+        return needle in t or bool(word and word.search(t))
+
+    if isinstance(trip.get("lodging"), list):
+        trip["lodging"] = [l for l in trip["lodging"]
+                           if not refers("%s %s" % (l.get("name", ""), l.get("area", "")))]
+    if isinstance(trip.get("bookingCountdown"), list):
+        trip["bookingCountdown"] = [b for b in trip["bookingCountdown"]
+                                    if not refers("%s %s" % (b.get("item", ""), b.get("where", "")))]
+
+
+def remove_city(trip, day_start, day_end, city_name="", log_fn=None):
+    """Remove one overnight stop (days [day_start..day_end], 0-based inclusive)
+    from an existing trip and stitch the itinerary back together.
+
+    One model call rewrites the joined driving day (previous overnight → the
+    removed stop's successor); everything else is deterministic: later days
+    shift earlier, drivingDays/totalMiles/dateRange are recomputed, lodging and
+    booking-countdown lines for the removed city are dropped, and weather is
+    refreshed from a real forecast where one covers the shifted dates.
+
+    The trip's first and last day can never be removed. The trip dict is only
+    mutated after the model call succeeds, so a failed edit never leaves a
+    half-edited trip for callers to persist.
+    """
+    days = trip.get("days") or []
+    n = len(days)
+    if n < 3:
+        raise ValueError("trip is too short to edit")
+    if not (1 <= day_start <= day_end <= n - 2):
+        raise ValueError("span must keep the trip's first and last day")
+
+    join_idx = day_end + 1
+    join_day = days[join_idx]
+    prev_day = days[day_start - 1]
+    new_from = prev_day.get("overnight") or prev_day.get("to") or ""
+    old_to   = join_day.get("to") or ""
+    removed  = (city_name or days[day_start].get("overnight")
+                or join_day.get("from") or "that stop")
+    instruction = (
+        "The overnight stop '%s' has been REMOVED from the trip. This day "
+        "previously drove '%s' -> '%s'. Rewrite it as ONE day driving DIRECTLY "
+        "from '%s' to '%s': recompute driveMiles and driveTime realistically for "
+        "that direct route, choose stops and fuel/charging along the direct route "
+        "only, and do not route through or mention '%s'."
+        % (removed, join_day.get("from", ""), old_to, new_from, old_to, removed)
+    )
+    new_join = _regenerate_day_with_instruction(trip, join_idx, instruction, log_fn=log_fn)
+    # The model rewrote the leg's content; its endpoints are ours to enforce.
+    new_join["from"] = new_from
+    new_join["to"] = old_to
+    new_join["overnight"] = join_day.get("overnight")
+
+    removed_miles = sum(int(d.get("driveMiles") or 0)
+                        for d in days[day_start:join_idx + 1])
+    trip["days"] = days[:day_start] + [new_join] + days[join_idx + 1:]
+    trip["drivingDays"] = len(trip["days"])
+    if isinstance(trip.get("totalMiles"), (int, float)):
+        delta = int(new_join.get("driveMiles") or 0) - removed_miles
+        trip["totalMiles"] = max(0, int(trip["totalMiles"]) + delta)
+
+    iso = _resequence_dates(trip)
+    _drop_city_references(trip, city_name)
+    _refresh_weather(trip, day_start, iso)
+    despread_stops(trip)   # the rewritten day may introduce coincident pins
+    return trip
