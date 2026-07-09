@@ -141,6 +141,8 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
 - `scripts/routes.py` is mounted on `sys.path` by an external webapp — keep its public
   API stable: `plan_routes`, `demo_routes`, `payload_to_text`, `extract_json`,
   `haversine_km`.
+- `scripts/planner.py` is mounted the same way — keep `live_mode`, `generate_trip`,
+  `regenerate_day`, `remove_city`, `fix_endpoints`, `despread_stops` stable.
 
 ### `scripts/routes.py` live / offline dual-mode (webapp-only)
 `plan_routes()` runs in one of two modes, chosen by `_live_mode()`:
