@@ -333,6 +333,7 @@ def build_user(payload, region):
         "\nOutput contract (the renderer consumes this exact shape):\n"
         "- Output ONLY a single JSON object matching this schema — no prose, no markdown fences:\n"
         + schema + "\n"
+        '- Strict JSON: any double quote inside a string value must be escaped as \\".\n'
         "- Every stop and fuel/charge point needs real, accurate decimal lat/lng; Day 1's first "
         "stop MUST be the exact start and the final stop MUST be the destination.\n"
         "- 'dateRange' and 'drivingDays' must match the requested number of days; set 'region' to "
@@ -345,18 +346,54 @@ def build_user(payload, region):
     )
 
 
+_STRICT_JSON_NUDGE = (
+    "\n\nRETRY NOTICE: your previous response was not parseable JSON. Return "
+    "STRICT JSON this time — most importantly, any double quote inside a "
+    "string value must be escaped as \\\"."
+)
+
+
+def _log_bad_json(where, text, err, stop_reason=None):
+    """Preserve the evidence when model JSON fails to parse: the error, the
+    stop_reason and the text around the failure position go to stderr, so
+    server logs show the root cause instead of a bare JSONDecodeError."""
+    pos = getattr(err, "pos", None)
+    ctx = ""
+    if isinstance(pos, int):
+        lo, hi = max(0, pos - 200), min(len(text), pos + 200)
+        ctx = " … context @%d: %r" % (pos, text[lo:hi])
+    print("[warn] %s: unparseable model JSON (%s; stop_reason=%s; %d chars)%s"
+          % (where, err, stop_reason, len(text), ctx), file=sys.stderr)
+
+
+def _parse_with_retry(text, retry_fn, where, stop_reason=None):
+    """extract_json with one second chance: on failure, log the evidence and
+    let `retry_fn() -> (text, stop_reason)` ask the model again (a JSON slip
+    is a dice roll — one retry removes almost all user-visible failures)."""
+    try:
+        return _routes.extract_json(text)
+    except Exception as e:
+        _log_bad_json(where, text, e, stop_reason)
+    text2, stop2 = retry_fn()
+    try:
+        return _routes.extract_json(text2)
+    except Exception as e:
+        _log_bad_json(where + " (retry)", text2, e, stop2)
+        raise
+
+
 def plan_live(payload, region, on_progress=None, log_fn=None):
     """Live phase-2 generation: one streaming Claude call framed by the skill's
-    own docs. `on_progress(event)` (if given) is called with small dicts as JSON
+    own docs (plus one automatic retry if the response isn't parseable JSON).
+    `on_progress(event)` (if given) is called with small dicts as JSON
     streams in so a caller can reflect progress:
       - {"expectedChars": n}  once, before streaming starts
       - {"charsReceived": n}  on every chunk (fine-grained ETA signal)
       - {"step": idx}         when a coarse phase threshold is crossed
-    `log_fn(usage)` (if given) receives the final token-usage object."""
+    `log_fn(usage)` (if given) receives each call's token-usage object."""
     import anthropic
     client = anthropic.Anthropic()
     system, prompt = build_messages(payload, region)
-    text = ""
 
     def emit(event):
         if on_progress:
@@ -378,18 +415,25 @@ def plan_live(payload, region, on_progress=None, log_fn=None):
         (int(expected_chars * 0.67), 4),     # budget/research (~67% in)
     ]
     emit({"expectedChars": expected_chars})
-    with client.messages.stream(model=_MODEL, max_tokens=16000, system=system,
-                                messages=[{"role": "user", "content": prompt}]) as stream:
-        for chunk in stream.text_stream:
-            text += chunk
-            emit({"charsReceived": len(text)})
-            for n, step in thresholds:
-                if len(text) >= n:
-                    emit({"step": step})
-        final = stream.get_final_message()   # carries the authoritative token usage
-    if log_fn:
-        log_fn(final.usage)
-    return _routes.extract_json(text)
+
+    def stream_once(p):
+        text = ""
+        with client.messages.stream(model=_MODEL, max_tokens=16000, system=system,
+                                    messages=[{"role": "user", "content": p}]) as stream:
+            for chunk in stream.text_stream:
+                text += chunk
+                emit({"charsReceived": len(text)})
+                for n, step in thresholds:
+                    if len(text) >= n:
+                        emit({"step": step})
+            final = stream.get_final_message()   # carries the authoritative token usage
+        if log_fn:
+            log_fn(final.usage)
+        return text, getattr(final, "stop_reason", None)
+
+    text, stop = stream_once(prompt)
+    return _parse_with_retry(
+        text, lambda: stream_once(prompt + _STRICT_JSON_NUDGE), "plan_live", stop)
 
 
 def plan_demo(payload, region, on_progress=None):
@@ -492,7 +536,8 @@ def _regenerate_day_with_instruction(trip, day_index, instruction, log_fn=None):
         "%s\n\n"
         "Rewrite ONLY Day %d to honour this request. %s"
         "Keep the same 'date' value. Use accurate lat/lng for all stops. "
-        "Output ONLY the JSON object for this single day — no prose, no markdown fences:\n%s\n"
+        "Output ONLY the JSON object for this single day — no prose, no markdown "
+        "fences; any double quote inside a string value must be escaped as \\\":\n%s\n"
         "Return JSON only."
     ) % (
         trip.get("title", ""),
@@ -504,13 +549,19 @@ def _regenerate_day_with_instruction(trip, day_index, instruction, log_fn=None):
         continuity,
         schema,
     )
-    msg = client.messages.create(
-        model=_MODEL, max_tokens=4000,
-        messages=[{"role": "user", "content": prompt}])
-    text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
-    if log_fn:
-        log_fn(msg.usage)
-    new_day = _routes.extract_json(text)
+    def create_once(p):
+        msg = client.messages.create(
+            model=_MODEL, max_tokens=4000,
+            messages=[{"role": "user", "content": p}])
+        t = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+        if log_fn:
+            log_fn(msg.usage)
+        return t, getattr(msg, "stop_reason", None)
+
+    text, stop = create_once(prompt)
+    new_day = _parse_with_retry(
+        text, lambda: create_once(prompt + _STRICT_JSON_NUDGE),
+        "regenerate_day", stop)
     # Preserve the original date so the calendar doesn't drift.
     new_day["date"] = day.get("date", new_day.get("date", ""))
     return new_day

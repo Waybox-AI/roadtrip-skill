@@ -112,10 +112,51 @@ def _repair_truncated(s):
     return s[:last_safe] + "".join(reversed(last_stack))
 
 
+def _escape_inner_quotes(s):
+    """Escape bare double quotes that the model left INSIDE string values —
+    a recurring slip like  "note": "leaving "Golden Gate" at dawn".
+
+    While inside a string, a quote counts as the real terminator only when the
+    next non-whitespace character is structural (one of , : } ] or end of
+    text); anything else means the quote was content, so it is escaped. Valid
+    JSON passes through unchanged (after every real terminator the next token
+    IS structural). Known limit: an embedded quote directly before a comma —
+    "we said "hi", then left" — still parses wrong; no lexical fix can tell
+    that terminator apart, and the retry layer covers it instead."""
+    out, in_str, esc, n = [], False, False, len(s)
+    for i, ch in enumerate(s):
+        if not in_str:
+            if ch == '"':
+                in_str = True
+            out.append(ch)
+            continue
+        if esc:
+            esc = False
+            out.append(ch)
+            continue
+        if ch == "\\":
+            esc = True
+            out.append(ch)
+            continue
+        if ch == '"':
+            j = i + 1
+            while j < n and s[j] in " \t\r\n":
+                j += 1
+            if j >= n or s[j] in ",:}]":
+                in_str = False
+                out.append(ch)          # real terminator
+            else:
+                out.append('\\"')       # embedded quote — keep it as content
+            continue
+        out.append(ch)
+    return "".join(out)
+
+
 def extract_json(text):
     """Parse the model's JSON, tolerating code fences, surrounding prose, trailing
-    commas, and — crucially — truncation (when the response hits max_tokens we
-    salvage the JSON by closing open brackets at the last complete element)."""
+    commas, unescaped quotes inside string values, and — crucially — truncation
+    (when the response hits max_tokens we salvage the JSON by closing open
+    brackets at the last complete element)."""
     t = text.strip()
     if "```" in t:
         m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.S)
@@ -136,6 +177,20 @@ def extract_json(text):
             pass
         try:
             return json.loads(re.sub(r",\s*([}\]])", r"\1", c))
+        except Exception:
+            pass
+
+    # unescaped quotes inside string values: repair, then walk the same ladder
+    # again (a document can be both malformed and truncated).
+    fixed = _escape_inner_quotes(t)
+    if fixed != t:
+        for c in (fixed, re.sub(r",\s*([}\]])", r"\1", fixed)):
+            try:
+                return json.loads(c)
+            except Exception:
+                pass
+        try:
+            return json.loads(_repair_truncated(re.sub(r",\s*([}\]])", r"\1", fixed)))
         except Exception:
             pass
 
