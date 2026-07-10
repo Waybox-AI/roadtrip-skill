@@ -3,6 +3,13 @@
 Vendor-agnostic technical rules for working in this repo. Applies to any AI agent or
 human. For product/domain background see [CONTEXT.md](CONTEXT.md).
 
+## Branching Rule
+
+- When creating git branches, if current base branch is not default branch (`main`), you should prompt user to specify
+  base branch
+- When submitting pull request (PR), you should set PR base branch as the current local base branch, instead of the
+  browser github's default base branch
+
 ## Hard constraints
 
 - **Python 3.8+ standard library only** for `assets/`, `scripts/`, and `tools/`. **No
