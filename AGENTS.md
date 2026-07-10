@@ -142,7 +142,8 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
   API stable: `plan_routes`, `demo_routes`, `payload_to_text`, `extract_json`,
   `haversine_km`.
 - `scripts/planner.py` is mounted the same way — keep `live_mode`, `generate_trip`,
-  `regenerate_day`, `remove_city`, `set_nights`, `fix_endpoints`, `despread_stops` stable.
+  `regenerate_day`, `remove_city`, `set_nights`, `revise_stay`, `fix_endpoints`,
+  `despread_stops` stable.
 
 ### `scripts/routes.py` live / offline dual-mode (webapp-only)
 `plan_routes()` runs in one of two modes, chosen by `_live_mode()`:
