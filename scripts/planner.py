@@ -27,6 +27,11 @@ remove_city(trip, day_start, day_end, city_name="", log_fn=None) -> dict
     driving day (one model call), then resequence dates, refresh totals and —
     where a real forecast covers the new dates — weather. Mutates only after
     the model call succeeds; raises on an invalid span or model failure.
+set_nights(trip, day_start, day_end, city_name, nights, log_fn=None) -> dict
+    Trip edit: change how long one overnight stop lasts. The city's run of
+    days is rewritten as `nights` days by one model call (arrival driving leg
+    preserved verbatim), then the same deterministic cascade as remove_city
+    runs (dates, totals, lodging nights, weather). Same atomicity contract.
 fix_endpoints(trip, start, destination) -> None
     Snap the first/last stop coordinates to the real start/destination.
 despread_stops(trip) -> None
@@ -580,6 +585,84 @@ def regenerate_day(trip, day_index, comment_body, log_fn=None):
         log_fn=log_fn)
 
 
+def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
+                                      instruction, log_fn=None):
+    """Single-shot model call that rewrites a run of consecutive days as
+    EXACTLY `out_count` replacement days per `instruction`. The wire format is
+    an object — {"days": [...]} — so extract_json's object handling applies.
+    Returns the list of new day dicts; raises on failure or count mismatch."""
+    import anthropic
+    client = anthropic.Anthropic()
+    days = trip.get("days") or []
+    span = days[day_start:day_end + 1]
+    days_summary = "\n".join(
+        "Day %d (%s): %s  [%s → %s]" % (
+            i + 1, d.get("date", ""), d.get("title", ""),
+            d.get("from", ""), d.get("to", ""))
+        for i, d in enumerate(days)
+    )
+    prev_to   = days[day_start - 1].get("to", "") if day_start > 0 else ""
+    next_from = days[day_end + 1].get("from", "") if day_end + 1 < len(days) else ""
+    continuity = ""
+    if prev_to:
+        continuity += "The day before this run ends at '%s'. " % prev_to
+    if next_from:
+        continuity += "The day after this run starts at '%s'. " % next_from
+    day_schema = (
+        '{"date":str,"title":str,"from":str,"to":str,"driveMiles":int,"driveTime":str,'
+        '"overnight":str|null,"timezoneNote":str?,'
+        '"weather":{"icon":"sunny|partly-cloudy|cloudy|rain|snow|storm|windy|fog","high":int,"low":int},'
+        '"stops":[{"name":str,"type":"park|hike|scenic|city|tour|food|lodging",'
+        '"lat":float,"lng":float,"note":str}],'
+        '"fuelCharging":[{"name":str,"type":"gas|charge","lat":float,"lng":float,"note":str}],'
+        '"meal":{"name":str,"perPerson":int},"risks":[str]}'
+    )
+    prompt = (
+        "You are updating a run of consecutive days in an existing road trip itinerary.\n\n"
+        "Trip: %s\n"
+        "All days (for continuity context):\n%s\n\n"
+        "Current run — Days %d to %d:\n%s\n\n"
+        "%s\n\n"
+        "Rewrite ONLY this run, as EXACTLY %d day(s) total. %s"
+        "Use accurate lat/lng for all stops. Output ONLY a JSON object of the form "
+        '{"days": [day, ...]} with exactly %d element(s) — no prose, no markdown '
+        "fences; any double quote inside a string value must be escaped as \\\".\n"
+        "Each day matches: %s\n"
+        "Return JSON only."
+    ) % (
+        trip.get("title", ""),
+        days_summary,
+        day_start + 1, day_end + 1,
+        json.dumps(span, ensure_ascii=False, indent=2),
+        instruction,
+        out_count,
+        continuity,
+        out_count,
+        day_schema,
+    )
+
+    def create_once(p):
+        msg = client.messages.create(
+            model=_MODEL, max_tokens=min(16000, 2000 + 2600 * out_count),
+            messages=[{"role": "user", "content": p}])
+        t = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+        if log_fn:
+            log_fn(msg.usage)
+        return t, getattr(msg, "stop_reason", None)
+
+    text, stop = create_once(prompt)
+    got = _parse_with_retry(
+        text, lambda: create_once(prompt + _STRICT_JSON_NUDGE),
+        "regenerate_span", stop)
+    new_days = got.get("days") if isinstance(got, dict) else None
+    if (not isinstance(new_days, list) or len(new_days) != out_count
+            or not all(isinstance(d, dict) for d in new_days)):
+        raise ValueError("model returned %s day(s) for the run, expected %d"
+                         % (len(new_days) if isinstance(new_days, list) else "no",
+                            out_count))
+    return new_days
+
+
 # --------------------------------------------------------------------------- #
 # Trip editing (phase 3): remove one overnight stop from an existing trip
 # --------------------------------------------------------------------------- #
@@ -673,6 +756,29 @@ def _refresh_weather(trip, first_idx, iso_dates):
         d["weather"] = w
 
 
+def _mi(day):
+    """driveMiles as an int, tolerating missing/garbage model values."""
+    try:
+        return int(day.get("driveMiles") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _set_lodging_nights(trip, city_name, nights):
+    """Keep the lodging list consistent with a stay-length change: entries
+    referencing the city get the new night count (same cheap matching as
+    _drop_city_references)."""
+    if not (city_name or "").strip() or not isinstance(trip.get("lodging"), list):
+        return
+    needle = city_name.strip().lower()
+    core = needle.split(",")[0].strip()
+    word = re.compile(r"\b%s\b" % re.escape(core)) if core else None
+    for l in trip["lodging"]:
+        t = ("%s %s" % (l.get("name", ""), l.get("area", ""))).lower()
+        if needle in t or (word and word.search(t)):
+            l["nights"] = nights
+
+
 def _drop_city_references(trip, city_name):
     """Drop lodging / booking-countdown lines that reference the removed city,
     so the visible page doesn't keep advertising a hotel we no longer stay at."""
@@ -736,16 +842,93 @@ def remove_city(trip, day_start, day_end, city_name="", log_fn=None):
     new_join["to"] = old_to
     new_join["overnight"] = join_day.get("overnight")
 
-    removed_miles = sum(int(d.get("driveMiles") or 0)
-                        for d in days[day_start:join_idx + 1])
+    removed_miles = sum(_mi(d) for d in days[day_start:join_idx + 1])
     trip["days"] = days[:day_start] + [new_join] + days[join_idx + 1:]
     trip["drivingDays"] = len(trip["days"])
     if isinstance(trip.get("totalMiles"), (int, float)):
-        delta = int(new_join.get("driveMiles") or 0) - removed_miles
+        delta = _mi(new_join) - removed_miles
         trip["totalMiles"] = max(0, int(trip["totalMiles"]) + delta)
 
     iso = _resequence_dates(trip)
     _drop_city_references(trip, city_name)
     _refresh_weather(trip, day_start, iso)
     despread_stops(trip)   # the rewritten day may introduce coincident pins
+    return trip
+
+
+def set_nights(trip, day_start, day_end, city_name, nights, log_fn=None):
+    """Change how long one overnight stop lasts: the city's run of days
+    [day_start..day_end] is rewritten as `nights` days by one model call, then
+    the same deterministic cascade as remove_city runs (dates, totals, lodging
+    night counts, weather, pin de-stacking).
+
+    Unlike remove_city, a run anchored to the trip's FIRST day is editable —
+    the arrival day always survives with its driving leg preserved verbatim;
+    only the stay length changes. The trip's final day stays untouched.
+
+    The trip dict is mutated only after the model call succeeds, so a failed
+    edit never leaves a half-edited trip for callers to persist.
+    """
+    days = trip.get("days") or []
+    n = len(days)
+    if n < 2:
+        raise ValueError("trip is too short to edit")
+    if not (0 <= day_start <= day_end <= n - 2):
+        raise ValueError("span must lie before the trip's final day")
+    try:
+        nights = int(nights)
+    except (TypeError, ValueError):
+        raise ValueError("invalid night count")
+    current = day_end - day_start + 1
+    if not (1 <= nights <= 7):
+        raise ValueError("nights must be between 1 and 7")
+    if nights == current:
+        raise ValueError("stay is already %d night(s) long" % current)
+    if n - current + nights > 21:
+        raise ValueError("trip would exceed 21 days")
+
+    arrival = days[day_start]
+    city = city_name or arrival.get("overnight") or "that stop"
+    instruction = (
+        "The traveler changed the stay at '%s' from %d to %d night(s). Replan "
+        "this run: the FIRST day must keep the identical arrival drive "
+        "'%s' -> '%s' (%s mi, %s) — only its sightseeing may change; every "
+        "other day stays local around '%s'. Redistribute the area's best "
+        "sights across the new length — drop the least essential ones when "
+        "shrinking, add worthwhile nearby ones when growing."
+        % (city, current, nights,
+           arrival.get("from", ""), arrival.get("to", ""),
+           arrival.get("driveMiles", "?"), arrival.get("driveTime", "?"),
+           city)
+    )
+    new_run = _regenerate_span_with_instruction(
+        trip, day_start, day_end, nights, instruction, log_fn=log_fn)
+
+    # Anchors are ours to enforce: same overnight throughout, arrival leg verbatim.
+    overnight = arrival.get("overnight")
+    for k, d in enumerate(new_run):
+        d["overnight"] = overnight
+        if k == 0:
+            d["from"] = arrival.get("from", "")
+            d["to"] = arrival.get("to", "")
+            d["driveMiles"] = arrival.get("driveMiles")
+            d["driveTime"] = arrival.get("driveTime")
+            # Day 1 of the trip anchors date resequencing — when the run is
+            # start-anchored the model's date must never displace the calendar.
+            d["date"] = arrival.get("date", d.get("date", ""))
+        else:
+            d["from"] = overnight or d.get("from", "")
+            d["to"] = overnight or d.get("to", "")
+
+    old_miles = sum(_mi(d) for d in days[day_start:day_end + 1])
+    trip["days"] = days[:day_start] + new_run + days[day_end + 1:]
+    trip["drivingDays"] = len(trip["days"])
+    if isinstance(trip.get("totalMiles"), (int, float)):
+        delta = sum(_mi(d) for d in new_run) - old_miles
+        trip["totalMiles"] = max(0, int(trip["totalMiles"]) + delta)
+
+    _set_lodging_nights(trip, city, nights)
+    iso = _resequence_dates(trip)
+    _refresh_weather(trip, day_start, iso)
+    despread_stops(trip)
     return trip
