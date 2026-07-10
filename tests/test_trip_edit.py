@@ -1,19 +1,25 @@
-"""Tests for trip editing: planner.remove_city and its deterministic cascade.
+"""Tests for trip editing: planner.remove_city / set_nights and their
+deterministic cascade.
 
 The model call and the weather client are always mocked — the suite runs
 offline with no keys (repo hard constraint). Fixture data is the bundled
 Southwest sample (7 days, overnights: Springdale x2, Bryce, Page, Grand
-Canyon x2, return).
+Canyon x2, return); the property sweep additionally walks every bundled
+sample trip.
 """
 
 import copy
+import datetime
+import glob
 import json
 import os
+import sys
+import types
 
 import pytest
 
 from scripts import planner
-from scripts.planner import remove_city
+from scripts.planner import remove_city, set_nights
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..")
 
@@ -241,6 +247,227 @@ class TestSetNights:
         with pytest.raises(RuntimeError):
             set_nights(trip, 0, 1, "Springdale, UT", 1)
         assert trip == snapshot
+
+
+def _overnight_runs(days, allow_start_anchor):
+    """Maximal same-overnight runs eligible for editing (mirrors the webapp's
+    grouping): overnight truthy, run ends before the final day, and — for
+    remove — the run may not touch Day 1."""
+    runs, n, i = [], len(days), 0
+    while i < n:
+        o = days[i].get("overnight") or None
+        j = i
+        while j + 1 < n and (days[j + 1].get("overnight") or None) == o:
+            j += 1
+        if o and j <= n - 2 and (allow_start_anchor or i >= 1):
+            runs.append((i, j, o))
+        i = j + 1
+    return runs
+
+
+def _assert_dates_contiguous(trip):
+    days = trip["days"]
+    y0, m0, d0 = trip["dateRange"].split(" ~ ")[0].split("-")
+    cur = datetime.date(int(y0), int(m0), int(d0))
+    iso = []
+    for d in days:
+        assert d["date"] == cur.strftime("%m/%d")
+        iso.append(cur.strftime("%Y-%m-%d"))
+        cur += datetime.timedelta(days=1)
+    assert trip["dateRange"] == "%s ~ %s" % (iso[0], iso[-1])
+
+
+def _stable(day):
+    """A day stripped of the fields the cascade may legitimately touch on
+    UNCHANGED days: the date (resequencing) and stop coordinates
+    (despread_stops re-runs trip-wide and nudges colliding pins)."""
+    d = copy.deepcopy(day)
+    d.pop("date", None)
+    for s in d.get("stops") or []:
+        s.pop("lat", None)
+        s.pop("lng", None)
+    return d
+
+
+class TestPropertySweep:
+    """Every bundled sample × every eligible run × several night targets —
+    the invariants that must hold no matter what the (mocked) model returns."""
+
+    def _samples(self):
+        for f in sorted(glob.glob(os.path.join(_ROOT, "assets", "tripData.*.json"))):
+            with open(f, encoding="utf-8") as fh:
+                yield os.path.basename(f), json.load(fh)
+
+    def test_set_nights_sweep(self, mock_span_regen):
+        scenarios = 0
+        for name, base in self._samples():
+            n = len(base["days"])
+            for (i, j, city) in _overnight_runs(base["days"], allow_start_anchor=True):
+                cur = j - i + 1
+                targets = sorted({1, cur - 1, cur + 1, cur + 2, 7})
+                for target in targets:
+                    if not (1 <= target <= 7) or target == cur or n - cur + target > 21:
+                        continue
+                    trip = copy.deepcopy(base)
+                    orig = copy.deepcopy(base)
+                    out = set_nights(trip, i, j, city, target)
+                    scenarios += 1
+                    ctx = "%s run[%d..%d] %d→%d" % (name, i, j, cur, target)
+                    # shape
+                    assert len(out["days"]) == n - cur + target, ctx
+                    assert out["drivingDays"] == len(out["days"]), ctx
+                    _assert_dates_contiguous(out)
+                    # prefix untouched, suffix content-identical (dates may shift)
+                    assert [_stable(d) for d in out["days"][:i]] == [_stable(d) for d in orig["days"][:i]], ctx
+                    assert ([_stable(d) for d in out["days"][i + target:]]
+                            == [_stable(d) for d in orig["days"][j + 1:]]), ctx
+                    # anchors enforced on the rewritten run
+                    arr_old, arr_new = orig["days"][i], out["days"][i]
+                    for key in ("from", "to", "driveMiles", "driveTime"):
+                        assert arr_new.get(key) == arr_old.get(key), ctx
+                    for d in out["days"][i:i + target]:
+                        assert d["overnight"] == arr_old.get("overnight"), ctx
+                    for d in out["days"][i + 1:i + target]:
+                        assert d["from"] == arr_old.get("overnight"), ctx
+                    # totals arithmetic
+                    if isinstance(orig.get("totalMiles"), (int, float)):
+                        delta = (sum(planner._mi(d) for d in out["days"][i:i + target])
+                                 - sum(planner._mi(d) for d in orig["days"][i:j + 1]))
+                        assert out["totalMiles"] == max(0, int(orig["totalMiles"]) + delta), ctx
+                    # lodging night counts follow; unrelated entries untouched
+                    needle = city.split(",")[0].strip().lower()
+                    for l_new, l_old in zip(out.get("lodging", []), orig.get("lodging", [])):
+                        text = ("%s %s" % (l_old.get("name", ""), l_old.get("area", ""))).lower()
+                        if needle and needle in text:
+                            assert l_new["nights"] == target, ctx
+                        else:
+                            assert l_new == l_old, ctx
+                    # countdown must survive a stay-length change
+                    assert out.get("bookingCountdown") == orig.get("bookingCountdown"), ctx
+        assert scenarios >= 20   # the sweep actually swept
+
+    def test_remove_city_sweep(self, mock_regen):
+        scenarios = 0
+        for name, base in self._samples():
+            n = len(base["days"])
+            for (i, j, city) in _overnight_runs(base["days"], allow_start_anchor=False):
+                if n - (j - i + 1) < 2:
+                    continue
+                trip = copy.deepcopy(base)
+                orig = copy.deepcopy(base)
+                out = remove_city(trip, i, j, city_name=city)
+                scenarios += 1
+                ctx = "%s remove run[%d..%d]" % (name, i, j)
+                assert len(out["days"]) == n - (j - i + 1), ctx
+                assert out["drivingDays"] == len(out["days"]), ctx
+                _assert_dates_contiguous(out)
+                assert [_stable(d) for d in out["days"][:i]] == [_stable(d) for d in orig["days"][:i]], ctx
+                # stitched day endpoints enforced
+                stitched = out["days"][i]
+                assert stitched["from"] == (orig["days"][i - 1].get("overnight")
+                                            or orig["days"][i - 1].get("to")), ctx
+                assert stitched["to"] == orig["days"][j + 1].get("to"), ctx
+                assert stitched["overnight"] == orig["days"][j + 1].get("overnight"), ctx
+                # suffix after the stitched day content-identical
+                assert ([_stable(d) for d in out["days"][i + 1:]]
+                        == [_stable(d) for d in orig["days"][j + 2:]]), ctx
+                # the removed city no longer referenced in lodging
+                needle = city.split(",")[0].strip().lower()
+                for l in out.get("lodging", []):
+                    assert needle not in ("%s %s" % (l.get("name", ""),
+                                                     l.get("area", ""))).lower(), ctx
+        assert scenarios >= 4
+
+
+class TestSpanRegenOffline:
+    """Exercise _regenerate_span_with_instruction itself — prompt assembly,
+    exact-count validation and the retry path — via a scripted fake anthropic."""
+
+    def _install_fake(self, monkeypatch, script):
+        calls = []
+
+        class _Client:
+            def __init__(self, *a, **kw):
+                self.messages = self
+
+            def create(self, **kw):
+                calls.append(kw)
+                blk = types.SimpleNamespace(type="text", text=script.pop(0))
+                return types.SimpleNamespace(content=[blk], usage={"in": 1},
+                                             stop_reason="end_turn")
+
+        mod = types.ModuleType("anthropic")
+        mod.Anthropic = _Client
+        monkeypatch.setitem(sys.modules, "anthropic", mod)
+        return calls
+
+    def _payload(self, count):
+        return json.dumps({"days": [_span_day(k) for k in range(count)]})
+
+    def test_happy_path_prompt_and_result(self, trip, monkeypatch):
+        calls = self._install_fake(monkeypatch, [self._payload(2)])
+        got = planner._regenerate_span_with_instruction(
+            trip, 2, 2, 2, "TEST-INSTRUCTION-MARKER")
+        assert len(got) == 2 and got[0]["title"] == "SPAN DAY 1"
+        assert len(calls) == 1
+        prompt = calls[0]["messages"][0]["content"]
+        assert "TEST-INSTRUCTION-MARKER" in prompt
+        assert "EXACTLY 2 day(s)" in prompt
+        assert '"days"' in prompt
+        assert "Bryce Canyon City" in prompt          # span JSON embedded
+        assert calls[0]["max_tokens"] == 2000 + 2600 * 2
+
+    def test_retry_on_garbage_then_success(self, trip, monkeypatch, capsys):
+        calls = self._install_fake(
+            monkeypatch, ["utter { garbage !!!", self._payload(1)])
+        got = planner._regenerate_span_with_instruction(trip, 2, 2, 1, "X")
+        assert len(got) == 1
+        assert len(calls) == 2
+        assert calls[1]["messages"][0]["content"].endswith(
+            planner._STRICT_JSON_NUDGE)
+        assert "unparseable model JSON" in capsys.readouterr().err
+
+    def test_count_mismatch_raises_without_retry(self, trip, monkeypatch):
+        calls = self._install_fake(monkeypatch, [self._payload(1)])
+        with pytest.raises(ValueError, match="expected 2"):
+            planner._regenerate_span_with_instruction(trip, 2, 2, 2, "X")
+        assert len(calls) == 1     # count mismatch is not a parse failure
+
+    def test_log_fn_receives_usage_per_call(self, trip, monkeypatch):
+        self._install_fake(monkeypatch, ["garbage", self._payload(1)])
+        seen = []
+        planner._regenerate_span_with_instruction(
+            trip, 2, 2, 1, "X", log_fn=seen.append)
+        assert len(seen) == 2      # both the failed and the retry call are billed
+
+
+class TestDegenerateTrips:
+    def test_missing_date_metadata_degrades_gracefully(self, mock_span_regen):
+        trip = {"days": [
+            {"date": "bogus", "overnight": "A", "from": "S", "to": "A",
+             "driveMiles": 10, "stops": []},
+            {"date": "bogus", "overnight": "A", "from": "A", "to": "A",
+             "driveMiles": 0, "stops": []},
+            {"date": "bogus", "overnight": None, "from": "A", "to": "S",
+             "driveMiles": 10, "stops": []},
+        ], "totalMiles": 20, "lodging": [], "bookingCountdown": []}
+        out = set_nights(trip, 0, 1, "A", 1)     # no dateRange/generationDate
+        assert len(out["days"]) == 2             # edit still lands
+        assert "dateRange" not in out            # date cascade skipped, no crash
+
+    def test_days_without_stops_survive_weather_refresh(self, mock_span_regen, monkeypatch):
+        monkeypatch.setattr(planner, "_weather_forecast",
+                            lambda lat, lng: {"source": "nws", "days": []})
+        trip = {"days": [
+            {"date": "09/12", "overnight": "A", "from": "S", "to": "A",
+             "driveMiles": 10},                   # no stops key at all
+            {"date": "09/13", "overnight": "A", "from": "A", "to": "A",
+             "driveMiles": 0},
+            {"date": "09/14", "overnight": None, "from": "A", "to": "S",
+             "driveMiles": 10},
+        ], "dateRange": "2026-09-12 ~ 2026-09-14", "totalMiles": 20}
+        out = set_nights(trip, 0, 1, "A", 1)
+        assert len(out["days"]) == 2
 
 
 class TestWeatherRefresh:
