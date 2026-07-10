@@ -138,6 +138,111 @@ class TestFailureLeavesTripUntouched:
         assert trip == snapshot
 
 
+def _span_day(k):
+    return {
+        "date": "01/01", "title": "SPAN DAY %d" % (k + 1),
+        "from": "model-from", "to": "model-to",
+        "driveMiles": 999 if k == 0 else 12,   # 999 must be overwritten by enforcement
+        "driveTime": "9h", "overnight": "model-overnight",
+        "weather": {"icon": "cloudy", "high": 70, "low": 50},
+        "stops": [{"name": "Span stop %d" % k, "type": "scenic",
+                   "lat": 37.1 + k, "lng": -112.4, "note": ""}],
+        "fuelCharging": [], "meal": {"name": "Cafe", "perPerson": 15}, "risks": [],
+    }
+
+
+@pytest.fixture
+def mock_span_regen(monkeypatch):
+    calls = {}
+
+    def fake(t, day_start, day_end, out_count, instruction, log_fn=None):
+        calls.update(span=(day_start, day_end), count=out_count, instruction=instruction)
+        return [_span_day(k) for k in range(out_count)]
+
+    monkeypatch.setattr(planner, "_regenerate_span_with_instruction", fake)
+    return calls
+
+
+class TestSetNights:
+    def test_guards(self, trip, mock_span_regen):
+        from scripts.planner import set_nights
+        with pytest.raises(ValueError):   # unchanged count
+            set_nights(trip, 2, 2, "Bryce Canyon City, UT", 1)
+        with pytest.raises(ValueError):   # zero nights is remove, not resize
+            set_nights(trip, 2, 2, "Bryce Canyon City, UT", 0)
+        with pytest.raises(ValueError):   # above cap
+            set_nights(trip, 2, 2, "Bryce Canyon City, UT", 8)
+        with pytest.raises(ValueError):   # touches the final day
+            set_nights(trip, 6, 6, "Las Vegas, NV", 2)
+
+    def test_trip_length_cap(self, mock_span_regen):
+        days = [{"date": "09/%02d" % (12 + i), "overnight": "X" if i < 16 else None,
+                 "from": "A", "to": "B", "driveMiles": 10, "stops": []}
+                for i in range(17)]
+        trip = {"days": days, "dateRange": "2026-09-12 ~ 2026-09-28", "totalMiles": 200}
+        from scripts.planner import set_nights
+        with pytest.raises(ValueError):   # 17 - 1 + 7 = 23 > 21
+            set_nights(trip, 3, 3, "X", 7)
+
+    def test_grow_bryce_to_two_nights(self, trip, mock_span_regen):
+        from scripts.planner import set_nights
+        out = set_nights(trip, 2, 2, "Bryce Canyon City, UT", 2)
+        assert out is trip
+        assert len(out["days"]) == 8 and out["drivingDays"] == 8
+        run = out["days"][2:4]
+        # arrival leg preserved verbatim from the old arrival day (85 mi, not 999)
+        assert run[0]["from"] == "Springdale, UT"
+        assert run[0]["to"] == "Bryce Canyon City, UT"
+        assert run[0]["driveMiles"] == 85
+        # second day is local and anchored to the same overnight
+        assert run[1]["from"] == "Bryce Canyon City, UT"
+        assert run[1]["overnight"] == "Bryce Canyon City, UT"
+        # dates resequenced: one extra day, range extends by one
+        assert [d["date"] for d in out["days"]][:5] == \
+            ["09/12", "09/13", "09/14", "09/15", "09/16"]
+        assert out["dateRange"] == "2026-09-12 ~ 2026-09-19"
+        # totals: old run 85 → new run 85 (enforced) + 12 = delta +12
+        assert out["totalMiles"] == 1180 + 12
+        # lodging night count follows the stay
+        bryce = [l for l in out["lodging"] if "bryce" in l.get("area", "").lower()]
+        assert bryce and bryce[0]["nights"] == 2
+        # the mock was asked for exactly 2 days on the right span
+        assert mock_span_regen["span"] == (2, 2) and mock_span_regen["count"] == 2
+
+    def test_shrink_start_anchored_springdale(self, trip, mock_span_regen):
+        """Runs touching Day 1 are editable here (unlike remove_city)."""
+        from scripts.planner import set_nights
+        out = set_nights(trip, 0, 1, "Springdale, UT", 1)
+        assert len(out["days"]) == 6
+        first = out["days"][0]
+        assert first["from"] == "Las Vegas, NV"        # departure leg intact
+        assert first["driveMiles"] == 165
+        assert first["overnight"] == "Springdale, UT"
+        assert out["dateRange"] == "2026-09-12 ~ 2026-09-17"
+        spring = [l for l in out["lodging"] if "springdale" in l.get("area", "").lower()]
+        assert spring and spring[0]["nights"] == 1
+
+    def test_count_mismatch_raises_untouched(self, trip, monkeypatch):
+        from scripts.planner import set_nights
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction",
+                            lambda *a, **kw: (_ for _ in ()).throw(
+                                ValueError("model returned 1 day(s) for the run, expected 2")))
+        snapshot = copy.deepcopy(trip)
+        with pytest.raises(ValueError):
+            set_nights(trip, 2, 2, "Bryce Canyon City, UT", 2)
+        assert trip == snapshot
+
+    def test_model_failure_untouched(self, trip, monkeypatch):
+        from scripts.planner import set_nights
+        def boom(*a, **kw):
+            raise RuntimeError("api down")
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction", boom)
+        snapshot = copy.deepcopy(trip)
+        with pytest.raises(RuntimeError):
+            set_nights(trip, 0, 1, "Springdale, UT", 1)
+        assert trip == snapshot
+
+
 class TestWeatherRefresh:
     def _forecast_for(self, dates, icon="rain", high=50, low=30):
         return {"source": "nws", "units": "F",
