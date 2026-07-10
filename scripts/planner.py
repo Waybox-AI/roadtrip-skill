@@ -589,16 +589,74 @@ def regenerate_day(trip, day_index, comment_body, log_fn=None):
         log_fn=log_fn)
 
 
+def _stay_lodging(trip, city_name):
+    """The lodging entry for a stay's city, or None. Cheap name/area match —
+    same heuristic as _set_lodging_nights."""
+    if not (city_name or "").strip() or not isinstance(trip.get("lodging"), list):
+        return None
+    needle = city_name.strip().lower()
+    core = needle.split(",")[0].strip()
+    word = re.compile(r"\b%s\b" % re.escape(core)) if core else None
+    for l in trip["lodging"]:
+        t = ("%s %s" % (l.get("name", ""), l.get("area", ""))).lower()
+        if needle in t or (word and word.search(t)):
+            return l
+    return None
+
+
+def _stop_key(name):
+    """'Antelope Canyon (guided tour)' -> 'antelope canyon' — the part of a stop
+    name that a booking entry is likely to echo."""
+    s = re.sub(r"\(.*?\)", " ", str(name or "")).lower()
+    s = re.sub(r"[^\w\s]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s if len(s) >= 6 else ""
+
+
+def _stay_bookings(trip, city_name, span_days=None):
+    """Booking-countdown entries belonging to a stay.
+
+    Matched by the city name OR by any stop in the stay's days — plenty of
+    bookings never name the town ("Antelope Canyon guided tour" belongs to the
+    Page stay), and those are exactly the ones travelers ask to drop."""
+    if not isinstance(trip.get("bookingCountdown"), list):
+        return []
+    needles = []
+    if (city_name or "").strip():
+        needle = city_name.strip().lower()
+        needles.append(needle)
+        core = needle.split(",")[0].strip()
+        if core:
+            needles.append(core)
+    for d in (span_days or []):
+        for s in (d.get("stops") or []):
+            k = _stop_key(s.get("name"))
+            if k:
+                needles.append(k)
+    out = []
+    for b in trip["bookingCountdown"]:
+        t = ("%s %s" % (b.get("item", ""), b.get("where", ""))).lower()
+        if any(n in t for n in needles):
+            out.append(b)
+    return out
+
+
 def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
-                                      instruction, log_fn=None):
+                                      instruction, city_name="", log_fn=None):
     """Single-shot model call that rewrites a run of consecutive days as
     EXACTLY `out_count` replacement days per `instruction`. The wire format is
-    an object — {"days": [...]} — so extract_json's object handling applies.
-    Returns the list of new day dicts; raises on failure or count mismatch."""
+    an object — {"days": [...], "lodging"?: {...}, "bookingCountdown"?: [...]} —
+    so a request like "swap that hotel" or "skip the permit" can also update the
+    trip-level sections that belong to this stay.
+
+    Returns (new_days, lodging_or_None, bookings_or_None); raises on failure or
+    day-count mismatch."""
     import anthropic
     client = anthropic.Anthropic()
     days = trip.get("days") or []
     span = days[day_start:day_end + 1]
+    cur_lodging = _stay_lodging(trip, city_name)
+    cur_bookings = _stay_bookings(trip, city_name, span)
     days_summary = "\n".join(
         "Day %d (%s): %s  [%s → %s]" % (
             i + 1, d.get("date", ""), d.get("title", ""),
@@ -621,33 +679,59 @@ def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
         '"fuelCharging":[{"name":str,"type":"gas|charge","lat":float,"lng":float,"note":str}],'
         '"meal":{"name":str,"perPerson":int},"risks":[str]}'
     )
+    # Trip-level sections that belong to this stay: hand them over so requests
+    # like "swap that hotel" or "drop the tour booking" can actually land.
+    extras, extra_schema = "", ""
+    if cur_lodging is not None:
+        extras += ("\nThis stay's lodging entry:\n%s\n"
+                   % json.dumps(cur_lodging, ensure_ascii=False))
+        extra_schema += (
+            ',\n "lodging": {"name":str,"area":str,"pricePerNight":int,"rating":str}'
+            "   // OPTIONAL — include ONLY if the request changes where they sleep"
+            " (a different hotel, cheaper, closer). Omit 'nights' and 'booked'.")
+    if cur_bookings:
+        extras += ("\nThis stay's booking-countdown entries:\n%s\n"
+                   % json.dumps(cur_bookings, ensure_ascii=False))
+        extra_schema += (
+            ',\n "bookingCountdown": [{"item":str,"bookBy":"YYYY-MM-DD","where":str,'
+            '"priority":"high|medium|low","note":str}]'
+            "   // OPTIONAL — include ONLY if the request changes what must be"
+            " reserved for this stay; return the FULL replacement list for it"
+            " (empty list = drop them all). No bookBy date before today.")
     prompt = (
         "You are updating a run of consecutive days in an existing road trip itinerary.\n\n"
-        "Trip: %s\n"
+        "Trip: %s\nTODAY is %s.\n"
         "All days (for continuity context):\n%s\n\n"
-        "Current run — Days %d to %d:\n%s\n\n"
+        "Current run — Days %d to %d:\n%s\n%s\n"
         "%s\n\n"
         "Rewrite ONLY this run, as EXACTLY %d day(s) total. %s"
-        "Use accurate lat/lng for all stops. Output ONLY a JSON object of the form "
-        '{"days": [day, ...]} with exactly %d element(s) — no prose, no markdown '
-        "fences; any double quote inside a string value must be escaped as \\\".\n"
+        "You MAY update this run's driving distance/time, stops, meals, fuel/charging, "
+        "risks%s — whatever the request calls for. Use accurate lat/lng for all stops.\n"
+        "Output ONLY a JSON object — no prose, no markdown fences; any double quote "
+        'inside a string value must be escaped as \\". Shape:\n'
+        '{\n "days": [day, ...]   // EXACTLY %d element(s)%s\n}\n'
         "Each day matches: %s\n"
         "Return JSON only."
     ) % (
         trip.get("title", ""),
+        time.strftime("%Y-%m-%d"),
         days_summary,
         day_start + 1, day_end + 1,
         json.dumps(span, ensure_ascii=False, indent=2),
+        extras,
         instruction,
         out_count,
         continuity,
+        (", the hotel and the bookings for this stay"
+         if (cur_lodging is not None or cur_bookings) else ""),
         out_count,
+        extra_schema,
         day_schema,
     )
 
     def create_once(p):
         msg = client.messages.create(
-            model=_MODEL, max_tokens=min(16000, 2000 + 2600 * out_count),
+            model=_MODEL, max_tokens=min(16000, 2500 + 2600 * out_count),
             messages=[{"role": "user", "content": p}])
         t = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
         if log_fn:
@@ -664,7 +748,14 @@ def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
         raise ValueError("model returned %s day(s) for the run, expected %d"
                          % (len(new_days) if isinstance(new_days, list) else "no",
                             out_count))
-    return new_days
+    new_lodging = got.get("lodging")
+    if not isinstance(new_lodging, dict) or not new_lodging.get("name"):
+        new_lodging = None
+    new_bookings = got.get("bookingCountdown")
+    if not isinstance(new_bookings, list) or not all(
+            isinstance(b, dict) and b.get("item") for b in new_bookings):
+        new_bookings = None
+    return new_days, new_lodging, new_bookings
 
 
 # --------------------------------------------------------------------------- #
@@ -913,27 +1004,35 @@ def _replan_stay(trip, day_start, day_end, city_name, out_count, extra_request, 
         parts.append("Traveler request — honor it as the top priority: \"%s\"."
                      % extra_request)
     parts.append(
-        "Replan this run: the FIRST day must keep the identical arrival drive "
-        "'%s' -> '%s' (%s mi, %s) — only its sightseeing may change; every "
-        "other day stays local around '%s'. Redistribute the area's best "
-        "sights across the new length — drop the least essential ones when "
-        "shrinking, add worthwhile nearby ones when growing."
+        "Replan this run: the FIRST day still drives '%s' -> '%s' (currently "
+        "%s mi, %s) — keep those endpoints, but its sightseeing, and therefore "
+        "its distance and time, may change; every other day stays local around "
+        "'%s'. Redistribute the area's best sights across the new length — drop "
+        "the least essential ones when shrinking, add worthwhile nearby ones "
+        "when growing."
         % (arrival.get("from", ""), arrival.get("to", ""),
            arrival.get("driveMiles", "?"), arrival.get("driveTime", "?"),
            city))
     instruction = " ".join(parts)
-    new_run = _regenerate_span_with_instruction(
-        trip, day_start, day_end, out_count, instruction, log_fn=log_fn)
+    old_span = days[day_start:day_end + 1]
+    stale_bookings = _stay_bookings(trip, city, old_span)
+    new_run, new_lodging, new_bookings = _regenerate_span_with_instruction(
+        trip, day_start, day_end, out_count, instruction,
+        city_name=city, log_fn=log_fn)
 
-    # Anchors are ours to enforce: same overnight throughout, arrival leg verbatim.
+    # Anchors are ours to enforce: the stay's identity (overnight) and where the
+    # arrival leg starts and ends. Its distance/time may now change — a scenic
+    # detour on the way in must show up in the mileage, not be silently reverted.
     overnight = arrival.get("overnight")
     for k, d in enumerate(new_run):
         d["overnight"] = overnight
         if k == 0:
             d["from"] = arrival.get("from", "")
             d["to"] = arrival.get("to", "")
-            d["driveMiles"] = arrival.get("driveMiles")
-            d["driveTime"] = arrival.get("driveTime")
+            if not isinstance(d.get("driveMiles"), (int, float)):
+                d["driveMiles"] = arrival.get("driveMiles")
+            if not d.get("driveTime"):
+                d["driveTime"] = arrival.get("driveTime")
             # Day 1 of the trip anchors date resequencing — when the run is
             # start-anchored the model's date must never displace the calendar.
             d["date"] = arrival.get("date", d.get("date", ""))
@@ -948,12 +1047,69 @@ def _replan_stay(trip, day_start, day_end, city_name, out_count, extra_request, 
         delta = sum(_mi(d) for d in new_run) - old_miles
         trip["totalMiles"] = max(0, int(trip["totalMiles"]) + delta)
 
+    _apply_stay_lodging(trip, city, new_lodging, out_count)
+    _apply_stay_bookings(trip, stale_bookings, new_bookings)
     if out_count != current:
         _set_lodging_nights(trip, city, out_count)
     iso = _resequence_dates(trip)
     _refresh_weather(trip, day_start, iso)
     despread_stops(trip)
     return trip
+
+
+def _apply_stay_lodging(trip, city_name, new_lodging, nights):
+    """Swap in the model's replacement hotel for this stay. The night count
+    stays ours (it follows the edit, not the model) and `booked` resets to
+    False — it's a different property. No-op when the model proposed none."""
+    if not new_lodging:
+        return
+    cur = _stay_lodging(trip, city_name)
+    entry = {
+        "name": str(new_lodging.get("name", ""))[:120],
+        "area": str(new_lodging.get("area") or (cur or {}).get("area") or city_name)[:120],
+        "nights": nights,
+        "booked": False,
+    }
+    price = new_lodging.get("pricePerNight")
+    if isinstance(price, (int, float)) and price >= 0:
+        entry["pricePerNight"] = int(price)
+    elif cur and "pricePerNight" in cur:
+        entry["pricePerNight"] = cur["pricePerNight"]
+    rating = new_lodging.get("rating")
+    if rating:
+        entry["rating"] = str(rating)[:16]
+    elif cur and cur.get("rating"):
+        entry["rating"] = cur["rating"]
+    if cur is not None:
+        cur.clear()
+        cur.update(entry)
+    else:
+        trip.setdefault("lodging", []).append(entry)
+
+
+def _apply_stay_bookings(trip, stale, new_bookings):
+    """Replace this stay's booking-countdown entries (`stale`, matched BEFORE the
+    days were spliced) with the model's list — an empty list means the request
+    dropped them. No-op when the model omitted the key, so unrelated bookings are
+    never disturbed."""
+    if new_bookings is None or not isinstance(trip.get("bookingCountdown"), list):
+        return
+    keep = [b for b in trip["bookingCountdown"] if b not in stale]
+    cleaned = []
+    for b in new_bookings:
+        item = str(b.get("item", "")).strip()
+        if not item:
+            continue
+        entry = {"item": item[:160],
+                 "bookBy": str(b.get("bookBy", ""))[:10],
+                 "where": str(b.get("where", ""))[:120],
+                 "priority": (b.get("priority")
+                              if b.get("priority") in ("high", "medium", "low")
+                              else "medium")}
+        if b.get("note"):
+            entry["note"] = str(b["note"])[:240]
+        cleaned.append(entry)
+    trip["bookingCountdown"] = keep + cleaned
 
 
 def revise_stay(trip, day_start, day_end, city_name, instruction, nights=None, log_fn=None):

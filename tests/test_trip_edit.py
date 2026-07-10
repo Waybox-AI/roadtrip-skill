@@ -148,7 +148,7 @@ def _span_day(k):
     return {
         "date": "01/01", "title": "SPAN DAY %d" % (k + 1),
         "from": "model-from", "to": "model-to",
-        "driveMiles": 999 if k == 0 else 12,   # 999 must be overwritten by enforcement
+        "driveMiles": 999 if k == 0 else 12,   # arrival mileage now comes from the model
         "driveTime": "9h", "overnight": "model-overnight",
         "weather": {"icon": "cloudy", "high": 70, "low": 50},
         "stops": [{"name": "Span stop %d" % k, "type": "scenic",
@@ -159,11 +159,15 @@ def _span_day(k):
 
 @pytest.fixture
 def mock_span_regen(monkeypatch):
-    calls = {}
+    """Stand in for the model call. `calls["reply"]` lets a test choose what
+    trip-level extras the model proposes: (lodging, bookingCountdown)."""
+    calls = {"reply": (None, None)}
 
-    def fake(t, day_start, day_end, out_count, instruction, log_fn=None):
-        calls.update(span=(day_start, day_end), count=out_count, instruction=instruction)
-        return [_span_day(k) for k in range(out_count)]
+    def fake(t, day_start, day_end, out_count, instruction, city_name="", log_fn=None):
+        calls.update(span=(day_start, day_end), count=out_count,
+                     instruction=instruction, city_name=city_name)
+        lodging, bookings = calls["reply"]
+        return [_span_day(k) for k in range(out_count)], lodging, bookings
 
     monkeypatch.setattr(planner, "_regenerate_span_with_instruction", fake)
     return calls
@@ -199,7 +203,7 @@ class TestSetNights:
         # arrival leg preserved verbatim from the old arrival day (85 mi, not 999)
         assert run[0]["from"] == "Springdale, UT"
         assert run[0]["to"] == "Bryce Canyon City, UT"
-        assert run[0]["driveMiles"] == 85
+        assert run[0]["driveMiles"] == 999   # a detour may change the mileage
         # second day is local and anchored to the same overnight
         assert run[1]["from"] == "Bryce Canyon City, UT"
         assert run[1]["overnight"] == "Bryce Canyon City, UT"
@@ -207,8 +211,8 @@ class TestSetNights:
         assert [d["date"] for d in out["days"]][:5] == \
             ["09/12", "09/13", "09/14", "09/15", "09/16"]
         assert out["dateRange"] == "2026-09-12 ~ 2026-09-19"
-        # totals: old run 85 → new run 85 (enforced) + 12 = delta +12
-        assert out["totalMiles"] == 1180 + 12
+        # totals follow the model: old run 85 → new run 999 + 12
+        assert out["totalMiles"] == 1180 + (999 + 12) - 85
         # lodging night count follows the stay
         bryce = [l for l in out["lodging"] if "bryce" in l.get("area", "").lower()]
         assert bryce and bryce[0]["nights"] == 2
@@ -221,8 +225,9 @@ class TestSetNights:
         out = set_nights(trip, 0, 1, "Springdale, UT", 1)
         assert len(out["days"]) == 6
         first = out["days"][0]
-        assert first["from"] == "Las Vegas, NV"        # departure leg intact
-        assert first["driveMiles"] == 165
+        assert first["from"] == "Las Vegas, NV"        # departure endpoints intact
+        assert first["to"] == "Springdale, UT"
+        assert first["driveMiles"] == 999             # mileage may follow new sightseeing
         assert first["overnight"] == "Springdale, UT"
         assert out["dateRange"] == "2026-09-12 ~ 2026-09-17"
         spring = [l for l in out["lodging"] if "springdale" in l.get("area", "").lower()]
@@ -323,7 +328,7 @@ class TestPropertySweep:
                             == [_stable(d) for d in orig["days"][j + 1:]]), ctx
                     # anchors enforced on the rewritten run
                     arr_old, arr_new = orig["days"][i], out["days"][i]
-                    for key in ("from", "to", "driveMiles", "driveTime"):
+                    for key in ("from", "to"):          # endpoints enforced
                         assert arr_new.get(key) == arr_old.get(key), ctx
                     for d in out["days"][i:i + target]:
                         assert d["overnight"] == arr_old.get("overnight"), ctx
@@ -406,21 +411,22 @@ class TestSpanRegenOffline:
 
     def test_happy_path_prompt_and_result(self, trip, monkeypatch):
         calls = self._install_fake(monkeypatch, [self._payload(2)])
-        got = planner._regenerate_span_with_instruction(
+        got, lodging, bookings = planner._regenerate_span_with_instruction(
             trip, 2, 2, 2, "TEST-INSTRUCTION-MARKER")
         assert len(got) == 2 and got[0]["title"] == "SPAN DAY 1"
+        assert lodging is None and bookings is None
         assert len(calls) == 1
         prompt = calls[0]["messages"][0]["content"]
         assert "TEST-INSTRUCTION-MARKER" in prompt
         assert "EXACTLY 2 day(s)" in prompt
         assert '"days"' in prompt
         assert "Bryce Canyon City" in prompt          # span JSON embedded
-        assert calls[0]["max_tokens"] == 2000 + 2600 * 2
+        assert calls[0]["max_tokens"] == 2500 + 2600 * 2
 
     def test_retry_on_garbage_then_success(self, trip, monkeypatch, capsys):
         calls = self._install_fake(
             monkeypatch, ["utter { garbage !!!", self._payload(1)])
-        got = planner._regenerate_span_with_instruction(trip, 2, 2, 1, "X")
+        got, _, _ = planner._regenerate_span_with_instruction(trip, 2, 2, 1, "X")
         assert len(got) == 1
         assert len(calls) == 2
         assert calls[1]["messages"][0]["content"].endswith(
@@ -480,11 +486,11 @@ class TestReviseStay:
         assert mock_span_regen["count"] == 1              # 同长度重排
         assert "不想住汽车旅馆" in mock_span_regen["instruction"]
         assert "top priority" in mock_span_regen["instruction"]
-        assert out["lodging"] == before_lodging           # 晚数没变,住宿列表不动
+        assert out["lodging"] == before_lodging           # 模型没提议换酒店 → 不动
         assert [d["date"] for d in out["days"]][:3] == ["09/12", "09/13", "09/14"]
-        # 到达日驾驶段依旧被强制保留
+        # 到达日端点仍被强制,里程交给模型
         assert out["days"][2]["from"] == "Springdale, UT"
-        assert out["days"][2]["driveMiles"] == 85
+        assert out["days"][2]["to"] == "Bryce Canyon City, UT"
 
     def test_instruction_with_resize_in_one_call(self, trip, mock_span_regen):
         out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT",
@@ -526,6 +532,90 @@ class TestReviseStay:
         with pytest.raises(RuntimeError):
             revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "swap hotel")
         assert trip == snapshot
+
+
+class TestStayContentUpdates:
+    """The model may also replace the stay's hotel and its bookings."""
+
+    def test_hotel_swapped_nights_and_booked_stay_ours(self, trip, mock_span_regen):
+        mock_span_regen["reply"] = (
+            {"name": "Bryce Budget Inn", "area": "Bryce Canyon City, UT",
+             "pricePerNight": 95, "rating": "4.1", "nights": 99, "booked": True},
+            None)
+        before_len = len(trip["lodging"])
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT",
+                          "\u4e0d\u60f3\u4f4f\u8fd9\u5bb6\uff0c\u6362\u5bb6\u4fbf\u5b9c\u7684")
+        lg = next(l for l in out["lodging"] if "bryce" in l["area"].lower())
+        assert lg["name"] == "Bryce Budget Inn"
+        assert lg["pricePerNight"] == 95 and lg["rating"] == "4.1"
+        assert lg["nights"] == 1          # nights belong to the code, not the model
+        assert lg["booked"] is False      # different property -> reset
+        assert len(out["lodging"]) == before_len   # replaced, not appended
+
+    def test_hotel_swap_with_resize_syncs_nights(self, trip, mock_span_regen):
+        mock_span_regen["reply"] = ({"name": "Hoodoo Lodge", "pricePerNight": 150}, None)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "swap hotel", nights=3)
+        lg = next(l for l in out["lodging"] if "bryce" in l["area"].lower())
+        assert lg["name"] == "Hoodoo Lodge" and lg["nights"] == 3
+        assert lg["area"] == "Bryce Canyon City, UT"   # model omitted area -> keep old
+
+    def test_partial_hotel_keeps_old_price_and_rating(self, trip, mock_span_regen):
+        before = next(l for l in trip["lodging"] if "bryce" in l["area"].lower())
+        old_price, old_rating = before["pricePerNight"], before["rating"]
+        mock_span_regen["reply"] = ({"name": "Only A Name"}, None)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "rename")
+        lg = next(l for l in out["lodging"] if "bryce" in l["area"].lower())
+        assert lg["pricePerNight"] == old_price and lg["rating"] == old_rating
+
+    def test_bookings_replaced_only_for_this_stay(self, trip, mock_span_regen):
+        stale = planner._stay_bookings(trip, "Page, AZ", trip["days"][3:4])
+        assert stale                                   # matched via the Antelope Canyon stop
+        others = [b for b in trip["bookingCountdown"] if b not in stale]
+        mock_span_regen["reply"] = (None, [
+            {"item": "Horseshoe Bend parking", "bookBy": "2026-09-01",
+             "where": "City of Page", "priority": "low", "note": "$10 lot"}])
+        out = revise_stay(trip, 3, 3, "Page, AZ", "no guided tour")
+        items = [b["item"] for b in out["bookingCountdown"]]
+        assert "Horseshoe Bend parking" in items
+        for b in others:
+            assert b in out["bookingCountdown"]
+
+    def test_empty_booking_list_drops_this_stay_bookings(self, trip, mock_span_regen):
+        stale = planner._stay_bookings(trip, "Page, AZ", trip["days"][3:4])
+        assert stale
+        mock_span_regen["reply"] = (None, [])
+        out = revise_stay(trip, 3, 3, "Page, AZ", "book nothing")
+        for b in stale:
+            assert b not in out["bookingCountdown"]
+
+    def test_no_extras_means_no_changes(self, trip, mock_span_regen):
+        before_l = copy.deepcopy(trip["lodging"])
+        before_b = copy.deepcopy(trip["bookingCountdown"])
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "just tweak the hikes")
+        assert out["lodging"] == before_l and out["bookingCountdown"] == before_b
+
+    def test_bad_booking_entries_normalized(self, trip, mock_span_regen):
+        mock_span_regen["reply"] = (None, [
+            {"item": "X", "priority": "URGENT!!"}, {"item": "   "}])
+        out = revise_stay(trip, 3, 3, "Page, AZ", "fix bookings")
+        added = [b for b in out["bookingCountdown"] if b["item"] == "X"]
+        assert added and added[0]["priority"] == "medium"
+        assert all(b["item"].strip() for b in out["bookingCountdown"])
+
+    def test_city_name_passed_to_regen(self, trip, mock_span_regen):
+        revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "x")
+        assert mock_span_regen["city_name"] == "Bryce Canyon City, UT"
+
+    def test_missing_drive_fields_fall_back_to_old(self, trip, monkeypatch):
+        def fake(t, ds, de, n, ins, city_name="", log_fn=None):
+            d = _span_day(0)
+            d.pop("driveMiles")
+            d["driveTime"] = ""
+            return [d], None, None
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction", fake)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "x")
+        assert out["days"][2]["driveMiles"] == 85       # old value as fallback
+        assert out["days"][2]["driveTime"] == "1h45m"
 
 
 class TestWeatherRefresh:
