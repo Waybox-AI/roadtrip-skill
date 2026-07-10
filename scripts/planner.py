@@ -930,6 +930,9 @@ def remove_city(trip, day_start, day_end, city_name="", log_fn=None):
     if not (1 <= day_start <= day_end <= n - 2):
         raise ValueError("span must keep the trip's first and last day")
 
+    old_day_count = n
+    old_total_miles = trip.get("totalMiles") if isinstance(
+        trip.get("totalMiles"), (int, float)) else 0
     join_idx = day_end + 1
     join_day = days[join_idx]
     prev_day = days[day_start - 1]
@@ -960,6 +963,7 @@ def remove_city(trip, day_start, day_end, city_name="", log_fn=None):
 
     iso = _resequence_dates(trip)
     _drop_city_references(trip, city_name)
+    _recompute_budget(trip, old_day_count, old_total_miles)
     _refresh_weather(trip, day_start, iso)
     despread_stops(trip)   # the rewritten day may introduce coincident pins
     return trip
@@ -1028,6 +1032,9 @@ def _replan_stay(trip, day_start, day_end, city_name, out_count, extra_request, 
            arrival.get("driveMiles", "?"), arrival.get("driveTime", "?"),
            city))
     instruction = " ".join(parts)
+    old_day_count = len(days)
+    old_total_miles = trip.get("totalMiles") if isinstance(
+        trip.get("totalMiles"), (int, float)) else 0
     old_span = days[day_start:day_end + 1]
     stale_bookings = _stay_bookings(trip, city, old_span)
     new_run, new_lodging, new_bookings = _regenerate_span_with_instruction(
@@ -1066,6 +1073,7 @@ def _replan_stay(trip, day_start, day_end, city_name, out_count, extra_request, 
     if out_count != current:
         _set_lodging_nights(trip, city, out_count)
     iso = _resequence_dates(trip)
+    _recompute_budget(trip, old_day_count, old_total_miles)
     _refresh_weather(trip, day_start, iso)
     despread_stops(trip)
     return trip
@@ -1125,6 +1133,96 @@ def _apply_stay_bookings(trip, stale, new_bookings):
             entry["note"] = note[:240]
         cleaned.append(entry)
     trip["bookingCountdown"] = keep + cleaned
+
+
+# --------------------------------------------------------------------------- #
+# Budget recomputation (deterministic — no model call)
+# --------------------------------------------------------------------------- #
+
+_LODGING_WORDS = ("lodging", "hotel", "accommodation", "stay",
+                  "\u4f4f\u5bbf", "\u9152\u5e97")          # 住宿 / 酒店
+_FUEL_WORDS = ("fuel", "gas", "gasoline", "charging", "electricity",
+               "\u71c3\u6cb9", "\u6cb9\u8d39", "\u52a0\u6cb9",
+               "\u5145\u7535", "\u7535\u8d39")             # 燃油/油费/加油/充电/电费
+_DAYS_RE = re.compile(r"(\d+)\s*(days?|\u5929)", re.I)       # "7 days" / "7 天"
+_NIGHTS_RE = re.compile(r"(\d+)\s*(nights?|\u665a)", re.I)   # "6 nights" / "6 晚"
+_MILES_RE = re.compile(r"([\d,]+)\s*(mi\b|miles?|km\b|\u82f1\u91cc|\u516c\u91cc)", re.I)
+
+
+def _travelers_count(trip):
+    """'2 adults' -> 2; '2 adults + 1 kid' -> 3. Falls back to 1."""
+    nums = [int(n) for n in re.findall(r"\d+", str(trip.get("travelers") or ""))]
+    return sum(nums) if nums else 1
+
+
+def _sub_first_number(text, pattern, value):
+    """Rewrite the first number matched by `pattern` (a 2-group regex whose
+    group(1) is the number) with `value`, keeping the unit intact."""
+    m = pattern.search(text or "")
+    if not m:
+        return text
+    fmt = "{:,}".format(value) if "," in m.group(1) else str(value)
+    return text[:m.start(1)] + fmt + text[m.end(1):]
+
+
+def _lodging_total(trip):
+    total = 0
+    for l in (trip.get("lodging") or []):
+        price, nights = l.get("pricePerNight"), l.get("nights")
+        if isinstance(price, (int, float)) and isinstance(nights, (int, float)):
+            total += int(price) * int(nights)
+    return total
+
+
+def _recompute_budget(trip, old_days, old_miles):
+    """Bring the budget back in line with an edited trip. Deterministic:
+
+      * lodging line  -> recomputed from the lodging list (authoritative after
+                         a hotel swap or a night-count change)
+      * fuel line     -> scaled by new/old total miles
+      * "N days" line -> scaled by new/old day count (food, rental car, ...)
+      * anything else -> untouched (park passes, tours, misc)
+
+    Labels carrying a night/day/mile count are rewritten to match. Totals and
+    per-person are always recomputed from the item list. Best-effort: any item
+    it cannot interpret is left exactly as it was.
+    """
+    budget = trip.get("budget")
+    if not isinstance(budget, dict) or not isinstance(budget.get("items"), list):
+        return
+    new_days = len(trip.get("days") or []) or old_days
+    new_miles = trip.get("totalMiles")
+    if not isinstance(new_miles, (int, float)):
+        new_miles = old_miles
+    nights_total = sum(int(l.get("nights") or 0) for l in (trip.get("lodging") or []))
+
+    for item in budget["items"]:
+        label = str(item.get("label", ""))
+        low = label.lower()
+        amount = item.get("amount")
+        if not isinstance(amount, (int, float)):
+            continue
+        if any(w in low for w in _LODGING_WORDS):
+            total = _lodging_total(trip)
+            if total > 0:
+                item["amount"] = total
+                if nights_total:
+                    item["label"] = _sub_first_number(label, _NIGHTS_RE, nights_total)
+            continue
+        if any(w in low for w in _FUEL_WORDS):
+            if old_miles and new_miles and old_miles > 0:
+                item["amount"] = max(0, int(round(amount * float(new_miles) / old_miles)))
+                item["label"] = _sub_first_number(item["label"], _MILES_RE, int(new_miles))
+            continue
+        if _DAYS_RE.search(label) and old_days > 0 and new_days != old_days:
+            item["amount"] = max(0, int(round(amount * float(new_days) / old_days)))
+            item["label"] = _sub_first_number(item["label"], _DAYS_RE, new_days)
+
+    total = sum(int(i["amount"]) for i in budget["items"]
+                if isinstance(i.get("amount"), (int, float)))
+    budget["total"] = total
+    budget["perPerson"] = int(round(total / max(1, _travelers_count(trip))))
+
 
 
 def revise_stay(trip, day_start, day_end, city_name, instruction, nights=None, log_fn=None):

@@ -685,6 +685,36 @@ class TestNullAndTypeHardening:
         assert c(True) is None and c(False) is None
         assert c(None) is None and c("abc") is None
 
+class TestBudgetFollowsEdits:
+    """The budget must not keep quoting the old day/night/mile counts."""
+
+    def test_set_nights_updates_budget(self, trip, mock_span_regen):
+        before_total = trip["budget"]["total"]
+        set_nights(trip, 2, 2, "Bryce Canyon City, UT", 3)   # 1 -> 3 nights (+2 days)
+        b = trip["budget"]
+        food = next(i for i in b["items"] if "food" in i["label"].lower())
+        lodging = next(i for i in b["items"] if "lodging" in i["label"].lower())
+        assert "9 days" in food["label"]                     # 7 -> 9 days
+        assert lodging["amount"] == sum(
+            l["pricePerNight"] * l["nights"] for l in trip["lodging"])
+        assert b["total"] == sum(i["amount"] for i in b["items"]) != before_total
+        assert b["perPerson"] == round(b["total"] / 2)
+
+    def test_remove_city_updates_budget(self, trip, mock_regen):
+        remove_city(trip, 2, 2, city_name="Bryce Canyon City, UT")
+        b = trip["budget"]
+        food = next(i for i in b["items"] if "food" in i["label"].lower())
+        assert "6 days" in food["label"]                     # 7 -> 6 days
+        assert b["total"] == sum(i["amount"] for i in b["items"])
+
+    def test_hotel_swap_updates_lodging_cost(self, trip, mock_span_regen):
+        mock_span_regen["reply"] = ({"name": "Cheap Inn", "pricePerNight": 60}, None)
+        revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "cheaper hotel please")
+        lodging = next(i for i in trip["budget"]["items"]
+                       if "lodging" in i["label"].lower())
+        assert lodging["amount"] == sum(
+            l["pricePerNight"] * l["nights"] for l in trip["lodging"])
+
 
 class TestWeatherRefresh:
     def _forecast_for(self, dates, icon="rain", high=50, low=30):
