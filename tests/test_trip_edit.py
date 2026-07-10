@@ -19,7 +19,7 @@ import types
 import pytest
 
 from scripts import planner
-from scripts.planner import remove_city, set_nights
+from scripts.planner import remove_city, revise_stay, set_nights
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..")
 
@@ -468,6 +468,64 @@ class TestDegenerateTrips:
         ], "dateRange": "2026-09-12 ~ 2026-09-14", "totalMiles": 20}
         out = set_nights(trip, 0, 1, "A", 1)
         assert len(out["days"]) == 2
+
+
+class TestReviseStay:
+    def test_instruction_only_keeps_length_and_lodging(self, trip, mock_span_regen):
+        before_lodging = copy.deepcopy(trip["lodging"])
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT",
+                          "不想住汽车旅馆，换家带早餐的")
+        assert len(out["days"]) == 7                      # 长度不变
+        assert out["drivingDays"] == 7
+        assert mock_span_regen["count"] == 1              # 同长度重排
+        assert "不想住汽车旅馆" in mock_span_regen["instruction"]
+        assert "top priority" in mock_span_regen["instruction"]
+        assert out["lodging"] == before_lodging           # 晚数没变,住宿列表不动
+        assert [d["date"] for d in out["days"]][:3] == ["09/12", "09/13", "09/14"]
+        # 到达日驾驶段依旧被强制保留
+        assert out["days"][2]["from"] == "Springdale, UT"
+        assert out["days"][2]["driveMiles"] == 85
+
+    def test_instruction_with_resize_in_one_call(self, trip, mock_span_regen):
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT",
+                          "want a hoodoo sunrise hike", nights=2)
+        assert len(out["days"]) == 8
+        assert mock_span_regen["count"] == 2
+        ins = mock_span_regen["instruction"]
+        assert "from 1 to 2 night(s)" in ins
+        assert "hoodoo sunrise hike" in ins
+        bryce = [l for l in out["lodging"] if "bryce" in l.get("area", "").lower()]
+        assert bryce and bryce[0]["nights"] == 2          # 改了晚数才同步住宿
+
+    def test_nights_equal_current_is_allowed(self, trip, mock_span_regen):
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "swap hotel", nights=1)
+        assert len(out["days"]) == 7                      # 与 set_nights 不同:等长合法
+
+    def test_empty_instruction_rejected(self, trip, mock_span_regen):
+        with pytest.raises(ValueError):
+            revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "   ")
+
+    def test_instruction_capped_at_500_chars(self, trip, mock_span_regen):
+        revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "A" * 505)
+        ins = mock_span_regen["instruction"]
+        assert "A" * 500 in ins and "A" * 501 not in ins
+
+    def test_bad_nights_and_span_guards(self, trip, mock_span_regen):
+        with pytest.raises(ValueError):
+            revise_stay(trip, 2, 2, "Bryce", "x", nights=8)
+        with pytest.raises(ValueError):
+            revise_stay(trip, 6, 6, "Las Vegas, NV", "x")   # 碰到最后一天
+        with pytest.raises(ValueError):
+            revise_stay(trip, 2, 2, "Bryce", "x", nights="lots")
+
+    def test_model_failure_untouched(self, trip, monkeypatch):
+        def boom(*a, **kw):
+            raise RuntimeError("api down")
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction", boom)
+        snapshot = copy.deepcopy(trip)
+        with pytest.raises(RuntimeError):
+            revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "swap hotel")
+        assert trip == snapshot
 
 
 class TestWeatherRefresh:

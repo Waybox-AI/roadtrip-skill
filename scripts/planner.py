@@ -32,6 +32,10 @@ set_nights(trip, day_start, day_end, city_name, nights, log_fn=None) -> dict
     days is rewritten as `nights` days by one model call (arrival driving leg
     preserved verbatim), then the same deterministic cascade as remove_city
     runs (dates, totals, lodging nights, weather). Same atomicity contract.
+revise_stay(trip, day_start, day_end, city_name, instruction, nights=None,
+            log_fn=None) -> dict
+    Trip edit: rewrite one stay per a free-text traveler request, optionally
+    resizing it in the same single model call. Same guards/cascade/atomicity.
 fix_endpoints(trip, start, destination) -> None
     Snap the first/last stop coordinates to the real start/destination.
 despread_stops(trip) -> None
@@ -887,22 +891,39 @@ def set_nights(trip, day_start, day_end, city_name, nights, log_fn=None):
     if n - current + nights > 21:
         raise ValueError("trip would exceed 21 days")
 
+    return _replan_stay(trip, day_start, day_end, city_name, nights, "", log_fn)
+
+
+def _replan_stay(trip, day_start, day_end, city_name, out_count, extra_request, log_fn):
+    """Shared engine behind set_nights / revise_stay: rewrite one stay's run as
+    `out_count` days via a single model call (honoring an optional traveler
+    request), then run the deterministic cascade. Callers own the validation."""
+    days = trip.get("days") or []
     arrival = days[day_start]
     city = city_name or arrival.get("overnight") or "that stop"
-    instruction = (
-        "The traveler changed the stay at '%s' from %d to %d night(s). Replan "
-        "this run: the FIRST day must keep the identical arrival drive "
+    current = day_end - day_start + 1
+    parts = []
+    if out_count != current:
+        parts.append("The traveler changed the stay at '%s' from %d to %d night(s)."
+                     % (city, current, out_count))
+    else:
+        parts.append("The traveler wants this %d-night stay at '%s' replanned."
+                     % (current, city))
+    if extra_request:
+        parts.append("Traveler request — honor it as the top priority: \"%s\"."
+                     % extra_request)
+    parts.append(
+        "Replan this run: the FIRST day must keep the identical arrival drive "
         "'%s' -> '%s' (%s mi, %s) — only its sightseeing may change; every "
         "other day stays local around '%s'. Redistribute the area's best "
         "sights across the new length — drop the least essential ones when "
         "shrinking, add worthwhile nearby ones when growing."
-        % (city, current, nights,
-           arrival.get("from", ""), arrival.get("to", ""),
+        % (arrival.get("from", ""), arrival.get("to", ""),
            arrival.get("driveMiles", "?"), arrival.get("driveTime", "?"),
-           city)
-    )
+           city))
+    instruction = " ".join(parts)
     new_run = _regenerate_span_with_instruction(
-        trip, day_start, day_end, nights, instruction, log_fn=log_fn)
+        trip, day_start, day_end, out_count, instruction, log_fn=log_fn)
 
     # Anchors are ours to enforce: same overnight throughout, arrival leg verbatim.
     overnight = arrival.get("overnight")
@@ -927,8 +948,44 @@ def set_nights(trip, day_start, day_end, city_name, nights, log_fn=None):
         delta = sum(_mi(d) for d in new_run) - old_miles
         trip["totalMiles"] = max(0, int(trip["totalMiles"]) + delta)
 
-    _set_lodging_nights(trip, city, nights)
+    if out_count != current:
+        _set_lodging_nights(trip, city, out_count)
     iso = _resequence_dates(trip)
     _refresh_weather(trip, day_start, iso)
     despread_stops(trip)
     return trip
+
+
+def revise_stay(trip, day_start, day_end, city_name, instruction, nights=None, log_fn=None):
+    """Free-text trip edit: rewrite one overnight stop's days per the traveler's
+    request ("don't want that hotel", "more hiking, less driving"), optionally
+    resizing the stay in the same single model call.
+
+    `instruction` is required (capped at 500 chars — it is embedded into the
+    prompt). `nights=None` or equal to the current length keeps the stay length;
+    otherwise the same rules as set_nights apply (1-7 nights, trip <= 21 days).
+    Same span guards, anchor enforcement, deterministic cascade and atomicity
+    contract as the other edit operations.
+    """
+    days = trip.get("days") or []
+    n = len(days)
+    if n < 2:
+        raise ValueError("trip is too short to edit")
+    if not (0 <= day_start <= day_end <= n - 2):
+        raise ValueError("span must lie before the trip's final day")
+    text = (instruction or "").strip()[:500]
+    if not text:
+        raise ValueError("an instruction is required")
+    current = day_end - day_start + 1
+    if nights is None:
+        out_count = current
+    else:
+        try:
+            out_count = int(nights)
+        except (TypeError, ValueError):
+            raise ValueError("invalid night count")
+        if not (1 <= out_count <= 7):
+            raise ValueError("nights must be between 1 and 7")
+        if n - current + out_count > 21:
+            raise ValueError("trip would exceed 21 days")
+    return _replan_stay(trip, day_start, day_end, city_name, out_count, text, log_fn)
