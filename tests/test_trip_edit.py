@@ -618,6 +618,74 @@ class TestStayContentUpdates:
         assert out["days"][2]["driveTime"] == "1h45m"
 
 
+class TestNullAndTypeHardening:
+    """The model may emit explicit nulls or stringified numbers — neither may
+    leak into the trip data (PR review findings)."""
+
+    def test_null_booking_fields_do_not_become_the_word_none(self, trip, mock_span_regen):
+        mock_span_regen["reply"] = (None, [
+            {"item": None, "bookBy": None, "where": None},          # wholly null -> skipped
+            {"item": "Real thing", "bookBy": None, "where": None},  # partial -> empty strings
+        ])
+        out = revise_stay(trip, 3, 3, "Page, AZ", "fix bookings")
+        added = [b for b in out["bookingCountdown"] if b["item"] == "Real thing"]
+        assert len(added) == 1
+        assert added[0]["bookBy"] == "" and added[0]["where"] == ""
+        for b in out["bookingCountdown"]:
+            assert "None" not in (b["item"] + b.get("bookBy", "") + b.get("where", ""))
+
+    def test_null_hotel_fields_do_not_become_the_word_none(self, trip, mock_span_regen):
+        mock_span_regen["reply"] = ({"name": "Quiet Inn", "area": None,
+                                     "rating": None, "pricePerNight": None}, None)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "swap hotel")
+        lg = next(l for l in out["lodging"] if "bryce" in l["area"].lower())
+        assert lg["name"] == "Quiet Inn"
+        assert "None" not in lg["area"] and lg.get("rating") != "None"
+        assert lg["pricePerNight"] == 190          # null -> keep the old price
+
+    def test_null_names_in_trip_data_do_not_pollute_matching(self):
+        trip = {"lodging": [{"name": None, "area": None},
+                            {"name": "Bryce Inn", "area": "Bryce Canyon City, UT"}],
+                "bookingCountdown": [{"item": None, "where": None}]}
+        assert planner._stay_lodging(trip, "none") is None      # never matches the null row
+        assert planner._stay_lodging(trip, "Bryce Canyon City, UT")["name"] == "Bryce Inn"
+        assert planner._stay_bookings(trip, "none") == []
+
+    def test_stringified_mileage_is_parsed_not_clobbered(self, trip, monkeypatch):
+        def fake(t, ds, de, n, ins, city_name="", log_fn=None):
+            d = _span_day(0)
+            d["driveMiles"] = "150 mi"          # model wrote a string
+            return [d], None, None
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction", fake)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "detour")
+        assert out["days"][2]["driveMiles"] == 150      # parsed, not reverted to 85
+
+    def test_boolean_mileage_is_rejected(self, trip, monkeypatch):
+        def fake(t, ds, de, n, ins, city_name="", log_fn=None):
+            d = _span_day(0)
+            d["driveMiles"] = True              # isinstance(True, int) is True!
+            return [d], None, None
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction", fake)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "x")
+        assert out["days"][2]["driveMiles"] == 85       # falls back, never 1 mile
+
+    def test_blank_drive_time_falls_back(self, trip, monkeypatch):
+        def fake(t, ds, de, n, ins, city_name="", log_fn=None):
+            d = _span_day(0)
+            d["driveTime"] = "   "
+            return [d], None, None
+        monkeypatch.setattr(planner, "_regenerate_span_with_instruction", fake)
+        out = revise_stay(trip, 2, 2, "Bryce Canyon City, UT", "x")
+        assert out["days"][2]["driveTime"] == "1h45m"
+
+    def test_coerce_miles_unit(self):
+        c = planner._coerce_miles
+        assert c(150) == 150 and c(150.7) == 150 and c("150") == 150
+        assert c("~1,50 mi") == 1                 # first number wins
+        assert c(True) is None and c(False) is None
+        assert c(None) is None and c("abc") is None
+
+
 class TestWeatherRefresh:
     def _forecast_for(self, dates, icon="rain", high=50, low=30):
         return {"source": "nws", "units": "F",

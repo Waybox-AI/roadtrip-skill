@@ -589,6 +589,23 @@ def regenerate_day(trip, day_index, comment_body, log_fn=None):
         log_fn=log_fn)
 
 
+def _s(v):
+    """Text of a possibly-null model field. `str(None)` would leak the literal
+    "None" into match strings and rendered entries."""
+    return "" if v is None else str(v)
+
+
+def _coerce_miles(v):
+    """Model mileage as an int. Accepts 150, 150.0, "150", "150 mi"; rejects
+    booleans (isinstance(True, int) is True) and anything unparseable."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return int(v)
+    m = re.search(r"-?\d+(?:\.\d+)?", _s(v))
+    return int(float(m.group())) if m else None
+
+
 def _stay_lodging(trip, city_name):
     """The lodging entry for a stay's city, or None. Cheap name/area match —
     same heuristic as _set_lodging_nights."""
@@ -598,7 +615,7 @@ def _stay_lodging(trip, city_name):
     core = needle.split(",")[0].strip()
     word = re.compile(r"\b%s\b" % re.escape(core)) if core else None
     for l in trip["lodging"]:
-        t = ("%s %s" % (l.get("name", ""), l.get("area", ""))).lower()
+        t = ("%s %s" % (_s(l.get("name")), _s(l.get("area")))).lower()
         if needle in t or (word and word.search(t)):
             return l
     return None
@@ -635,7 +652,7 @@ def _stay_bookings(trip, city_name, span_days=None):
                 needles.append(k)
     out = []
     for b in trip["bookingCountdown"]:
-        t = ("%s %s" % (b.get("item", ""), b.get("where", ""))).lower()
+        t = ("%s %s" % (_s(b.get("item")), _s(b.get("where")))).lower()
         if any(n in t for n in needles):
             out.append(b)
     return out
@@ -853,10 +870,7 @@ def _refresh_weather(trip, first_idx, iso_dates):
 
 def _mi(day):
     """driveMiles as an int, tolerating missing/garbage model values."""
-    try:
-        return int(day.get("driveMiles") or 0)
-    except (TypeError, ValueError):
-        return 0
+    return _coerce_miles(day.get("driveMiles")) or 0
 
 
 def _set_lodging_nights(trip, city_name, nights):
@@ -869,7 +883,7 @@ def _set_lodging_nights(trip, city_name, nights):
     core = needle.split(",")[0].strip()
     word = re.compile(r"\b%s\b" % re.escape(core)) if core else None
     for l in trip["lodging"]:
-        t = ("%s %s" % (l.get("name", ""), l.get("area", ""))).lower()
+        t = ("%s %s" % (_s(l.get("name")), _s(l.get("area")))).lower()
         if needle in t or (word and word.search(t)):
             l["nights"] = nights
 
@@ -889,10 +903,10 @@ def _drop_city_references(trip, city_name):
 
     if isinstance(trip.get("lodging"), list):
         trip["lodging"] = [l for l in trip["lodging"]
-                           if not refers("%s %s" % (l.get("name", ""), l.get("area", "")))]
+                           if not refers("%s %s" % (_s(l.get("name")), _s(l.get("area"))))]
     if isinstance(trip.get("bookingCountdown"), list):
         trip["bookingCountdown"] = [b for b in trip["bookingCountdown"]
-                                    if not refers("%s %s" % (b.get("item", ""), b.get("where", "")))]
+                                    if not refers("%s %s" % (_s(b.get("item")), _s(b.get("where"))))]
 
 
 def remove_city(trip, day_start, day_end, city_name="", log_fn=None):
@@ -1029,10 +1043,10 @@ def _replan_stay(trip, day_start, day_end, city_name, out_count, extra_request, 
         if k == 0:
             d["from"] = arrival.get("from", "")
             d["to"] = arrival.get("to", "")
-            if not isinstance(d.get("driveMiles"), (int, float)):
-                d["driveMiles"] = arrival.get("driveMiles")
-            if not d.get("driveTime"):
-                d["driveTime"] = arrival.get("driveTime")
+            miles = _coerce_miles(d.get("driveMiles"))
+            d["driveMiles"] = miles if miles is not None else arrival.get("driveMiles")
+            drive_time = _s(d.get("driveTime")).strip()
+            d["driveTime"] = drive_time or arrival.get("driveTime")
             # Day 1 of the trip anchors date resequencing — when the run is
             # start-anchored the model's date must never displace the calendar.
             d["date"] = arrival.get("date", d.get("date", ""))
@@ -1065,8 +1079,8 @@ def _apply_stay_lodging(trip, city_name, new_lodging, nights):
         return
     cur = _stay_lodging(trip, city_name)
     entry = {
-        "name": str(new_lodging.get("name", ""))[:120],
-        "area": str(new_lodging.get("area") or (cur or {}).get("area") or city_name)[:120],
+        "name": _s(new_lodging.get("name")).strip()[:120],
+        "area": _s(new_lodging.get("area") or (cur or {}).get("area") or city_name)[:120],
         "nights": nights,
         "booked": False,
     }
@@ -1075,9 +1089,9 @@ def _apply_stay_lodging(trip, city_name, new_lodging, nights):
         entry["pricePerNight"] = int(price)
     elif cur and "pricePerNight" in cur:
         entry["pricePerNight"] = cur["pricePerNight"]
-    rating = new_lodging.get("rating")
+    rating = _s(new_lodging.get("rating")).strip()
     if rating:
-        entry["rating"] = str(rating)[:16]
+        entry["rating"] = rating[:16]
     elif cur and cur.get("rating"):
         entry["rating"] = cur["rating"]
     if cur is not None:
@@ -1097,17 +1111,18 @@ def _apply_stay_bookings(trip, stale, new_bookings):
     keep = [b for b in trip["bookingCountdown"] if b not in stale]
     cleaned = []
     for b in new_bookings:
-        item = str(b.get("item", "")).strip()
+        item = _s(b.get("item")).strip()
         if not item:
             continue
         entry = {"item": item[:160],
-                 "bookBy": str(b.get("bookBy", ""))[:10],
-                 "where": str(b.get("where", ""))[:120],
+                 "bookBy": _s(b.get("bookBy")).strip()[:10],
+                 "where": _s(b.get("where")).strip()[:120],
                  "priority": (b.get("priority")
                               if b.get("priority") in ("high", "medium", "low")
                               else "medium")}
-        if b.get("note"):
-            entry["note"] = str(b["note"])[:240]
+        note = _s(b.get("note")).strip()
+        if note:
+            entry["note"] = note[:240]
         cleaned.append(entry)
     trip["bookingCountdown"] = keep + cleaned
 
