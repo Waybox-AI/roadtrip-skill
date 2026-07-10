@@ -1158,7 +1158,8 @@ def _travelers_count(trip):
 def _sub_first_number(text, pattern, value):
     """Rewrite the first number matched by `pattern` (a 2-group regex whose
     group(1) is the number) with `value`, keeping the unit intact."""
-    m = pattern.search(text or "")
+    text = _s(text)
+    m = pattern.search(text)
     if not m:
         return text
     fmt = "{:,}".format(value) if "," in m.group(1) else str(value)
@@ -1197,10 +1198,10 @@ def _recompute_budget(trip, old_days, old_miles):
     nights_total = sum(int(l.get("nights") or 0) for l in (trip.get("lodging") or []))
 
     for item in budget["items"]:
-        label = str(item.get("label", ""))
+        label = _s(item.get("label"))     # normalized once; never touch the raw value
         low = label.lower()
-        amount = item.get("amount")
-        if not isinstance(amount, (int, float)):
+        amount = _coerce_miles(item.get("amount"))   # ints, floats and "186"
+        if amount is None:
             continue
         if any(w in low for w in _LODGING_WORDS):
             total = _lodging_total(trip)
@@ -1212,14 +1213,14 @@ def _recompute_budget(trip, old_days, old_miles):
         if any(w in low for w in _FUEL_WORDS):
             if old_miles and new_miles and old_miles > 0:
                 item["amount"] = max(0, int(round(amount * float(new_miles) / old_miles)))
-                item["label"] = _sub_first_number(item["label"], _MILES_RE, int(new_miles))
+                item["label"] = _sub_first_number(label, _MILES_RE, int(new_miles))
             continue
         if _DAYS_RE.search(label) and old_days > 0 and new_days != old_days:
             item["amount"] = max(0, int(round(amount * float(new_days) / old_days)))
-            item["label"] = _sub_first_number(item["label"], _DAYS_RE, new_days)
+            item["label"] = _sub_first_number(label, _DAYS_RE, new_days)
 
-    total = sum(int(i["amount"]) for i in budget["items"]
-                if isinstance(i.get("amount"), (int, float)))
+    total = sum(a for a in (_coerce_miles(i.get("amount")) for i in budget["items"])
+                if a is not None)
     budget["total"] = total
     budget["perPerson"] = int(round(total / max(1, _travelers_count(trip))))
 

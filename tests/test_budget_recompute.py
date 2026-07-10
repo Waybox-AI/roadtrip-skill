@@ -130,3 +130,26 @@ class TestChineseLabels:
         assert any("1,300 英里" in k for k in items)
         assert any("8 天" in k and v == 800 for k, v in items.items())
         assert trip["budget"]["total"] == sum(items.values())
+
+
+class TestReviewHardening:
+    """PR-review findings: never index a raw label, tolerate odd amounts."""
+
+    def test_item_without_label_is_skipped_not_crashing(self, trip):
+        trip["budget"]["items"].append({"amount": 50, "reliability": "estimate"})
+        trip["totalMiles"] = 2000
+        _recompute_budget(trip, 7, 1180)          # must not raise KeyError
+        assert trip["budget"]["total"] == sum(
+            i["amount"] for i in trip["budget"]["items"])
+
+    def test_null_label_is_skipped(self, trip):
+        trip["budget"]["items"].append({"label": None, "amount": 50})
+        trip["days"].append(dict(trip["days"][-1]))
+        _recompute_budget(trip, 7, trip["totalMiles"])
+        assert trip["budget"]["items"][-1] == {"label": None, "amount": 50}
+
+    def test_stringified_amount_counted(self, trip):
+        trip["budget"]["items"].append({"label": "Ferry", "amount": "50"})
+        _recompute_budget(trip, 7, trip["totalMiles"])
+        assert trip["budget"]["total"] == sum(
+            int(i["amount"]) for i in trip["budget"]["items"])
