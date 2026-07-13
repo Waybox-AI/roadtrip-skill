@@ -44,6 +44,10 @@ refresh_trip_weather(trip) -> dict
     Replace each day's weather with a real forecast (source="forecast") or, past
     the forecast window, a seasonal climatology average (source="climatology").
     Called on generate and when a trip page is opened. Best-effort.
+weather_advisories(trip) -> list[dict|None]
+    Per-day weather advisories (deterministic, no model call), aligned with
+    trip['days']: None, or {severity, source, condition, message}. Only days
+    with a provenance tag get one; language follows trip['lang'].
 geocode(query, timeout=3.0) -> {"lat","lng"} | None
 geocode_near(query, lat, lng, timeout=3.0) -> {"lat","lng"} | None
     Best-effort Photon geocoding (free, no key), the latter biased to a locale.
@@ -927,6 +931,116 @@ def refresh_trip_weather(trip):
                for k in range(len(days))]
         _refresh_weather(trip, 0, iso)
     return trip
+
+
+# --------------------------------------------------------------------------- #
+# Weather advisories (deterministic — no model call)
+# --------------------------------------------------------------------------- #
+
+# Phrase bank, keyed (icon-or-condition, has_outdoor_activity). Two source
+# voices: a real forecast speaks in the future ("expect…"), a climatology
+# average speaks in tendencies ("this stretch is typically…"). Kept in the
+# skill so both language variants live next to the planning logic.
+_ADVICE = {
+    "en": {
+        "storm":  ("Thunderstorms in the forecast — lightning and flash-flood risk.",
+                   "Thunderstorms are typical here this time of year."),
+        "snow":   ("Snow in the forecast — roads and high trails may be affected.",
+                   "Snow is common here this season — check road status."),
+        "rain":   ("Rain likely — trails get slick and slot canyons flood fast.",
+                   "This stretch is often wet this time of year."),
+        "wind":   ("Strong wind expected — dust, and dicey driving for high-profile vehicles.",
+                   "Strong afternoon wind is typical here this season."),
+        "heat":   ("Extreme heat expected — start early, carry far more water than feels necessary.",
+                   "This region is typically very hot this time of year."),
+        "cold":   ("Hard freeze expected — plan for ice and short daylight.",
+                   "Nights are typically below freezing here this season."),
+        "hike_suffix":  " Consider moving the hike, or keep it to the morning.",
+        "reslot_suffix": " No outdoor plans that day, so it mostly affects the drive.",
+        "verify": " Re-check the official forecast the day before you go.",
+    },
+    "zh": {
+        "storm":  ("预报有雷暴——注意雷击和山洪风险。",
+                   "这个季节这一带通常多雷暴。"),
+        "snow":   ("预报有降雪——道路和高海拔步道可能受影响。",
+                   "这个季节这里常有降雪——请查路况。"),
+        "rain":   ("预计有雨——步道湿滑，狭缝峡谷易突发山洪。",
+                   "这个季节这一段通常偏湿。"),
+        "wind":   ("预计大风——扬尘，高车身车辆行车需谨慎。",
+                   "这个季节这里午后通常有大风。"),
+        "heat":   ("预计极端高温——尽早出发，带比你以为需要的多得多的水。",
+                   "这个季节这一区域通常非常炎热。"),
+        "cold":   ("预计严重霜冻——注意结冰和白昼短。",
+                   "这个季节这里夜间通常低于冰点。"),
+        "hike_suffix":  " 可考虑把徒步改期，或只安排在上午。",
+        "reslot_suffix": " 这天没有户外行程，主要影响的是驾驶。",
+        "verify": " 出发前一天请以官方预报再核实一次。",
+    },
+}
+_HEAT_HIGH = 100          # °F daytime high that counts as "extreme heat"
+_COLD_LOW = 25            # °F overnight low that counts as a hard freeze
+_WIND_MPH = 35           # sustained/gust max that counts as "strong wind"
+_WET_PROB = 60           # forecast precip-probability that counts as "rain likely"
+_OUTDOOR_TYPES = ("hike", "park")
+
+
+def _day_condition(w):
+    """Reduce a day's weather dict to one advisory key, or None if unremarkable.
+    Order = severity: storm > snow > heat > cold > wind > rain."""
+    icon = w.get("icon")
+    if icon == "storm":
+        return "storm"
+    if icon == "snow":
+        return "snow"
+    hi, lo = w.get("high"), w.get("low")
+    if isinstance(hi, (int, float)) and hi >= _HEAT_HIGH:
+        return "heat"
+    if isinstance(lo, (int, float)) and lo <= _COLD_LOW:
+        return "cold"
+    if isinstance(w.get("windMph"), (int, float)) and w["windMph"] >= _WIND_MPH:
+        return "wind"
+    if icon == "rain" or (isinstance(w.get("precipProb"), (int, float))
+                          and w["precipProb"] >= _WET_PROB):
+        return "rain"
+    return None
+
+
+def _has_outdoor(day):
+    return any(s.get("type") in _OUTDOOR_TYPES for s in (day.get("stops") or []))
+
+
+def weather_advisories(trip):
+    """Per-day weather advisories for a trip — deterministic, no model call.
+
+    Returns a list aligned with trip['days']; each item is None (nothing worth
+    flagging) or {severity, source, message}. severity is "high" when notable
+    weather coincides with an outdoor day, else "info". Only days whose weather
+    carries a provenance tag (source == "forecast"|"climatology", set by
+    refresh_trip_weather) get an advisory — the model's own estimate is never
+    reliable enough to warn on. Language follows trip['lang']."""
+    lang = "zh" if str(trip.get("lang", "")).lower().startswith("zh") else "en"
+    bank = _ADVICE[lang]
+    out = []
+    for day in (trip.get("days") or []):
+        w = day.get("weather") or {}
+        source = w.get("source")
+        cond = _day_condition(w) if source in ("forecast", "climatology") else None
+        if not cond:
+            out.append(None)
+            continue
+        forecast_msg, climate_msg = bank[cond]
+        msg = forecast_msg if source == "forecast" else climate_msg
+        outdoor = _has_outdoor(day)
+        msg += bank["hike_suffix"] if outdoor else bank["reslot_suffix"]
+        if source == "forecast":
+            msg += bank["verify"]
+        out.append({
+            "severity": "high" if outdoor else "info",
+            "source": source,
+            "condition": cond,
+            "message": msg,
+        })
+    return out
 
 
 def _mi(day):
