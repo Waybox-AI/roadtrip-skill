@@ -40,6 +40,10 @@ fix_endpoints(trip, start, destination) -> None
     Snap the first/last stop coordinates to the real start/destination.
 despread_stops(trip) -> None
     Nudge/re-geocode stops whose coordinates collide so map pins separate.
+refresh_trip_weather(trip) -> dict
+    Replace each day's weather with a real forecast (source="forecast") or, past
+    the forecast window, a seasonal climatology average (source="climatology").
+    Called on generate and when a trip page is opened. Best-effort.
 geocode(query, timeout=3.0) -> {"lat","lng"} | None
 geocode_near(query, lat, lng, timeout=3.0) -> {"lat","lng"} | None
     Best-effort Photon geocoding (free, no key), the latter biased to a locale.
@@ -504,6 +508,10 @@ def generate_trip(payload, live, on_progress=None, log_fn=None):
     if live:
         fix_endpoints(trip, payload.get("start"), payload.get("destination"))
     despread_stops(trip)   # stop coincident map pins from stacking (see docstring)
+    # Replace the model's guessed weather with a real forecast (or seasonal
+    # average past the forecast window) now that stop coordinates are settled.
+    # Best-effort: a failure here leaves the model's estimate untouched.
+    refresh_trip_weather(trip)
     return trip
 
 
@@ -834,38 +842,91 @@ def _weather_forecast(lat, lng):
         return None
 
 
+def _climatology(lat, lng, iso_date):
+    """Seasonal 'typical for the date' via tools/weather_client. Best-effort."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import weather_client
+        y, mo, dy = iso_date.split("-")
+        return weather_client.climatology(lat, lng, mo, dy)
+    except Exception as e:
+        print("[warn] climatology unavailable: %s" % e, file=sys.stderr)
+        return None
+
+
+def _apply_weather(day, data, source, iso_date):
+    """Stamp a day's weather from a forecast/climatology `data` dict and tag its
+    provenance so the UI (and the advisory engine) can tell a real forecast from
+    a seasonal average. Never invents fields the source didn't provide."""
+    w = day.get("weather") or {}
+    w["icon"] = data.get("icon") or w.get("icon") or "partly-cloudy"
+    if isinstance(data.get("high"), (int, float)):
+        w["high"] = int(data["high"])
+    if isinstance(data.get("low"), (int, float)):
+        w["low"] = int(data["low"])
+    # Provenance + the extra signals the advisory engine (PR②) will use.
+    w["source"] = source                 # "forecast" | "climatology"
+    w["asOf"] = iso_date
+    for k in ("precipProb", "windMph", "wetShare", "summary"):
+        if data.get(k) is not None:
+            w[k] = data[k]
+    day["weather"] = w
+
+
 def _refresh_weather(trip, first_idx, iso_dates):
-    """Overwrite weather with a real forecast for every day from `first_idx` on
-    (their calendar dates just changed), where the forecast actually covers the
-    new date; other days keep the model's estimate. Best-effort, never raises."""
+    """Refresh weather for days [first_idx..] whose calendar dates are known.
+
+    For each such day: a real forecast if the date is within the forecast
+    window (tagged source="forecast"), else a seasonal climatology average
+    (source="climatology"). Days the model estimated and we couldn't improve
+    keep their values untagged. Best-effort, never raises."""
     if not iso_dates:
         return
     days = trip.get("days") or []
-    cache = {}
+    fc_cache, clim_cache = {}, {}
     for i in range(max(first_idx, 0), len(days)):
+        if i >= len(iso_dates):
+            break
         d = days[i]
+        iso = iso_dates[i]
         stop = next((s for s in reversed(d.get("stops") or [])
                      if isinstance(s.get("lat"), (int, float))
                      and isinstance(s.get("lng"), (int, float))), None)
-        if not stop:
+        if not stop or not iso:
             continue
         key = (round(stop["lat"], 1), round(stop["lng"], 1))
-        if key not in cache:
-            cache[key] = _weather_forecast(stop["lat"], stop["lng"]) or {}
-        fc = cache[key]
-        if fc.get("source") != "nws":
-            continue   # fallback shape = no real data for this location
-        hit = next((x for x in (fc.get("days") or [])
-                    if x.get("date") == iso_dates[i]), None)
-        if not hit:
-            continue   # date beyond the forecast window — keep the estimate
-        w = d.get("weather") or {}
-        w["icon"] = hit.get("icon") or w.get("icon") or "partly-cloudy"
-        if isinstance(hit.get("high"), (int, float)):
-            w["high"] = int(hit["high"])
-        if isinstance(hit.get("low"), (int, float)):
-            w["low"] = int(hit["low"])
-        d["weather"] = w
+        if key not in fc_cache:
+            fc_cache[key] = _weather_forecast(stop["lat"], stop["lng"]) or {}
+        fc = fc_cache[key]
+        hit = None
+        if fc.get("source") in ("nws", "open-meteo"):
+            hit = next((x for x in (fc.get("days") or [])
+                        if x.get("date") == iso), None)
+        if hit:
+            _apply_weather(d, hit, "forecast", iso)
+            continue
+        # Beyond the forecast window (or no live data) — fall back to seasonal.
+        ck = (key, iso[5:])              # cache by lat/lng + MM-DD
+        if ck not in clim_cache:
+            clim_cache[ck] = _climatology(stop["lat"], stop["lng"], iso)
+        clim = clim_cache[ck]
+        if clim:
+            _apply_weather(d, clim, "climatology", iso)
+
+
+def refresh_trip_weather(trip):
+    """Refresh the whole trip's weather from real forecasts / seasonal averages,
+    computing each day's calendar date itself. This is what the webapp calls when
+    a trip is generated or opened, so the page shows real weather instead of the
+    model's guess. Best-effort, never raises; returns the trip."""
+    start = _trip_start_date(trip)
+    days = trip.get("days") or []
+    if start and days:
+        iso = [(start + datetime.timedelta(days=k)).isoformat()
+               for k in range(len(days))]
+        _refresh_weather(trip, 0, iso)
+    return trip
 
 
 def _mi(day):

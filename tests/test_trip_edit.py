@@ -58,8 +58,9 @@ def mock_regen(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def offline(monkeypatch):
-    """No network ever: weather returns nothing, geocoding returns nothing."""
+    """No network ever: forecast, climatology and geocoding all return nothing."""
     monkeypatch.setattr(planner, "_weather_forecast", lambda lat, lng: None)
+    monkeypatch.setattr(planner, "_climatology", lambda lat, lng, iso: None)
     monkeypatch.setattr(planner, "geocode_near", lambda *a, **kw: None)
     monkeypatch.setattr(planner, "geocode", lambda *a, **kw: None)
 
@@ -727,21 +728,36 @@ class TestWeatherRefresh:
         monkeypatch.setattr(planner, "_weather_forecast",
                             lambda lat, lng: self._forecast_for(window))
         out = remove_city(trip, 2, 2, "Bryce Canyon City, UT")
-        # days before the edit keep the model's estimate
+        # days before the edit keep the model's estimate (no source tag)
         assert out["days"][0]["weather"] == {"icon": "sunny", "high": 88, "low": 60}
         assert out["days"][1]["weather"] == {"icon": "sunny", "high": 90, "low": 62}
-        # the stitched day and every shifted day get the real forecast
+        # the stitched day and every shifted day get the real forecast, tagged
         for d in out["days"][2:]:
             if d.get("stops"):
                 assert d["weather"]["icon"] == "rain"
                 assert d["weather"]["high"] == 50
+                assert d["weather"]["source"] == "forecast"
+                assert d["weather"]["asOf"]
 
-    def test_dates_beyond_window_keep_estimate(self, trip, mock_regen, monkeypatch):
+    def test_dates_beyond_window_fall_back_to_climatology(self, trip, mock_regen, monkeypatch):
+        # Forecast covers only 09/14; climatology answers everything else.
         monkeypatch.setattr(planner, "_weather_forecast",
                             lambda lat, lng: self._forecast_for(["2026-09-14"]))
+        monkeypatch.setattr(planner, "_climatology",
+                            lambda lat, lng, iso: {"icon": "snow", "high": 40, "low": 20})
         out = remove_city(trip, 2, 2, "Bryce Canyon City, UT")
-        assert out["days"][2]["weather"]["icon"] == "rain"        # 09/14 covered
-        assert out["days"][3]["weather"]["icon"] != "rain"        # 09/15 not covered
+        assert out["days"][2]["weather"]["source"] == "forecast"      # 09/14 covered
+        assert out["days"][2]["weather"]["icon"] == "rain"
+        assert out["days"][3]["weather"]["source"] == "climatology"   # beyond window
+        assert out["days"][3]["weather"]["icon"] == "snow"
+
+    def test_beyond_window_and_no_climatology_keeps_estimate(self, trip, mock_regen, monkeypatch):
+        # Forecast covers only 09/14; climatology unavailable (offline fixture).
+        monkeypatch.setattr(planner, "_weather_forecast",
+                            lambda lat, lng: self._forecast_for(["2026-09-14"]))
+        before = copy.deepcopy(trip["days"][4]["weather"])
+        out = remove_city(trip, 2, 2, "Bryce Canyon City, UT")
+        assert out["days"][3]["weather"] == before                   # shifted, unchanged
 
     def test_fallback_source_never_overwrites(self, trip, mock_regen, monkeypatch):
         monkeypatch.setattr(planner, "_weather_forecast",

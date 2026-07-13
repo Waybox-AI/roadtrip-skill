@@ -150,11 +150,16 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
   `haversine_km`.
 - `scripts/planner.py` is mounted the same way — keep `live_mode`, `generate_trip`,
   `regenerate_day`, `remove_city`, `set_nights`, `revise_stay`, `fix_endpoints`,
-  `despread_stops` stable.
+  `despread_stops`, `refresh_trip_weather` stable.
 - Stay edits (`set_nights` / `revise_stay`) let the model return this stay's `lodging`
   and `bookingCountdown` alongside its `days`; night counts and `booked` stay
   code-owned. Bookings are matched to a stay by city name **or** by a stop name in
   its days (many bookings never name the town).
+- **Weather provenance.** `weather_client.forecast()` tries NWS (US) then Open-Meteo
+  (global, ~16-day, +precip-prob/wind); `climatology()` gives a seasonal average past
+  the forecast window. On a trip day, `weather.source` is `"forecast"` or
+  `"climatology"`; an untagged `weather` block is the model's own estimate. Never
+  render or reason about a climatology average as if it were a forecast.
 
 ### `scripts/routes.py` live / offline dual-mode (webapp-only)
 `plan_routes()` runs in one of two modes, chosen by `_live_mode()`:
