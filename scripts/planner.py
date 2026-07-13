@@ -40,6 +40,14 @@ fix_endpoints(trip, start, destination) -> None
     Snap the first/last stop coordinates to the real start/destination.
 despread_stops(trip) -> None
     Nudge/re-geocode stops whose coordinates collide so map pins separate.
+refresh_trip_weather(trip) -> dict
+    Replace each day's weather with a real forecast (source="forecast") or, past
+    the forecast window, a seasonal climatology average (source="climatology").
+    Called on generate and when a trip page is opened. Best-effort.
+weather_advisories(trip) -> list[dict|None]
+    Per-day weather advisories (deterministic, no model call), aligned with
+    trip['days']: None, or {severity, source, condition, message}. Only days
+    with a provenance tag get one; language follows trip['lang'].
 geocode(query, timeout=3.0) -> {"lat","lng"} | None
 geocode_near(query, lat, lng, timeout=3.0) -> {"lat","lng"} | None
     Best-effort Photon geocoding (free, no key), the latter biased to a locale.
@@ -504,6 +512,10 @@ def generate_trip(payload, live, on_progress=None, log_fn=None):
     if live:
         fix_endpoints(trip, payload.get("start"), payload.get("destination"))
     despread_stops(trip)   # stop coincident map pins from stacking (see docstring)
+    # Replace the model's guessed weather with a real forecast (or seasonal
+    # average past the forecast window) now that stop coordinates are settled.
+    # Best-effort: a failure here leaves the model's estimate untouched.
+    refresh_trip_weather(trip)
     return trip
 
 
@@ -834,38 +846,201 @@ def _weather_forecast(lat, lng):
         return None
 
 
+def _climatology(lat, lng, iso_date):
+    """Seasonal 'typical for the date' via tools/weather_client. Best-effort."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import weather_client
+        y, mo, dy = iso_date.split("-")
+        return weather_client.climatology(lat, lng, mo, dy)
+    except Exception as e:
+        print("[warn] climatology unavailable: %s" % e, file=sys.stderr)
+        return None
+
+
+def _apply_weather(day, data, source, iso_date):
+    """Stamp a day's weather from a forecast/climatology `data` dict and tag its
+    provenance so the UI (and the advisory engine) can tell a real forecast from
+    a seasonal average. Never invents fields the source didn't provide."""
+    w = day.get("weather") or {}
+    w["icon"] = data.get("icon") or w.get("icon") or "partly-cloudy"
+    if isinstance(data.get("high"), (int, float)):
+        w["high"] = int(data["high"])
+    if isinstance(data.get("low"), (int, float)):
+        w["low"] = int(data["low"])
+    # Provenance + the extra signals the advisory engine (PR②) will use.
+    w["source"] = source                 # "forecast" | "climatology"
+    w["asOf"] = iso_date
+    for k in ("precipProb", "windMph", "wetShare", "summary"):
+        if data.get(k) is not None:
+            w[k] = data[k]
+    day["weather"] = w
+
+
 def _refresh_weather(trip, first_idx, iso_dates):
-    """Overwrite weather with a real forecast for every day from `first_idx` on
-    (their calendar dates just changed), where the forecast actually covers the
-    new date; other days keep the model's estimate. Best-effort, never raises."""
+    """Refresh weather for days [first_idx..] whose calendar dates are known.
+
+    For each such day: a real forecast if the date is within the forecast
+    window (tagged source="forecast"), else a seasonal climatology average
+    (source="climatology"). Days the model estimated and we couldn't improve
+    keep their values untagged. Best-effort, never raises."""
     if not iso_dates:
         return
     days = trip.get("days") or []
-    cache = {}
+    fc_cache, clim_cache = {}, {}
     for i in range(max(first_idx, 0), len(days)):
+        if i >= len(iso_dates):
+            break
         d = days[i]
+        iso = iso_dates[i]
         stop = next((s for s in reversed(d.get("stops") or [])
                      if isinstance(s.get("lat"), (int, float))
                      and isinstance(s.get("lng"), (int, float))), None)
-        if not stop:
+        if not stop or not iso:
             continue
         key = (round(stop["lat"], 1), round(stop["lng"], 1))
-        if key not in cache:
-            cache[key] = _weather_forecast(stop["lat"], stop["lng"]) or {}
-        fc = cache[key]
-        if fc.get("source") != "nws":
-            continue   # fallback shape = no real data for this location
-        hit = next((x for x in (fc.get("days") or [])
-                    if x.get("date") == iso_dates[i]), None)
-        if not hit:
-            continue   # date beyond the forecast window — keep the estimate
-        w = d.get("weather") or {}
-        w["icon"] = hit.get("icon") or w.get("icon") or "partly-cloudy"
-        if isinstance(hit.get("high"), (int, float)):
-            w["high"] = int(hit["high"])
-        if isinstance(hit.get("low"), (int, float)):
-            w["low"] = int(hit["low"])
-        d["weather"] = w
+        if key not in fc_cache:
+            fc_cache[key] = _weather_forecast(stop["lat"], stop["lng"]) or {}
+        fc = fc_cache[key]
+        hit = None
+        if fc.get("source") in ("nws", "open-meteo"):
+            hit = next((x for x in (fc.get("days") or [])
+                        if x.get("date") == iso), None)
+        if hit:
+            _apply_weather(d, hit, "forecast", iso)
+            continue
+        # Beyond the forecast window (or no live data) — fall back to seasonal.
+        ck = (key, iso[5:])              # cache by lat/lng + MM-DD
+        if ck not in clim_cache:
+            clim_cache[ck] = _climatology(stop["lat"], stop["lng"], iso)
+        clim = clim_cache[ck]
+        if clim:
+            _apply_weather(d, clim, "climatology", iso)
+
+
+def refresh_trip_weather(trip):
+    """Refresh the whole trip's weather from real forecasts / seasonal averages,
+    computing each day's calendar date itself. This is what the webapp calls when
+    a trip is generated or opened, so the page shows real weather instead of the
+    model's guess. Best-effort, never raises; returns the trip."""
+    start = _trip_start_date(trip)
+    days = trip.get("days") or []
+    if start and days:
+        iso = [(start + datetime.timedelta(days=k)).isoformat()
+               for k in range(len(days))]
+        _refresh_weather(trip, 0, iso)
+    return trip
+
+
+# --------------------------------------------------------------------------- #
+# Weather advisories (deterministic — no model call)
+# --------------------------------------------------------------------------- #
+
+# Phrase bank, keyed (icon-or-condition, has_outdoor_activity). Two source
+# voices: a real forecast speaks in the future ("expect…"), a climatology
+# average speaks in tendencies ("this stretch is typically…"). Kept in the
+# skill so both language variants live next to the planning logic.
+_ADVICE = {
+    "en": {
+        "storm":  ("Thunderstorms in the forecast — lightning and flash-flood risk.",
+                   "Thunderstorms are typical here this time of year."),
+        "snow":   ("Snow in the forecast — roads and high trails may be affected.",
+                   "Snow is common here this season — check road status."),
+        "rain":   ("Rain likely — trails get slick and slot canyons flood fast.",
+                   "This stretch is often wet this time of year."),
+        "wind":   ("Strong wind expected — dust, and dicey driving for high-profile vehicles.",
+                   "Strong afternoon wind is typical here this season."),
+        "heat":   ("Extreme heat expected — start early, carry far more water than feels necessary.",
+                   "This region is typically very hot this time of year."),
+        "cold":   ("Hard freeze expected — plan for ice and short daylight.",
+                   "Nights are typically below freezing here this season."),
+        "hike_suffix":  " Consider moving the hike, or keep it to the morning.",
+        "reslot_suffix": " No outdoor plans that day, so it mostly affects the drive.",
+        "verify": " Re-check the official forecast the day before you go.",
+    },
+    "zh": {
+        "storm":  ("预报有雷暴——注意雷击和山洪风险。",
+                   "这个季节这一带通常多雷暴。"),
+        "snow":   ("预报有降雪——道路和高海拔步道可能受影响。",
+                   "这个季节这里常有降雪——请查路况。"),
+        "rain":   ("预计有雨——步道湿滑，狭缝峡谷易突发山洪。",
+                   "这个季节这一段通常偏湿。"),
+        "wind":   ("预计大风——扬尘，高车身车辆行车需谨慎。",
+                   "这个季节这里午后通常有大风。"),
+        "heat":   ("预计极端高温——尽早出发，带比你以为需要的多得多的水。",
+                   "这个季节这一区域通常非常炎热。"),
+        "cold":   ("预计严重霜冻——注意结冰和白昼短。",
+                   "这个季节这里夜间通常低于冰点。"),
+        "hike_suffix":  " 可考虑把徒步改期，或只安排在上午。",
+        "reslot_suffix": " 这天没有户外行程，主要影响的是驾驶。",
+        "verify": " 出发前一天请以官方预报再核实一次。",
+    },
+}
+_HEAT_HIGH = 100          # °F daytime high that counts as "extreme heat"
+_COLD_LOW = 25            # °F overnight low that counts as a hard freeze
+_WIND_MPH = 35           # sustained/gust max that counts as "strong wind"
+_WET_PROB = 60           # forecast precip-probability that counts as "rain likely"
+_OUTDOOR_TYPES = ("hike", "park")
+
+
+def _day_condition(w):
+    """Reduce a day's weather dict to one advisory key, or None if unremarkable.
+    Order = severity: storm > snow > heat > cold > wind > rain."""
+    icon = w.get("icon")
+    if icon == "storm":
+        return "storm"
+    if icon == "snow":
+        return "snow"
+    hi, lo = w.get("high"), w.get("low")
+    if isinstance(hi, (int, float)) and hi >= _HEAT_HIGH:
+        return "heat"
+    if isinstance(lo, (int, float)) and lo <= _COLD_LOW:
+        return "cold"
+    if isinstance(w.get("windMph"), (int, float)) and w["windMph"] >= _WIND_MPH:
+        return "wind"
+    if icon == "rain" or (isinstance(w.get("precipProb"), (int, float))
+                          and w["precipProb"] >= _WET_PROB):
+        return "rain"
+    return None
+
+
+def _has_outdoor(day):
+    return any(s.get("type") in _OUTDOOR_TYPES for s in (day.get("stops") or []))
+
+
+def weather_advisories(trip):
+    """Per-day weather advisories for a trip — deterministic, no model call.
+
+    Returns a list aligned with trip['days']; each item is None (nothing worth
+    flagging) or {severity, source, message}. severity is "high" when notable
+    weather coincides with an outdoor day, else "info". Only days whose weather
+    carries a provenance tag (source == "forecast"|"climatology", set by
+    refresh_trip_weather) get an advisory — the model's own estimate is never
+    reliable enough to warn on. Language follows trip['lang']."""
+    lang = "zh" if str(trip.get("lang", "")).lower().startswith("zh") else "en"
+    bank = _ADVICE[lang]
+    out = []
+    for day in (trip.get("days") or []):
+        w = day.get("weather") or {}
+        source = w.get("source")
+        cond = _day_condition(w) if source in ("forecast", "climatology") else None
+        if not cond:
+            out.append(None)
+            continue
+        forecast_msg, climate_msg = bank[cond]
+        msg = forecast_msg if source == "forecast" else climate_msg
+        outdoor = _has_outdoor(day)
+        msg += bank["hike_suffix"] if outdoor else bank["reslot_suffix"]
+        if source == "forecast":
+            msg += bank["verify"]
+        out.append({
+            "severity": "high" if outdoor else "info",
+            "source": source,
+            "condition": cond,
+            "message": msg,
+        })
+    return out
 
 
 def _mi(day):
