@@ -58,8 +58,22 @@ _WMO_SUMMARY = {
 }
 
 
+# Severity rank for picking a week's representative icon: higher = more notable.
+_WMO_SEVERITY = {"storm": 4, "snow": 3, "rain": 2, "fog": 1}
+
+
 def _wmo_icon(code):
     return _WMO_ICON.get(int(code) if code is not None else -1, "partly-cloudy")
+
+
+def _wmo_severity(code):
+    """How 'notable' a WMO code is (storm > snow > rain > fog > everything)."""
+    return _WMO_SEVERITY.get(_wmo_icon(code), 0)
+
+
+def _at(seq, i):
+    """seq[i] or None — tolerate Open-Meteo returning mismatched array lengths."""
+    return seq[i] if isinstance(seq, list) and i < len(seq) else None
 
 
 def _get_json(url, timeout):
@@ -133,11 +147,11 @@ def _open_meteo(lat, lng, timeout=8):
     times = dl.get("time") or []
     days = []
     for i, day in enumerate(times):
-        code = (dl.get("weather_code") or [None])[i] if i < len(dl.get("weather_code", [])) else None
-        hi = (dl.get("temperature_2m_max") or [None])[i]
-        lo = (dl.get("temperature_2m_min") or [None])[i]
-        pp = (dl.get("precipitation_probability_max") or [None])[i]
-        wd = (dl.get("wind_speed_10m_max") or [None])[i]
+        code = _at(dl.get("weather_code"), i)
+        hi = _at(dl.get("temperature_2m_max"), i)
+        lo = _at(dl.get("temperature_2m_min"), i)
+        pp = _at(dl.get("precipitation_probability_max"), i)
+        wd = _at(dl.get("wind_speed_10m_max"), i)
         days.append({
             "date": day,
             "name": None,
@@ -207,9 +221,8 @@ def climatology(lat, lng, month, day, span_days=7, timeout=8):
         if not highs:
             return None
         # Representative icon = the most "notable" phenomenon seen that week
-        # (storm/snow beat rain beat clear), not a bland average.
-        worst = max(codes, key=lambda c: _WMO_ICON.get(int(c), "") in
-                    ("storm", "snow", "rain")) if codes else None
+        # (storm > snow > rain > clear), not a bland average or first-seen.
+        worst = max(codes, key=_wmo_severity) if codes else None
         wet = sum(1 for p in precip if p and p > 0.01)
         return {
             "source": "climatology", "units": "F", "year": ref_year,

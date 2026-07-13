@@ -72,6 +72,25 @@ class TestForecastLadder:
         out = wc.forecast(0.0, 0.0)
         assert out["source"] == "fallback"                # never raises
 
+    def test_mismatched_array_lengths_do_not_crash(self, monkeypatch):
+        # Regression (PR review): value arrays shorter than `time` used to
+        # IndexError. Missing values must degrade to None, not crash.
+        ragged = {"daily": {
+            "time": ["2026-07-13", "2026-07-14", "2026-07-15"],
+            "weather_code": [3],                          # only 1 of 3
+            "temperature_2m_max": [91.7, 88.0],           # only 2 of 3
+            "temperature_2m_min": [],                     # empty
+            "precipitation_probability_max": [9, 24, 47],
+            "wind_speed_10m_max": [15.9],
+        }}
+        monkeypatch.setattr(wc, "_nws",
+                            lambda *a, **k: (_ for _ in ()).throw(Exception("US-only")))
+        monkeypatch.setattr(wc, "_get_json", _fake_http({"open-meteo": ragged}))
+        out = wc.forecast(51.18, -115.57)
+        assert out["source"] == "open-meteo" and len(out["days"]) == 3
+        assert out["days"][2]["high"] is None and out["days"][2]["low"] is None
+        assert out["days"][1]["high"] == 88
+
 
 class TestClimatology:
     _ARCHIVE = {"daily": {
@@ -89,6 +108,24 @@ class TestClimatology:
         assert c["high"] == 84                            # mean of the 4 highs
         assert c["icon"] == "storm"                       # most notable = WMO 95
         assert 0.4 < c["wetShare"] <= 0.5                 # 2 of 4 days wet
+
+    def test_storm_wins_even_when_rain_comes_first(self, monkeypatch):
+        # Regression (PR review): a boolean key made max() pick the first truthy
+        # (rain), not the most severe (storm). Rain days precede the storm here.
+        archive = {"daily": {
+            "time": ["2025-09-12", "2025-09-13", "2025-09-14"],
+            "weather_code": [61, 63, 95],                 # rain, rain, storm
+            "temperature_2m_max": [80.0, 82.0, 78.0],
+            "temperature_2m_min": [55.0, 56.0, 54.0],
+            "precipitation_sum": [0.2, 0.1, 0.4],
+        }}
+        monkeypatch.setattr(wc, "_get_json", _fake_http({"archive": archive}))
+        c = wc.climatology(37.3, -113.0, 9, 13, span_days=3)
+        assert c["icon"] == "storm"                       # severity, not position
+
+    def test_wmo_severity_order(self):
+        assert (wc._wmo_severity(95) > wc._wmo_severity(75)
+                > wc._wmo_severity(61) > wc._wmo_severity(0))   # storm>snow>rain>clear
 
     def test_feb_29_reference_year_does_not_crash(self, monkeypatch):
         monkeypatch.setattr(wc, "_get_json", _fake_http({"archive": self._ARCHIVE}))
