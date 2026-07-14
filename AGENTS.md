@@ -150,7 +150,8 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
   `haversine_km`.
 - `scripts/planner.py` is mounted the same way — keep `live_mode`, `generate_trip`,
   `regenerate_day`, `remove_city`, `set_nights`, `revise_stay`, `fix_endpoints`,
-  `despread_stops`, `refresh_trip_weather`, `weather_advisories` stable.
+  `despread_stops`, `refresh_trip_weather`, `refresh_trip_fuel`,
+  `refresh_trip_ev_corridor`, `weather_advisories` stable.
 - Stay edits (`set_nights` / `revise_stay`) let the model return this stay's `lodging`
   and `bookingCountdown` alongside its `days`; night counts and `booked` stay
   code-owned. Bookings are matched to a stay by city name **or** by a stop name in
@@ -160,6 +161,15 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
   the forecast window. On a trip day, `weather.source` is `"forecast"` or
   `"climatology"`; an untagged `weather` block is the model's own estimate. Never
   render or reason about a climatology average as if it were a forecast.
+- **Fuel / EV backfill.** After a live generation, `generate_trip` replaces the
+  model's guessed energy economics with tool math (single source of truth with the
+  agent workflow): `refresh_trip_fuel(trip, efficiency)` recomputes the fuel/charging
+  budget line from `fuel_client.gas_cost` / `ev_cost` (tagged
+  `source: "fuel_client"`, reliability stays `estimate`), and
+  `refresh_trip_ev_corridor(trip)` fills `evPlan` from
+  `charging_client.corridor` using the days' `driveMiles` + charge stops (purely
+  computational, no network). Both are best-effort and never raise; an existing
+  `evPlan` and curated demo trips are left untouched.
 - **Weather advisories.** `weather_advisories(trip)` is deterministic (no model
   call): per-day `{severity, source, condition, message}` or None. It only warns
   on days with a provenance tag — never on the model's own estimate — and speaks

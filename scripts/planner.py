@@ -516,6 +516,13 @@ def generate_trip(payload, live, on_progress=None, log_fn=None):
     # average past the forecast window) now that stop coordinates are settled.
     # Best-effort: a failure here leaves the model's estimate untouched.
     refresh_trip_weather(trip)
+    if live:
+        # Same single-source-of-truth pass for the trip's energy economics:
+        # the fuel/charging budget line and the EV corridor come from the
+        # tools/ clients (the code the agent workflow uses), not model recall.
+        # Demo trips are curated fixtures and keep their hand-checked numbers.
+        refresh_trip_fuel(trip, efficiency=payload.get("efficiency"))
+        refresh_trip_ev_corridor(trip)
     return trip
 
 
@@ -1394,10 +1401,125 @@ def _recompute_budget(trip, old_days, old_miles):
             item["amount"] = max(0, int(round(amount * float(new_days) / old_days)))
             item["label"] = _sub_first_number(label, _DAYS_RE, new_days)
 
+    _retotal_budget(trip, budget)
+
+
+def _retotal_budget(trip, budget):
+    """Recompute budget.total / budget.perPerson from the item list."""
     total = sum(a for a in (_coerce_miles(i.get("amount")) for i in budget["items"])
                 if a is not None)
     budget["total"] = total
     budget["perPerson"] = int(round(total / max(1, _travelers_count(trip))))
+
+
+# --------------------------------------------------------------------------- #
+# Fuel / EV backfill (deterministic — no model call)
+# --------------------------------------------------------------------------- #
+
+# Visual region theme -> fuel_client price-region key (rough prior; the label
+# always shows the assumed price and the reliability stays "estimate").
+_FUEL_REGION = {"desert": "southwest", "mountain": "mountain", "coast": "west",
+                "forest": "pacificnw", "autumn": "northeast"}
+
+
+def _as_positive_number(x):
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def refresh_trip_fuel(trip, efficiency=None):
+    """Replace the model's guessed fuel/charging budget line with the same
+    deterministic math the agent workflow gets from tools/fuel_client — one
+    source of truth for energy economics across the skill and the webapp.
+
+    `efficiency` is the user's stated MPG (gas/RV) or mi-per-kWh (EV); falls
+    back to the trip's vehicle block, then the client defaults. Best-effort,
+    never raises; returns the trip."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import fuel_client
+
+        miles = _as_positive_number(trip.get("totalMiles"))
+        budget = trip.get("budget")
+        if miles is None or not isinstance(budget, dict) \
+                or not isinstance(budget.get("items"), list):
+            return trip
+        vehicle = trip.get("vehicle") or {}
+        vtype = (vehicle.get("type") or "gas").lower()
+        eff = _as_positive_number(efficiency)
+        zh = (trip.get("lang") == "zh")
+
+        if vtype == "ev":
+            per_kwh = eff or fuel_client.EV_MI_PER_KWH
+            data = fuel_client.ev_cost(int(miles), mi_per_kwh=per_kwh)
+            label = ("充电（约 %d 英里 · %g 英里/千瓦时 · $%.2f/千瓦时）"
+                     % (miles, data["miPerKWh"], data["pricePerKWh"])
+                     if zh else data["label"])
+        else:
+            mpg = eff or _as_positive_number(vehicle.get("mpg")) \
+                or (10 if vtype == "rv" else 26)
+            region = _FUEL_REGION.get(trip.get("region"), "us")
+            data = fuel_client.gas_cost(int(miles), mpg, region=region)
+            label = ("燃油（约 %d 英里 · %g MPG · $%.2f/加仑）"
+                     % (miles, data["mpg"], data["pricePerGal"])
+                     if zh else data["label"])
+
+        item = next((i for i in budget["items"]
+                     if any(w in _s(i.get("label")).lower() for w in _FUEL_WORDS)),
+                    None)
+        if item is None:
+            item = {}
+            budget["items"].append(item)
+        item["label"] = label
+        item["amount"] = int(round(data["cost"]))
+        item["reliability"] = "estimate"
+        item["source"] = "fuel_client"
+        _retotal_budget(trip, budget)
+    except Exception as e:
+        print("[warn] fuel backfill unavailable: %s" % e, file=sys.stderr)
+    return trip
+
+
+def refresh_trip_ev_corridor(trip):
+    """Fill trip['evPlan'] for an EV trip from tools/charging_client.corridor —
+    per-leg state-of-charge from the days' driveMiles and charge stops. Purely
+    computational (no network). Respects an existing evPlan (agent- or demo-
+    built). Best-effort, never raises; returns the trip."""
+    try:
+        vehicle = trip.get("vehicle") or {}
+        if (vehicle.get("type") or "").lower() != "ev" or trip.get("evPlan"):
+            return trip
+        rng = _as_positive_number(vehicle.get("rangeMiles"))
+        if rng is None:
+            return trip
+        legs = []
+        for d in (trip.get("days") or []):
+            miles = _as_positive_number(d.get("driveMiles"))
+            if miles is None:
+                continue
+            chargers = [f for f in (d.get("fuelCharging") or [])
+                        if (f.get("type") or "").lower() == "charge"]
+            kws = [f.get("powerKW") for f in chargers
+                   if isinstance(f.get("powerKW"), (int, float))]
+            legs.append({"to": d.get("to") or d.get("overnight") or d.get("title"),
+                         "miles": miles,
+                         "charger": bool(chargers),
+                         "chargerKW": int(max(kws)) if kws else None})
+        if not legs:
+            return trip
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import charging_client
+        plan = charging_client.corridor(legs, rng)
+        if plan.get("legs"):
+            trip["evPlan"] = plan
+    except Exception as e:
+        print("[warn] EV corridor backfill unavailable: %s" % e, file=sys.stderr)
+    return trip
 
 
 
