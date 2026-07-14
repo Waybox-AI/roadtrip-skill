@@ -329,9 +329,20 @@ var TRIP_DATA = __TRIP_DATA__;
       }
       return s + "</div>";
     }).join("");
+    var df = cb.dutyFree, dfHtml = "";
+    if (df && df.note) {
+      var zh = T.lang === "zh";
+      var conds = (zh ? df.conditionsZh : df.conditions) || [];
+      dfHtml = '<div class="border-crossing"><div class="border-route">🛍️ ' +
+        (zh ? "免税额度" : "Duty-free exemption") + "</div>" +
+        "<div class='stop-note'>" + esc(zh ? (df.noteZh || df.note) : df.note) +
+        (conds.length ? "<br>• " + conds.map(esc).join("<br>• ") : "") +
+        (df.verify ? "<br>" + (zh ? "核实：" : "Verify: ") + esc(df.verify) : "") +
+        "</div></div>";
+    }
     el("crossborder").innerHTML =
       '<div class="section"><h2>🛂 Border crossing</h2>' +
-      '<div class="card border-card">' + blocks +
+      '<div class="card border-card">' + blocks + dfHtml +
       "<div class='stop-note' style='margin-top:8px'>⚠️ Entry rules change — confirm with " +
       "CBP / CBSA / Mexican customs before you travel.</div></div></div>";
   }
@@ -513,9 +524,16 @@ var TRIP_DATA = __TRIP_DATA__;
   function renderLodging() {
     var L = T.lodging || [];
     if (!L.length) { el("lodging").innerHTML = ""; return; }
+    var linkNames = [["booking", "Booking"], ["airbnb", "Airbnb"], ["google_hotels", "Hotels"],
+                     ["koa", "KOA"], ["hipcamp", "Hipcamp"], ["recreation_gov", "Rec.gov"]];
     var rows = L.map(function (h) {
+      var lk = h.links || {};
+      var links = linkNames.filter(function (p) { return lk[p[0]]; }).map(function (p) {
+        return '<a href="' + esc(lk[p[0]]) + '" target="_blank" rel="noopener">' + p[1] + "</a>";
+      }).join(" · ");
       return "<tr><td>" + esc(h.name) + (h.booked ? " ✅" : "") +
-        "<div class='stop-note'>" + esc(h.area || "") + "</div></td>" +
+        "<div class='stop-note'>" + esc(h.area || "") +
+        (links ? (h.area ? " · " : "") + links : "") + "</div></td>" +
         "<td class='num'>" + (h.nights || 1) + "</td>" +
         "<td class='num'>" + (h.rating ? "★ " + esc(h.rating) : "—") + "</td>" +
         "<td class='num'>" + money(h.pricePerNight) + "</td></tr>";

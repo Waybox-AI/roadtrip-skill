@@ -151,7 +151,9 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
 - `scripts/planner.py` is mounted the same way — keep `live_mode`, `generate_trip`,
   `regenerate_day`, `remove_city`, `set_nights`, `revise_stay`, `fix_endpoints`,
   `despread_stops`, `refresh_trip_weather`, `refresh_trip_fuel`,
-  `refresh_trip_ev_corridor`, `weather_advisories` stable.
+  `refresh_trip_ev_corridor`, `refresh_trip_routing`, `refresh_trip_countdown`,
+  `refresh_trip_lodging_links`, `refresh_trip_border`,
+  `refresh_trip_route_options`, `weather_advisories` stable.
 - Stay edits (`set_nights` / `revise_stay`) let the model return this stay's `lodging`
   and `bookingCountdown` alongside its `days`; night counts and `booked` stay
   code-owned. Bookings are matched to a stay by city name **or** by a stop name in
@@ -161,15 +163,25 @@ the schema, reliability-grading rules, tool-routing table, and seasonal closure 
   the forecast window. On a trip day, `weather.source` is `"forecast"` or
   `"climatology"`; an untagged `weather` block is the model's own estimate. Never
   render or reason about a climatology average as if it were a forecast.
-- **Fuel / EV backfill.** After a live generation, `generate_trip` replaces the
-  model's guessed energy economics with tool math (single source of truth with the
-  agent workflow): `refresh_trip_fuel(trip, efficiency)` recomputes the fuel/charging
-  budget line from `fuel_client.gas_cost` / `ev_cost` (tagged
-  `source: "fuel_client"`, reliability stays `estimate`), and
-  `refresh_trip_ev_corridor(trip)` fills `evPlan` from
-  `charging_client.corridor` using the days' `driveMiles` + charge stops (purely
-  computational, no network). Both are best-effort and never raise; an existing
-  `evPlan` and curated demo trips are left untouched.
+- **Post-generation backfill (single source of truth with the agent workflow).**
+  After a live generation, `generate_trip` replaces every hard number the
+  single-shot model path had to guess with the same `tools/` clients the agent
+  workflow uses. In order: `refresh_trip_routing` (per-day miles/time from
+  `routing_client`/OSRM, tagged `driveSource: "osrm"`; all-or-nothing, the
+  great-circle fallback is never applied), `refresh_trip_fuel(trip, efficiency)`
+  (fuel/charging budget line from `fuel_client.gas_cost` / `ev_cost`, tagged
+  `source: "fuel_client"`, reliability stays `estimate`),
+  `refresh_trip_ev_corridor` (`evPlan` from `charging_client.corridor` using the
+  days' `driveMiles` + charge stops — purely computational),
+  `refresh_trip_countdown` (bookingCountdown deadlines from
+  `parks_client.book_by` release rules, tagged `source: "parks_client"`),
+  `refresh_trip_lodging_links` (`lodging[].links` from
+  `lodging_client.search_links`), `refresh_trip_border` (`crossBorder` from
+  `border_client.trip_section` + `customs_client.personal_exemption`, driven by
+  a model-emitted `crossings` structure list), and `refresh_trip_route_options`
+  (`routeOptions[]` via `helper.compare_routes` when the webapp passes both
+  phase-1 candidates as `payload["routes"]`). Every step is best-effort and
+  never raises; existing sections and curated demo trips are left untouched.
 - **Weather advisories.** `weather_advisories(trip)` is deterministic (no model
   call): per-day `{severity, source, condition, message}` or None. It only warns
   on days with a provenance tag — never on the model's own estimate — and speaks

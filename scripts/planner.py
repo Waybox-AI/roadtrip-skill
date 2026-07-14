@@ -290,7 +290,8 @@ def build_user(payload, region):
  "bookingCountdown":[{"item":str,"bookBy":"YYYY-MM-DD","where":str,"priority":"high|medium|low","note":str}],
  "budget":{"currency":"USD","items":[{"label":str,"amount":int,"reliability":"verified|reference|estimate"}],
    "total":int,"perPerson":int},
- "tips":[str], "disclaimer":str, "generationDate":"YYYY-MM-DD"
+ "tips":[str], "disclaimer":str, "generationDate":"YYYY-MM-DD",
+ "crossings":[{"from":"US|CA|MX","to":"US|CA|MX","day":int}]
 }"""
     user = json.dumps({k: v for k, v in payload.items() if v and k != "route"}, ensure_ascii=False)
     eff = payload.get("efficiency")
@@ -358,6 +359,10 @@ def build_user(payload, region):
         "- budget.total must equal the sum of budget.items and budget.perPerson = total / travelers; "
         "grade every line verified/reference/estimate.\n"
         "- No reservation 'bookBy' date may be before today.\n"
+        "- Include \"crossings\" ONLY if the route crosses a US/Canada/Mexico border: one entry "
+        "per crossing in driving order, with the trip day number it happens on; omit the key "
+        "entirely for domestic trips. Do NOT write any other border/customs content — the "
+        "checklists and duty-free amounts are generated downstream from official rule tables.\n"
         "- Fill 'disclaimer' with a note to verify against official sources.\n"
         "Return JSON only."
     )
@@ -517,12 +522,20 @@ def generate_trip(payload, live, on_progress=None, log_fn=None):
     # Best-effort: a failure here leaves the model's estimate untouched.
     refresh_trip_weather(trip)
     if live:
-        # Same single-source-of-truth pass for the trip's energy economics:
-        # the fuel/charging budget line and the EV corridor come from the
-        # tools/ clients (the code the agent workflow uses), not model recall.
-        # Demo trips are curated fixtures and keep their hand-checked numbers.
+        # Single-source-of-truth pass: every hard number the model was forced
+        # to guess is replaced by the same tools/ clients the agent workflow
+        # uses — routing first (real miles feed the fuel and EV math), then
+        # energy economics, booking deadlines, lodging links, border rules and
+        # the route-comparison table. Each step is best-effort and leaves the
+        # model's estimate in place on failure. Demo trips are curated
+        # fixtures and keep their hand-checked numbers.
+        refresh_trip_routing(trip)
         refresh_trip_fuel(trip, efficiency=payload.get("efficiency"))
         refresh_trip_ev_corridor(trip)
+        refresh_trip_countdown(trip)
+        refresh_trip_lodging_links(trip)
+        refresh_trip_border(trip)
+        refresh_trip_route_options(trip, payload)
     return trip
 
 
@@ -1519,6 +1532,188 @@ def refresh_trip_ev_corridor(trip):
             trip["evPlan"] = plan
     except Exception as e:
         print("[warn] EV corridor backfill unavailable: %s" % e, file=sys.stderr)
+    return trip
+
+
+def refresh_trip_routing(trip):
+    """Replace the model's guessed per-day driving miles/times with real OSRM
+    routing over each day's stop coordinates (tools/routing_client — the same
+    engine the agent workflow uses). Day N's route starts from day N-1's last
+    stop so overnights chain correctly. All-or-nothing: only "osrm" results are
+    applied (the client's great-circle fallback is cruder than the model's own
+    guess), and the first failure abandons the whole pass so day miles and
+    totalMiles never drift apart. Best-effort, never raises; returns the trip."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import routing_client
+
+        days = trip.get("days") or []
+        updates, prev_last = {}, None
+        for i, d in enumerate(days):
+            pts = [(s["lat"], s["lng"]) for s in (d.get("stops") or [])
+                   if isinstance(s.get("lat"), (int, float))
+                   and isinstance(s.get("lng"), (int, float))]
+            wps = ([prev_last] if prev_last else []) + pts
+            if pts:
+                prev_last = pts[-1]
+            if len(wps) < 2:
+                continue                     # layover / missing coords — keep model value
+            r = routing_client.route(wps)
+            if r.get("source") != "osrm":
+                return trip                  # OSRM unreachable — keep ALL model values
+            updates[i] = (int(round(r["miles"])), r["driveTime"])
+        if not updates:
+            return trip
+        total = 0
+        for i, d in enumerate(days):
+            if i in updates:
+                d["driveMiles"], d["driveTime"] = updates[i]
+                d["driveSource"] = "osrm"
+            total += d.get("driveMiles") or 0
+        if total > 0:
+            trip["totalMiles"] = int(round(total))
+    except Exception as e:
+        print("[warn] routing backfill unavailable: %s" % e, file=sys.stderr)
+    return trip
+
+
+# Booking-countdown label keywords -> parks_client release-rule key. Ordered:
+# first match wins, so the more specific rules come before the generic ones
+# ("wilderness permit" must not hit the timed-entry "permit" keyword).
+_COUNTDOWN_RULES = (
+    ("campground", ("campground", "campsite", "camping", "营地", "露营")),
+    ("in-park-lodge", ("lodge", "旅馆", "山庄")),
+    ("wilderness-permit", ("wilderness", "荒野")),
+    ("timed-entry", ("timed entry", "timed-entry", "permit", "预约", "许可")),
+    ("one-way-rental", ("rental", "租车")),
+)
+
+
+def refresh_trip_countdown(trip, today=None):
+    """Re-derive every recognizable bookingCountdown deadline from
+    tools/parks_client's release-window rules — hard dates from code, not model
+    recall. Items whose label matches no known rule keep the model's date. The
+    trip start date stands in for each item's arrival day (booking earlier
+    never hurts). Best-effort, never raises; returns the trip."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import parks_client
+
+        start = _trip_start_date(trip)
+        if not start:
+            return trip
+        arrival = start.isoformat()
+        for item in (trip.get("bookingCountdown") or []):
+            label = _s(item.get("item")).lower()
+            rule = next((r for r, words in _COUNTDOWN_RULES
+                         if any(w in label for w in words)), None)
+            if not rule:
+                continue
+            bb = parks_client.book_by(arrival, rule, today)
+            if bb:
+                item["bookBy"] = bb
+                item["source"] = "parks_client"
+    except Exception as e:
+        print("[warn] countdown backfill unavailable: %s" % e, file=sys.stderr)
+    return trip
+
+
+def refresh_trip_lodging_links(trip):
+    """Attach tools/lodging_client search links to each lodging entry so the
+    rendered page deep-links to the booking platforms instead of showing a
+    dead-end name. Pure link building (no network). Never raises."""
+    try:
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import lodging_client
+
+        for l in (trip.get("lodging") or []):
+            place = ", ".join(x for x in (_s(l.get("name")).strip(),
+                                          _s(l.get("area")).strip()) if x)
+            if place and not l.get("links"):
+                l["links"] = lodging_client.search_links(place)
+    except Exception as e:
+        print("[warn] lodging links unavailable: %s" % e, file=sys.stderr)
+    return trip
+
+
+_COUNTRIES = ("US", "CA", "MX")
+
+
+def refresh_trip_border(trip):
+    """Build trip['crossBorder'] from the model-declared crossing sequence
+    (trip['crossings']: [{"from","to","day"}]) via tools/border_client — the
+    documents/insurance/customs/units checklists come from the rule tables, not
+    model recall. When the sequence re-enters the home country and both
+    crossing days are known, tools/customs_client adds the duty-free personal
+    exemption. The model only supplies the structure; every hard fact comes
+    from the tools. Best-effort, never raises; returns the trip."""
+    try:
+        crossings = trip.get("crossings")
+        if not crossings or trip.get("crossBorder"):
+            return trip
+        seq = []
+        for c in crossings:
+            f = _s(c.get("from")).strip().upper()
+            t = _s(c.get("to")).strip().upper()
+            if f in _COUNTRIES and t in _COUNTRIES and f != t:
+                seq.append((f, t, False))
+        if not seq:
+            return trip
+        if _ROOT not in sys.path:
+            sys.path.insert(0, _ROOT)
+        from tools import border_client, customs_client
+
+        trip["crossBorder"] = border_client.trip_section(seq)
+        home = seq[0][0]
+        out_day = crossings[0].get("day")
+        ret = next((c for c in crossings[1:]
+                    if _s(c.get("to")).strip().upper() == home), None)
+        if ret is not None and isinstance(out_day, (int, float)) \
+                and isinstance(ret.get("day"), (int, float)):
+            hours = max(0, float(ret["day"]) - float(out_day)) * 24
+            trip["crossBorder"]["dutyFree"] = \
+                customs_client.personal_exemption(home, hours)
+    except Exception as e:
+        print("[warn] border backfill unavailable: %s" % e, file=sys.stderr)
+    return trip
+
+
+def refresh_trip_route_options(trip, payload):
+    """Populate routeOptions[] (the route-comparison table) from the phase-1
+    candidates via helper.compare_routes — the drive-intensity rating is code,
+    not model prose. The chosen row gets the trip's own post-routing miles and
+    computed budget total as its estCost; the road not taken keeps the phase-1
+    sketch numbers. Needs the webapp to pass both candidates as
+    payload['routes']; skips silently otherwise. Never raises."""
+    try:
+        routes = payload.get("routes") or []
+        if len(routes) < 2 or trip.get("routeOptions"):
+            return trip
+        chosen_label = _s((payload.get("route") or {}).get("label"))
+        opts = []
+        for r in routes:
+            wps = [_s(w.get("name")) for w in (r.get("waypoints") or [])
+                   if w.get("name")]
+            opts.append({"name": _s(r.get("label")) or "Route",
+                         "miles": r.get("totalMiles"),
+                         "days": r.get("drivingDays"),
+                         "highlights": ", ".join(wps[:4]),
+                         "chosen": bool(chosen_label)
+                         and _s(r.get("label")) == chosen_label})
+        chosen = next((o for o in opts if o["chosen"]), None)
+        if chosen:
+            if isinstance(trip.get("totalMiles"), (int, float)):
+                chosen["miles"] = trip["totalMiles"]
+            total = (trip.get("budget") or {}).get("total")
+            if isinstance(total, (int, float)):
+                chosen["estCost"] = total
+        trip["routeOptions"] = _helper.compare_routes(
+            opts, party=_s(trip.get("travelers")))["routeOptions"]
+    except Exception as e:
+        print("[warn] route options unavailable: %s" % e, file=sys.stderr)
     return trip
 
 
