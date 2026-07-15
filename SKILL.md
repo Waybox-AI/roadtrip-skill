@@ -78,6 +78,19 @@ Optional: destination/region, budget, preferences (scenic vs. fast, hike
 intensity, loop vs. one-way, border crossing). Only ask follow-ups for missing
 **required** slots; fill the rest with sensible defaults and proceed.
 
+**Validate place names before planning.** Slot presence is not slot truth: a
+made-up start like "ABC" parses fine and would otherwise flow straight into a
+fabricated route. Run every user-supplied place — start, destination, named
+waypoints; in heavy mode each day's from/to towns — through
+`python3 tools/places_client.py "<name>"` and branch on its verdict:
+`match` → adopt the returned canonical name + coordinates; `did-you-mean` →
+confirm the intended place with the user (one short question, same spirit as
+the required-slot follow-ups); `no-match` → **stop and ask — never plan a
+route around a place you could not verify**; `unverified` (offline) → use your
+own judgment and ask about any name you don't recognize. A `match` with
+`outsideNA: true` is a real place outside US/Canada/Mexico — tell the user
+it's beyond this skill's coverage instead of calling it fake.
+
 ### Step 2 — Route / destination planning (if not given)
 Decide **loop vs. one-way** first (affects one-way drop fees and pacing).
 For region-level input ("the Southwest", "Pacific Northwest"): search

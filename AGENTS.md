@@ -51,6 +51,7 @@ python3 assets/generate.py assets/tripData.pnw.json   -o assets/preview-pnw.html
 python3 tools/border_client.py US MX --rental
 python3 tools/parks_client.py --countdown 2026-09-12
 python3 tools/charging_client.py --leg 165 280
+python3 tools/places_client.py "Zzyzx, CA"   # place-name existence gate ("ABC" → no-match)
 ```
 
 Run the tests locally after **any** code change and report the result; add a matching
@@ -85,7 +86,7 @@ is deterministic rendering. (See "Data / view separation" below.)
 | `reference.md` | Companion spec: schema (§1), reliability grades (§2), tool-routing table (§3), drive limits (§4), seasonal closures (§5). |
 | `scripts/helper.py` | Regex slot-filling from the user's request; entry-mode + region detection; `compare_routes()` / `drive_intensity()`. Output is *hints*. |
 | `scripts/routes.py` | Two candidate routes for the **external webapp** (live model call or offline sample fallback). Not used by the skill workflow. |
-| `tools/*.py` | One data client per concern (routing, parks, weather, charging, fuel, lodging, border). Free/official API first, else a web-search `fallback(...)`. Never crash. |
+| `tools/*.py` | One data client per concern (routing, place validation, parks, weather, charging, fuel, lodging, border). Free/official API first, else a web-search `fallback(...)`. Never crash. |
 | `tools/web_search.py` | Defines the `fallback(reason, queries, sources)` shape every client degrades to. |
 | `assets/generate.py` | Validates (non-fatally) and injects `tripData.json` into `template.html` → `trip.html`. |
 | `assets/template.html` | The browser view: map, day timeline, budget. All view logic lives here. |
