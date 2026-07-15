@@ -155,6 +155,7 @@ hit official/free APIs first and fall back to web search only on failure.
 
 | Concern | Preferred source | Client | Fallback |
 |---------|------------------|--------|----------|
+| Place-name validation (Step 1) | **Photon geocoder (OSM, no key)** | `tools/places_client.py` | ask the user — never plan around an unverified name |
 | Route / miles / drive time | Google/Apple Directions, OSRM (OSM) | `tools/routing_client.py` | web search estimate |
 | Map tiles | **Leaflet + OSM (no key)** | built into template | — |
 | National park info | **NPS API (free)** | `tools/parks_client.py` | nps.gov scrape / search |
@@ -177,8 +178,8 @@ Each `tools/*.py` exposes simple functions returning plain dicts/lists and a
 `FALLBACK` note when it could not reach a live source. None require API keys to
 *run* — without a key they return a structured "use web search" fallback rather
 than crashing. Read keys from environment variables (e.g. `NPS_API_KEY`,
-`OCM_API_KEY`, `OPENWEATHER_API_KEY`); `NWS`, `OSRM`, and `Open Charge Map`
-(demo) need no key.
+`OCM_API_KEY`, `OPENWEATHER_API_KEY`); `NWS`, `OSRM`, `Photon`, and
+`Open Charge Map` (demo) need no key.
 
 ## 4. Daily-drive defaults (Step 3 validation)
 
