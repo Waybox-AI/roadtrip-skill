@@ -6,8 +6,10 @@ Product vision, problem framing, and domain terminology for **RoadTrip Navigator
 
 RoadTrip Navigator is **not a running application** — it is a **Claude Code plugin /
 agent skill**. The deliverable is `SKILL.md` (the workflow an agent follows) plus
-small, dependency-light Python helpers the agent shells out to while planning. The
-final artifact a user receives is a single self-contained **`trip.html`** file.
+small, dependency-light Python helpers the agent shells out to while planning. An MCP
+server (`mcp_server/`) serves the same helpers as typed tools to agent hosts that
+can't run the SKILL.md workflow (Codex CLI, Gemini CLI, …). The final artifact a user
+receives is a single self-contained **`trip.html`** file.
 
 Two audiences share this repo:
 - **The agent** reads `SKILL.md` and `reference.md` as *instructions* — these are
@@ -58,10 +60,15 @@ These are where pure-model answers fail and where the skill earns its keep:
   answer to that is executability (drive-time sanity, closures, book-by dates, SoC
   simulation) — never "more attractions".
 
-## Product structure — two channels, one brand
+## Product structure — three channels, one brand
 
 - **The skill (this repo)** — for users of Claude Code and other SKILL.md-compatible
   agents. Two-command install, zero API keys.
+- **The MCP server (`mcp_server/`, this repo)** — the same data tools + renderer for
+  users of *other* agent CLIs (Codex, Gemini, Cursor, …): one `mcp add` command, no
+  repo checkout or Python setup. It carries the execution layer where the skill
+  markdown can't run; the planning discipline stays reachable via its
+  `get_planning_guide` tool. Install docs: [mcp_server/README.md](mcp_server/README.md).
 - **The web version (roadtripskill.dev)** — no-install browser generation for
   non-developers; early access, free for now. This is the "external webapp" that
   imports `scripts/routes.py` (see [DEVELOPMENT.md](DEVELOPMENT.md)) — another reason
