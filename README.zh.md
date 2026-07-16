@@ -58,6 +58,20 @@ npx skills add Waybox-AI/roadtrip-skill
 
 然后用大白话提需求就行。改行程也像跟朋友聊天：「加一个酒庄」「我们带狗」「第 4 天开短一点」。
 
+### MCP server — 在 Codex / Gemini CLI 里用同一套工具
+
+skill 的实时数据工具（路线、天气、公园预约、EV 续航走廊、跨境规则…）和 HTML 渲染器也打包成了 [MCP](https://modelcontextprotocol.io) server，给跑不了 SKILL.md 工作流的 agent 用。一条命令接入，无需 clone、无需 API key：
+
+```bash
+# OpenAI Codex CLI
+codex mcp add roadtrip -- uvx --from git+https://github.com/Waybox-AI/roadtrip-skill roadtrip-mcp
+
+# Google Gemini CLI
+gemini mcp add roadtrip uvx --from git+https://github.com/Waybox-AI/roadtrip-skill roadtrip-mcp
+```
+
+（需要 [uv](https://docs.astral.sh/uv/)。和上面的 `npx skills add` 是互补的：那条装的是规划知识，这条装的是工具执行层。）14 个工具清单与各宿主注意事项见 [mcp_server/README.md](mcp_server/README.md)。
+
 ## 它校验的，恰好是通用规划不管的
 
 | 真上路时要命的事 | 通用 AI 行程 | RoadTrip Navigator |
