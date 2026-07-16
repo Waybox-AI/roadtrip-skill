@@ -64,6 +64,23 @@ npx skills add Waybox-AI/roadtrip-skill
 See [INSTALL.md](INSTALL.md) for manual setup and per-agent notes.
 </details>
 
+### MCP server — the same tools in Codex, Gemini CLI, and any MCP host
+
+The skill's live data tools (routing, weather, park reservations, EV corridor, border rules…) and its HTML renderer also ship as an [MCP](https://modelcontextprotocol.io) server, for agents that can't run SKILL.md workflows. One command, no checkout, no API keys:
+
+```bash
+# OpenAI Codex CLI
+codex mcp add roadtrip -- uvx --from git+https://github.com/Waybox-AI/roadtrip-skill roadtrip-mcp
+
+# Google Gemini CLI
+gemini mcp add roadtrip uvx --from git+https://github.com/Waybox-AI/roadtrip-skill roadtrip-mcp
+
+# Claude Code
+claude mcp add roadtrip -- uvx --from git+https://github.com/Waybox-AI/roadtrip-skill roadtrip-mcp
+```
+
+Needs [uv](https://docs.astral.sh/uv/). Pairs with the `npx skills add` install above — that carries the planning knowledge, this carries the tools. All 14 tools, per-host notes, and optional API keys: [mcp_server/README.md](mcp_server/README.md).
+
 ## What it checks that a chatbot won't
 
 Most AI trip planners hand you a wishlist of attractions. The wishlist falls apart around day two. This fixes the five places where it breaks:
@@ -136,6 +153,7 @@ AGENTS.md          Technical rules + worked prompts — plan, verify, EV, cross-
 assets/            generate.py, template.html, three demo trips
 scripts/helper.py  Slot filling, mode and region detection, route comparison
 tools/             One client per data source, each with a web-search fallback
+mcp_server/        MCP server: tools/ + renderer as 14 typed tools for any MCP host
 ```
 
 If you're learning to write agent skills, this repo doubles as a worked example — start with [SKILL.md](SKILL.md).

@@ -35,7 +35,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pytest
+        run: pip install pytest "mcp>=1.2,<2"
 
       - name: Run tests
         run: python -m pytest tests/ -v

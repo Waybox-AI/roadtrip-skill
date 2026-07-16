@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "roadtrip-navigator-mcp"
+version = "0.1.0"
+description = "MCP server exposing the RoadTrip Navigator skill's data tools and itinerary renderer to any MCP host (Claude Code, Codex CLI, Gemini CLI, ...)"
+readme = "mcp_server/README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.2,<2"]
+
+[project.urls]
+Homepage = "https://github.com/Waybox-AI/roadtrip-skill"
+
+[project.scripts]
+roadtrip-mcp = "mcp_server.server:main"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+# The repo is a skill first and a Python package second: only mcp_server/ is a
+# real package. Everything else the server needs at runtime (tools/, the
+# renderer, the skill docs) is vendored into mcp_server/_vendor/ at build time
+# so an installed wheel mirrors the repo-checkout layout the code resolves
+# against (see mcp_server/server.py `_ROOT`).
+[tool.hatch.build.targets.wheel]
+packages = ["mcp_server"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"tools/__init__.py" = "mcp_server/_vendor/tools/__init__.py"
+"tools/border_client.py" = "mcp_server/_vendor/tools/border_client.py"
+"tools/charging_client.py" = "mcp_server/_vendor/tools/charging_client.py"
+"tools/customs_client.py" = "mcp_server/_vendor/tools/customs_client.py"
+"tools/fuel_client.py" = "mcp_server/_vendor/tools/fuel_client.py"
+"tools/lodging_client.py" = "mcp_server/_vendor/tools/lodging_client.py"
+"tools/parks_client.py" = "mcp_server/_vendor/tools/parks_client.py"
+"tools/places_client.py" = "mcp_server/_vendor/tools/places_client.py"
+"tools/routing_client.py" = "mcp_server/_vendor/tools/routing_client.py"
+"tools/weather_client.py" = "mcp_server/_vendor/tools/weather_client.py"
+"tools/web_search.py" = "mcp_server/_vendor/tools/web_search.py"
+"assets/generate.py" = "mcp_server/_vendor/assets/generate.py"
+"assets/template.html" = "mcp_server/_vendor/assets/template.html"
+"SKILL.md" = "mcp_server/_vendor/SKILL.md"
+"reference.md" = "mcp_server/_vendor/reference.md"

@@ -14,8 +14,10 @@ human. For product/domain background see [CONTEXT.md](CONTEXT.md).
 
 - **Python 3.8+ standard library only** for `assets/`, `scripts/`, and `tools/`. **No
   third-party pip packages** at runtime (`urllib`, `json`, `re`, `math`, …). Do **not**
-  add runtime dependencies. `pytest` is the *only* dev dependency, used solely by
-  `tests/`.
+  add runtime dependencies. Sole exception: `mcp_server/` depends on the `mcp` SDK
+  (declared in `pyproject.toml`) — never let it leak into the other dirs. Dev
+  dependencies are `pytest` plus `mcp` for `tests/test_mcp_server.py`, which
+  auto-skips when `mcp` is absent so the stdlib+pytest baseline stays green.
 - **Zero required API keys.** Everything must run and test with no keys and no network.
   Keys (`NPS_API_KEY`, `OCM_API_KEY`, `OPENWEATHER_API_KEY`) are read from env vars
   only and are strictly optional upgrades.
@@ -52,6 +54,11 @@ python3 tools/border_client.py US MX --rental
 python3 tools/parks_client.py --countdown 2026-09-12
 python3 tools/charging_client.py --leg 165 280
 python3 tools/places_client.py "Zzyzx, CA"   # place-name existence gate ("ABC" → no-match)
+
+# MCP server: serve over stdio / run its tests (the one part that needs the mcp SDK)
+pip install -e ".[dev]"                      # mcp SDK + pytest
+python3 -m mcp_server.server
+python3 -m pytest tests/test_mcp_server.py -v
 ```
 
 Run the tests locally after **any** code change and report the result; add a matching
@@ -91,14 +98,16 @@ is deterministic rendering. (See "Data / view separation" below.)
 | `assets/generate.py` | Validates (non-fatally) and injects `tripData.json` into `template.html` → `trip.html`. |
 | `assets/template.html` | The browser view: map, day timeline, budget. All view logic lives here. |
 | `assets/tripData.*.json` + `preview*.html` | Sample trips — double as test fixtures and living schema docs. |
-| `tests/` | pytest suite (stdlib + pytest only). CI runs exactly this. |
+| `mcp_server/` | MCP stdio server: `tools/*` + renderer + planning guide as 14 typed tools for any MCP host (Claude Code / Codex / Gemini CLI). Thin adapter — no planning logic. |
+| `pyproject.toml` | Packaging for the `roadtrip-mcp` console script; the wheel vendors the server's runtime files under `mcp_server/_vendor/`. |
+| `tests/` | pytest suite (stdlib + pytest only, except `test_mcp_server.py`). CI runs exactly this. |
 
 ### "I need to… → start here"
 
 | Task | Where to start | Don't forget |
 |------|----------------|--------------|
 | Change the tripData schema | producing Python **+** `template.html` reader **+** `reference.md §1` | update the sample `tripData.*.json` too |
-| Add a new data source | new `tools/<x>_client.py` | follow the client contract, add a `tests/` file |
+| Add a new data source | new `tools/<x>_client.py` | follow the client contract, add a `tests/` file, wrap it in `mcp_server/server.py` (+ schema test, `_TOOLS_GUIDE` entry) |
 | Change how requests are parsed | `scripts/helper.py` | it emits hints, not authoritative parsing |
 | Add a sample trip | `assets/tripData.<name>.json` + matching `preview*.html` | wire keyword match in `routes.demo_routes()` if webapp should pick it |
 | Edit the rendered page | `assets/template.html` (+ `generate.py` if injection changes) | keep the `__TRIP_DATA__` escaping |
@@ -139,6 +148,17 @@ returning `{"source": "fallback", ...}`. When adding or editing a client:
   `except ImportError: from tools.web_search import ...`) so the file works both as a
   script and as a package import.
 - Include an `if __name__ == "__main__":` smoke-test block, and add/update `tests/`.
+
+### The MCP adapter (`mcp_server/`)
+`mcp_server/server.py` exposes the clients, the renderer, and the skill docs over the
+Model Context Protocol (stdio). It is a **thin adapter by contract**: input conversion
+and delegation only — planning logic and HTTP belong in `tools/`, rendering in
+`assets/generate.py`. Tool names are public API for host configs (`claude` / `codex` /
+`gemini mcp add`) — change them additively only. Tool docstrings are what non-Claude
+models read *instead of* `SKILL.md`, so keep the fallback-contract line and the
+`get_planning_guide` pointers intact. File layout resolves via `_ROOT`: repo checkout
+or, from an installed wheel, `mcp_server/_vendor/` — if a new file becomes a runtime
+dependency of the server, add it to the `force-include` list in `pyproject.toml`.
 
 ### Keep the skill sources in sync
 `SKILL.md`, `reference.md`, and the actual Python behavior must agree. A workflow step
