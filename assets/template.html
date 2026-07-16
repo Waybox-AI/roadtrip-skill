@@ -224,7 +224,7 @@ var TRIP_DATA = __TRIP_DATA__;
   var distUnit = U.distance || "mi";
   var tempUnit = U.temp || "F";
   var cur = (T.budget && T.budget.currency) || U.currency || "USD";
-  var curSym = ({ USD: "$", CAD: "C$", MXN: "MX$" })[cur] || "$";
+  var curSym = ({ USD: "$", CAD: "C$", MXN: "MX$", CNY: "¥", RMB: "¥" })[cur] || "$";
 
   function esc(s) {
     if (s === null || s === undefined) return "";

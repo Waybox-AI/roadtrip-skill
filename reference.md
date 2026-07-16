@@ -132,6 +132,8 @@ result straight into `tripData.json`.
 - `region` picks the color theme. `vehicle.type` picks 🚗/🔌/🚐.
 - Budget rows show a colored reliability badge; the footer total is the source
   of truth (generator warns if `total` ≠ sum of items).
+- `budget.currency` / `units.currency` map to symbols: USD `$`, CAD `C$`,
+  MXN `MX$`, CNY/RMB `¥`; unknown codes fall back to `$`.
 
 ## 2. Reliability grading
 
