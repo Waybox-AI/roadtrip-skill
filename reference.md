@@ -33,6 +33,7 @@ missing.
       "to": "Springdale, UT",
       "driveMiles": 165,
       "driveTime": "2h45m",
+      "driveSource": "osrm",       // set when miles/time came from routing_client (else model estimate)
       "overnight": "Springdale, UT",   // null on the final return day
       "timezoneNote": "PT → MT (+1h)", // shown highlighted when crossing zones
       "weather": { "icon": "sunny", "high": 88, "low": 60 },
@@ -58,12 +59,16 @@ missing.
 
   "lodging": [
     { "name": "...", "area": "...", "nights": 2,
-      "pricePerNight": 245, "rating": "4.6", "booked": false }
+      "pricePerNight": 245, "rating": "4.6", "booked": false,
+      "links": { "booking": "https://…", "airbnb": "https://…" } }
+      // optional platform deep links (lodging_client.search_links) — rendered
+      // as a small links row under the name
   ],
 
   "bookingCountdown": [            // drives the top ⚠️ countdown banner
     { "item": "Watchman Campground", "bookBy": "2026-03-12",
-      "where": "Recreation.gov", "priority": "high", "note": "T-6 months." }
+      "where": "Recreation.gov", "priority": "high", "note": "T-6 months.",
+      "source": "parks_client" }   // set when bookBy came from the release-rule table
   ],
 
   "budget": {
@@ -100,6 +105,11 @@ result straight into `tripData.json`.
 
 // Cross-border — renders a documents/insurance/units checklist per crossing.
 // Build with tools/border_client.trip_section([("US","CA",rental), ...]).
+// The single-shot webapp path instead has the model emit a top-level
+// "crossings":[{"from":"US","to":"CA","day":2}, ...] (structure only) and
+// planner.refresh_trip_border builds this section from it — including
+// "dutyFree" (customs_client.personal_exemption) when the trip re-enters
+// the home country and both crossing days are known.
 "crossBorder": {
   "summary": "US→CA · CA→US",
   "crossings": [
@@ -107,7 +117,10 @@ result straight into `tripData.json`.
       "insuranceNote": "...", "customsNotes": [...],
       "unitsAfter": { "distance": "km", "temp": "C", "currency": "CAD", "fuel": "litre" },
       "waitTimes": "CBSA Border Wait Times ...", "estWaitNote": "..." }
-  ]
+  ],
+  "dutyFree": { "amount": 800, "currency": "USD", "tier": "standard",
+                "note": "...", "noteZh": "...", "conditions": [...],
+                "conditionsZh": [...], "verify": "..." }   // optional
 },
 
 // EV charging corridor — renders a per-leg state-of-charge table.
