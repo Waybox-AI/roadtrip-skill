@@ -1,5 +1,10 @@
+import os
+import re
+
 import pytest
 from assets.generate import validate, build_html
+
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "template.html")
 
 MINIMAL_VALID = {
     "title": "My Trip",
@@ -91,5 +96,20 @@ class TestBuildHtml:
     def test_missing_token_raises_value_error(self):
         with pytest.raises(ValueError, match="missing"):
             build_html({"days": []}, "<html>no token here</html>")
+
+
+class TestCurrencySymbols:
+    """The renderer's currency map (template.html curSym) must cover every
+    currency the schema documents — a CNY trip once rendered as "$"."""
+
+    def test_cursym_map_covers_documented_currencies(self):
+        with open(TEMPLATE_PATH, encoding="utf-8") as f:
+            src = f.read()
+        m = re.search(r"curSym = \(\{(.+?)\}\)", src)
+        assert m, "curSym currency map not found in template.html"
+        mapping = m.group(1)
+        for code in ("USD", "CAD", "MXN", "CNY", "RMB"):
+            assert code in mapping, "currency %s missing from curSym map" % code
+        assert "¥" in mapping, "CNY/RMB must map to the ¥ symbol"
 
 
