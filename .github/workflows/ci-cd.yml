@@ -42,7 +42,7 @@ jobs:
 
   code-review:
     needs: test
-    if: ${{ github.event.sender.type != 'Bot' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -61,8 +61,8 @@ jobs:
           github_action_config.auto_improve: "true"
 
   notify:
-    needs: code-review
-    if: success()
+    needs: [test, code-review]
+    if: ${{ always() && needs.test.result == 'success' && (needs.code-review.result == 'success' || needs.code-review.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: Waybox-AI/feishu-notification@main
