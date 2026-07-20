@@ -278,7 +278,7 @@ def build_user(payload, region):
  "vehicle": {"type": "gas|EV|RV", "model": str, "mpg": int|null, "rangeMiles": int|null},
  "loopType": "loop|one-way", "totalMiles": int, "drivingDays": int,
  "region": "desert|coast|forest|autumn|mountain",
- "units": {"distance":"mi","temp":"F","currency":"USD"},
+ "units": {"distance":"mi","temp":"F","currency":"USD|CAD|MXN|CNY"},
  "days": [{"date":"MM/DD","title":str,"from":str,"to":str,"driveMiles":int,
    "driveTime":"Xh YYm","overnight":str|null,"timezoneNote":str?,
    "weather":{"icon":"sunny|partly-cloudy|cloudy|rain|snow|storm|windy|fog","high":int,"low":int},
@@ -288,7 +288,7 @@ def build_user(payload, region):
    "meal":{"name":str,"perPerson":int},"risks":[str]}],
  "lodging":[{"name":str,"area":str,"nights":int,"pricePerNight":int,"rating":str,"booked":false}],
  "bookingCountdown":[{"item":str,"bookBy":"YYYY-MM-DD","where":str,"priority":"high|medium|low","note":str}],
- "budget":{"currency":"USD","items":[{"label":str,"amount":int,"reliability":"verified|reference|estimate"}],
+ "budget":{"currency":"USD|CAD|MXN|CNY","items":[{"label":str,"amount":int,"reliability":"verified|reference|estimate"}],
    "total":int,"perPerson":int},
  "tips":[str], "disclaimer":str, "generationDate":"YYYY-MM-DD",
  "crossings":[{"from":"US|CA|MX","to":"US|CA|MX","day":int}]
@@ -297,12 +297,12 @@ def build_user(payload, region):
     eff = payload.get("efficiency")
     if (payload.get("vehicle") or "").lower() == "ev":
         energy_rule = ("- The EV travels about %s miles per kWh. Estimate a realistic current public "
-                       "DC fast-charging price ($/kWh) YOURSELF from typical regional rates (the user "
+                       "DC fast-charging price (per kWh, in the trip's currency) YOURSELF from typical regional rates (the user "
                        "won't know it) and compute the charging budget; show the assumed price in the "
                        "budget line label.\n" % (eff or "3.3"))
     else:
         energy_rule = ("- The vehicle averages about %s MPG. Estimate realistic current gas prices "
-                       "($/gal) YOURSELF for the regions on the route (the user won't know them) and "
+                       "(per gallon or litre, in the trip's currency) YOURSELF for the regions on the route (the user won't know them) and "
                        "compute the fuel budget (total miles / MPG x price); show the assumed price in "
                        "the budget line label.\n" % (eff or "26"))
     lang_rule = ""
@@ -358,6 +358,11 @@ def build_user(payload, region):
         "the best visual match.\n"
         "- budget.total must equal the sum of budget.items and budget.perPerson = total / travelers; "
         "grade every line verified/reference/estimate.\n"
+        "- Currency: price the ENTIRE budget in the currency of the country the trip drives in, "
+        "and set units.currency AND budget.currency to its code (US→USD, Canada→CAD, "
+        "Mexico→MXN, China→CNY). NEVER convert amounts into another currency — a trip "
+        "entirely within China prices every line in CNY yuan. Cross-border US/CA/MX trips keep "
+        "the existing USD convention with local-currency notes.\n"
         "- No reservation 'bookBy' date may be before today.\n"
         "- Include \"crossings\" ONLY if the route crosses a US/Canada/Mexico border: one entry "
         "per crossing in driving order, with the trip day number it happens on; omit the key "
@@ -1460,6 +1465,12 @@ def refresh_trip_fuel(trip, efficiency=None):
         budget = trip.get("budget")
         if miles is None or not isinstance(budget, dict) \
                 or not isinstance(budget.get("items"), list):
+            return trip
+        cur = str(budget.get("currency")
+                  or (trip.get("units") or {}).get("currency") or "USD").upper()
+        if cur != "USD":
+            # fuel_client's price priors are US-only — for a non-USD trip the
+            # model's own local-currency estimate is the better number; keep it.
             return trip
         vehicle = trip.get("vehicle") or {}
         vtype = (vehicle.get("type") or "gas").lower()

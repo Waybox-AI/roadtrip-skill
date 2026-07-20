@@ -43,6 +43,12 @@ class TestBuildUserRules:
         prompt = build_user(self._payload(lang="zh"), "desert")
         assert "Simplified Chinese" in prompt
 
+    def test_contract_allows_local_currencies(self):
+        prompt = build_user(self._payload(), "desert")
+        assert prompt.count("USD|CAD|MXN|CNY") == 2  # units + budget schema lines
+        assert "NEVER convert" in prompt             # the no-conversion rule
+        assert '"currency":"USD"' not in prompt      # the old hardcoded pin is gone
+
     def test_chosen_route_pins_waypoints(self):
         payload = self._payload(route={
             "label": "Scenic route",

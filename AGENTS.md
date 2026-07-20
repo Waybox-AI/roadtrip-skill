@@ -275,7 +275,8 @@ route-comparison page.
 ## Conventions
 
 - **Units:** miles / °F / MPG / USD by default; km / °C / local currency on
-  Canadian/Mexican legs (`crossBorder` encodes this).
+  Canadian/Mexican legs (`crossBorder` encodes this); a trip entirely within
+  China prices its budget in CNY (¥), never converted.
 - **Honesty boundaries:** never fabricate live fuel prices, live charger occupancy,
   minute-level traffic, or live campground availability. Point to the official app
   instead. Every generated page carries a disclaimer.

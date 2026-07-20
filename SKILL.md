@@ -164,7 +164,8 @@ food. Force a bottom disclaimer: prices are dynamic, confirm before departure.
 
 - Always produce **both** `tripData.json` and the rendered `trip.html`.
 - Units: miles, °F, MPG, USD by default; switch to km/°C/local currency on
-  Canadian/Mexican legs and note the change.
+  Canadian/Mexican legs and note the change. A trip entirely within China
+  prices its budget in CNY (¥) — never converted into USD.
 - Never invent a precise reservation availability, live charger occupancy, or
   minute-level traffic — point to the official app / Recreation.gov / nav.
 
