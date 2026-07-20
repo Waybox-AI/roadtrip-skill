@@ -79,6 +79,21 @@ class TestFuelBackfill:
         assert b["total"] == sum(i["amount"] for i in b["items"])
         assert b["perPerson"] == int(round(b["total"] / 2))
 
+    def test_non_usd_budget_is_left_alone(self, gas_trip):
+        # fuel_client's price priors are US-only — a CNY budget must keep the
+        # model's local-currency estimate instead of getting a USD line.
+        gas_trip["budget"]["currency"] = "CNY"
+        before = copy.deepcopy(gas_trip["budget"])
+        refresh_trip_fuel(gas_trip)
+        assert gas_trip["budget"] == before
+
+    def test_units_currency_fallback_also_guards(self, gas_trip):
+        del gas_trip["budget"]["currency"]
+        gas_trip["units"] = {"distance": "km", "temp": "C", "currency": "CNY"}
+        before = copy.deepcopy(gas_trip["budget"])
+        refresh_trip_fuel(gas_trip)
+        assert gas_trip["budget"] == before
+
     def test_efficiency_overrides_vehicle_mpg(self, gas_trip):
         refresh_trip_fuel(gas_trip, efficiency="30")
         expect = fuel_client.gas_cost(1180, 30.0, region="southwest")

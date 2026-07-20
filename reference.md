@@ -23,7 +23,7 @@ missing.
   "totalMiles": 1180,
   "drivingDays": 7,
   "region": "desert",              // theming: desert|coast|forest|autumn|mountain
-  "units": { "distance": "mi", "temp": "F", "currency": "USD" },
+  "units": { "distance": "mi", "temp": "F", "currency": "USD" },  // currency = the trip country's code: USD|CAD|MXN|CNY
 
   "days": [                        // required, ordered
     {
@@ -72,7 +72,7 @@ missing.
   ],
 
   "budget": {
-    "currency": "USD",
+    "currency": "USD",             // the country the trip drives in (CNY for China-domestic); never converted
     "items": [
       { "label": "Fuel (~1,180 mi ÷ 26 MPG × $4.10)", "amount": 186,
         "reliability": "estimate" }   // verified | reference | estimate
