@@ -61,8 +61,7 @@ jobs:
           github_action_config.auto_improve: "true"
 
   notify:
-    needs: [test, code-review]
-    if: ${{ always() && needs.test.result == 'success' && (needs.code-review.result == 'success' || needs.code-review.result == 'skipped') }}
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: Waybox-AI/feishu-notification@main
