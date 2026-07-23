@@ -154,12 +154,72 @@ class TestEvCorridorBackfill:
         from tools import charging_client
         refresh_trip_ev_corridor(ev_trip)
         legs = [{"to": "Monterey, CA", "miles": 120.0, "charger": True,
-                 "chargerKW": 250},
+                 "chargerKW": 250, "dayIndex": 0, "stops": []},
                 {"to": "Big Sur, CA", "miles": 90.0, "charger": False,
-                 "chargerKW": None},
+                 "chargerKW": None, "dayIndex": 1, "stops": []},
                 {"to": "Los Angeles, CA", "miles": 210.0, "charger": True,
-                 "chargerKW": 150}]
+                 "chargerKW": 150, "dayIndex": 3, "stops": []}]
         assert ev_trip["evPlan"] == charging_client.corridor(legs, 280)
+
+    def test_mid_route_charge_stop_splits_day(self, ev_trip):
+        # A charge stop with coordinates mid-route becomes its own
+        # charger-to-charger sub-leg instead of an arrival charger.
+        d = ev_trip["days"][3]
+        d["stops"] = [{"name": "Santa Barbara", "lat": 34.42, "lng": -119.70},
+                      {"name": "Los Angeles", "lat": 34.05, "lng": -118.24}]
+        d["fuelCharging"] = [{"name": "Ventura DC", "type": "charge",
+                              "powerKW": 350, "lat": 34.28, "lng": -119.29}]
+        refresh_trip_ev_corridor(ev_trip)
+        legs = ev_trip["evPlan"]["legs"]
+        mids = [l for l in legs if l.get("midLeg")]
+        assert len(mids) == 1
+        assert mids[0]["to"] == "Ventura DC"
+        assert mids[0]["dayIndex"] == 3 and mids[0]["charger"] is True
+        # the day's own arrival keeps its separate row
+        assert [l["to"] for l in legs].count("Los Angeles, CA") == 1
+
+    def test_frac_uses_previous_day_end_as_origin(self, ev_trip):
+        # A day's stop list often begins at the first sight, not the overnight
+        # town — the true origin is where yesterday ended, so a charger near
+        # the first sight is genuinely mid-leg, not "at the start".
+        ev_trip["days"][2]["stops"] = [
+            {"name": "Big Sur", "lat": 36.27, "lng": -121.81}]
+        d = ev_trip["days"][3]
+        d["stops"] = [{"name": "Santa Barbara", "lat": 34.42, "lng": -119.70},
+                      {"name": "Los Angeles", "lat": 34.05, "lng": -118.24}]
+        d["fuelCharging"] = [{"name": "SB Supercharger", "type": "charge",
+                              "powerKW": 250, "lat": 34.42, "lng": -119.69}]
+        refresh_trip_ev_corridor(ev_trip)
+        legs = ev_trip["evPlan"]["legs"]
+        mids = [l for l in legs if l.get("midLeg") and l.get("dayIndex") == 3]
+        assert [m["to"] for m in mids] == ["SB Supercharger"]
+
+    def test_low_power_charger_is_never_a_mid_leg_splitter(self, ev_trip):
+        # A hotel Level-2 charger mid-route is an overnight top-up, not a
+        # mid-leg fast stop — it must stay on the day's arrival.
+        d = ev_trip["days"][3]
+        d["stops"] = [{"name": "Santa Barbara", "lat": 34.42, "lng": -119.70},
+                      {"name": "Los Angeles", "lat": 34.05, "lng": -118.24}]
+        d["fuelCharging"] = [{"name": "Hotel L2", "type": "charge",
+                              "powerKW": 7, "lat": 34.28, "lng": -119.29}]
+        refresh_trip_ev_corridor(ev_trip)
+        legs = ev_trip["evPlan"]["legs"]
+        day3 = [l for l in legs if l.get("dayIndex") == 3]
+        assert not any(l.get("midLeg") for l in day3)
+        assert day3[-1]["charger"] is True and day3[-1]["chargerKW"] == 7
+
+    def test_implausible_endpoint_geocode_disables_split(self, ev_trip):
+        # Endpoints implausibly close for the day's mileage (a mis-geocoded
+        # stop, or an out-and-back day) — coordinates must not be trusted to
+        # place a charger along the leg.
+        d = ev_trip["days"][3]   # a 210-mile day
+        d["stops"] = [{"name": "A", "lat": 34.42, "lng": -119.70},
+                      {"name": "B", "lat": 34.45, "lng": -119.60}]   # ~10 km apart
+        d["fuelCharging"] = [{"name": "Mid DC", "type": "charge",
+                              "powerKW": 350, "lat": 34.43, "lng": -119.65}]
+        refresh_trip_ev_corridor(ev_trip)
+        legs = ev_trip["evPlan"]["legs"]
+        assert not any(l.get("midLeg") for l in legs if l.get("dayIndex") == 3)
 
     def test_existing_evplan_preserved(self, ev_trip):
         ev_trip["evPlan"] = {"source": "model", "legs": [{"to": "X"}]}
@@ -174,3 +234,19 @@ class TestEvCorridorBackfill:
         ev_trip["vehicle"]["rangeMiles"] = None
         refresh_trip_ev_corridor(ev_trip)
         assert "evPlan" not in ev_trip
+
+    def test_fallback_frac_from_origin_when_end_geocode_bad(self, ev_trip):
+        # The day's own stops are all mis-geocoded into one spot; with a sound
+        # origin anchor (yesterday's end), a well-placed charger still splits
+        # the leg via the distance-from-origin fallback.
+        ev_trip["days"][2]["stops"] = [
+            {"name": "Big Sur", "lat": 36.27, "lng": -121.81}]
+        d = ev_trip["days"][3]   # a 210-mile day
+        d["stops"] = [{"name": "SB", "lat": 36.26, "lng": -121.80},
+                      {"name": "LA", "lat": 36.25, "lng": -121.79}]
+        d["fuelCharging"] = [{"name": "Mid DC", "type": "charge",
+                              "powerKW": 350, "lat": 35.0, "lng": -120.0}]
+        refresh_trip_ev_corridor(ev_trip)
+        mids = [l for l in ev_trip["evPlan"]["legs"]
+                if l.get("midLeg") and l.get("dayIndex") == 3]
+        assert [m["to"] for m in mids] == ["Mid DC"]

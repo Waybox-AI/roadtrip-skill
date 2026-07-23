@@ -765,3 +765,79 @@ class TestWeatherRefresh:
         before = copy.deepcopy(trip["days"][4]["weather"])
         out = remove_city(trip, 2, 2, "Bryce Canyon City, UT")
         assert out["days"][3]["weather"] == before                # shifted, unchanged
+
+
+class TestAddChargingStops:
+    """add_charging_stops: append-only fuelCharging edit, valid for every day
+    (including the final one, which the stay-based edits cannot touch)."""
+
+    @pytest.fixture
+    def ev_trip(self, trip):
+        trip["vehicle"] = {"type": "EV", "rangeMiles": 280}
+        return trip
+
+    def test_appends_validated_stops(self, ev_trip, monkeypatch):
+        monkeypatch.setattr(
+            planner, "_propose_charging_stops",
+            lambda t, i, log_fn=None: [
+                {"name": "Midway SC", "type": "charge",
+                 "lat": 36.0, "lng": -113.0, "powerKW": 250, "note": "x"},
+                {"name": "no coords", "type": "charge", "powerKW": 350},
+                {"name": "slow", "type": "charge",
+                 "lat": 36.1, "lng": -113.1, "powerKW": 7},
+            ])
+        before = len(ev_trip["days"][2].get("fuelCharging") or [])
+        planner.add_charging_stops(ev_trip, 2)
+        added = ev_trip["days"][2]["fuelCharging"][before:]
+        # coordless entry dropped; slow charger floored to a DC-fast default
+        assert [a["name"] for a in added] == ["Midway SC", "slow"]
+        assert added[0]["powerKW"] == 250 and added[1]["powerKW"] == 120
+        assert all(a["type"] == "charge" for a in added)
+
+    def test_final_day_is_allowed(self, ev_trip, monkeypatch):
+        last = len(ev_trip["days"]) - 1
+        monkeypatch.setattr(
+            planner, "_propose_charging_stops",
+            lambda t, i, log_fn=None: [{"name": "S", "type": "charge",
+                                        "lat": 36.0, "lng": -113.0,
+                                        "powerKW": 150}])
+        planner.add_charging_stops(ev_trip, last)
+        assert any(f.get("name") == "S"
+                   for f in ev_trip["days"][last]["fuelCharging"])
+
+    def test_other_days_untouched(self, ev_trip, monkeypatch):
+        import copy as _copy
+        monkeypatch.setattr(
+            planner, "_propose_charging_stops",
+            lambda t, i, log_fn=None: [{"name": "S", "type": "charge",
+                                        "lat": 36.0, "lng": -113.0,
+                                        "powerKW": 150}])
+        before = _copy.deepcopy([d for j, d in enumerate(ev_trip["days"]) if j != 2])
+        planner.add_charging_stops(ev_trip, 2)
+        after = [d for j, d in enumerate(ev_trip["days"]) if j != 2]
+        assert after == before
+
+    def test_invalid_day_index_raises(self, ev_trip):
+        with pytest.raises(ValueError):
+            planner.add_charging_stops(ev_trip, 99)
+        with pytest.raises(ValueError):
+            planner.add_charging_stops(ev_trip, -1)
+
+    def test_unusable_model_answer_raises(self, ev_trip, monkeypatch):
+        monkeypatch.setattr(planner, "_propose_charging_stops",
+                            lambda t, i, log_fn=None: [{"name": "no coords"}])
+        with pytest.raises(ValueError):
+            planner.add_charging_stops(ev_trip, 1)
+
+    def test_reemitted_existing_entry_updates_in_place(self, ev_trip, monkeypatch):
+        d = ev_trip["days"][2]
+        d["fuelCharging"] = [{"name": "Old Station", "type": "charge"}]  # no coords
+        monkeypatch.setattr(
+            planner, "_propose_charging_stops",
+            lambda t, i, log_fn=None: [{"name": "Old Station", "type": "charge",
+                                        "lat": 36.0, "lng": -113.0,
+                                        "powerKW": 150}])
+        planner.add_charging_stops(ev_trip, 2)
+        fc = d["fuelCharging"]
+        assert len(fc) == 1                       # updated, not duplicated
+        assert fc[0]["lat"] == 36.0 and fc[0]["powerKW"] == 150
