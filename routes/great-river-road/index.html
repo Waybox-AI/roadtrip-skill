@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<!--
+  Pillar page: /routes/great-river-road
+  Self-contained, SSR-ready. All body copy lives in the HTML source (verify with:
+  curl -s https://roadtripskill.dev/routes/great-river-road | grep -c "Great River Road").
+
+  BEFORE PUBLISH (E-E-A-T / honesty checklist — see notes to the team):
+   * Swap the placeholder photo blocks (.photo) for >=8 real, geo-tagged images with EXIF.
+   * Replace og:image / twitter:image and publisher logo paths with real asset URLs.
+   * Replace the editorial byline with a named author + headshot + first-hand driving note.
+   * Refresh dateModified on every edit; roll the year in <title>/H1 each January.
+   * Satellite internal links (fall-foliage, southern-winter, best-stops, ev-charging,
+     vs-route-66) are marked with HTML comments below — wire them in once those posts ship.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Primary meta -->
+<title>Great River Road Itinerary: 10 Days, 10 States (2026 Guide)</title>
+<meta name="description" content="Drive the Great River Road from Itasca State Park to New Orleans: a 10-day, 2,000-mile Mississippi River itinerary with a route map, the best stops, daily mileage, and where to stay." />
+<link rel="canonical" href="https://roadtripskill.dev/routes/great-river-road" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="author" content="RoadTrip Skill" />
+<meta name="theme-color" content="#1f6f8b" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="RoadTrip Skill" />
+<meta property="og:title" content="Great River Road Itinerary: 10 Days Along the Mississippi" />
+<meta property="og:description" content="A 10-day, 2,000-mile Great River Road itinerary from the Mississippi headwaters to New Orleans — route map, best stops, daily mileage, costs, and FAQ." />
+<meta property="og:url" content="https://roadtripskill.dev/routes/great-river-road" />
+<!-- TODO: replace with a real 1200x630 shot (river-valley bluff or green pilot's-wheel road sign) -->
+<meta property="og:image" content="https://roadtripskill.dev/routes/great-river-road/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Great River Road Itinerary: 10 Days Along the Mississippi" />
+<meta name="twitter:description" content="A 10-day, 2,000-mile Great River Road itinerary from the Mississippi headwaters to New Orleans — map, best stops, costs, and FAQ." />
+<meta name="twitter:image" content="https://roadtripskill.dev/routes/great-river-road/og.png" />
+
+<!-- Structured data: Article + Breadcrumb + FAQ + TouristTrip -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Article",
+      "headline": "Great River Road Itinerary: 10 Days from the Headwaters to New Orleans",
+      "description": "A 10-day, 2,000-mile Great River Road itinerary along the Mississippi River through 10 states, with a route map, the best stops, daily mileage, costs, and FAQ.",
+      "image": "https://roadtripskill.dev/routes/great-river-road/og.png",
+      "author": { "@type": "Organization", "name": "RoadTrip Skill", "url": "https://roadtripskill.dev" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "RoadTrip Skill",
+        "logo": { "@type": "ImageObject", "url": "https://roadtripskill.dev/logo.png" }
+      },
+      "datePublished": "2026-07-23",
+      "dateModified": "2026-07-23",
+      "mainEntityOfPage": { "@type": "WebPage", "@id": "https://roadtripskill.dev/routes/great-river-road" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://roadtripskill.dev" },
+        { "@type": "ListItem", "position": 2, "name": "Routes", "item": "https://roadtripskill.dev/routes" },
+        { "@type": "ListItem", "position": 3, "name": "Great River Road", "item": "https://roadtripskill.dev/routes/great-river-road" }
+      ]
+    },
+    {
+      "@type": "TouristTrip",
+      "name": "Great River Road: 10-Day Mississippi River Itinerary",
+      "description": "Headwaters-to-Gulf drive following the Mississippi River for about 2,000 miles through Minnesota, Wisconsin, Iowa, Illinois, Missouri, Kentucky, Tennessee, Arkansas, Mississippi, and Louisiana.",
+      "touristType": ["Road trippers", "Scenic drivers", "History travelers"],
+      "itinerary": {
+        "@type": "ItemList",
+        "numberOfItems": 10,
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "item": { "@type": "TouristDestination", "name": "Itasca State Park to Minneapolis, MN" } },
+          { "@type": "ListItem", "position": 2, "item": { "@type": "TouristDestination", "name": "Minneapolis to La Crosse via Red Wing & Winona" } },
+          { "@type": "ListItem", "position": 3, "item": { "@type": "TouristDestination", "name": "La Crosse to Dubuque & Galena" } },
+          { "@type": "ListItem", "position": 4, "item": { "@type": "TouristDestination", "name": "Dubuque to the Quad Cities" } },
+          { "@type": "ListItem", "position": 5, "item": { "@type": "TouristDestination", "name": "Quad Cities to Hannibal, MO" } },
+          { "@type": "ListItem", "position": 6, "item": { "@type": "TouristDestination", "name": "Hannibal to St. Louis" } },
+          { "@type": "ListItem", "position": 7, "item": { "@type": "TouristDestination", "name": "St. Louis to Memphis via New Madrid" } },
+          { "@type": "ListItem", "position": 8, "item": { "@type": "TouristDestination", "name": "Memphis to Clarksdale & Vicksburg" } },
+          { "@type": "ListItem", "position": 9, "item": { "@type": "TouristDestination", "name": "Vicksburg to Natchez & Baton Rouge" } },
+          { "@type": "ListItem", "position": 10, "item": { "@type": "TouristDestination", "name": "Baton Rouge to New Orleans via the River Road plantations" } }
+        ]
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How many days do you need to drive the Great River Road?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Plan for 10 days to drive the full 2,000-mile route comfortably. It can be done in 7 days at a fast pace, or split into a 5-day northern segment (Minnesota to St. Louis) and a 5-day southern segment (St. Louis to New Orleans). Two weeks lets you slow down for state parks, blues clubs, and river towns." }
+        },
+        {
+          "@type": "Question",
+          "name": "What states does the Great River Road go through?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The Great River Road runs through 10 states, following the Mississippi River from north to south: Minnesota, Wisconsin, Iowa, Illinois, Missouri, Kentucky, Tennessee, Arkansas, Mississippi, and Louisiana." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the Great River Road worth driving?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, if you like a mix of scenery and culture over a single dramatic landscape. The northern bluff country between Red Wing and Dubuque rivals any river drive in the country, and the southern Delta from Memphis to New Orleans is the heart of American blues and food history. It is less crowded than the coastal highways and cheap to drive." }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the best part of the Great River Road?",
+          "acceptedAnswer": { "@type": "Answer", "text": "For scenery, the northern stretch from Red Wing, Minnesota to Dubuque, Iowa — bluffs, Lake Pepin, and river overlooks. For culture and food, the southern stretch from Memphis through Clarksdale, Vicksburg, and Natchez to New Orleans. If you can only drive one half, pick the north in fall or the south in winter." }
+        },
+        {
+          "@type": "Question",
+          "name": "Great River Road vs Route 66: which should you drive?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Route 66 is a west-bound nostalgia drive across the desert Southwest; the Great River Road is a north-south river drive through green bluff country and the Deep South. Choose Route 66 for retro Americana and big open landscapes, and the Great River Road for water views, small river towns, blues, and Southern food. The two even cross in St. Louis." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can you drive the Great River Road in an EV?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Fast charging is easy along the cities of the route — Minneapolis, the Quad Cities, St. Louis, Memphis, Baton Rouge, and New Orleans all have DC fast chargers. The gaps to plan for are the rural northern bluff stretch and the Mississippi Delta between Memphis and Vicksburg, where you should arrive with a comfortable buffer and charge in town rather than counting on roadside stalls." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --bg:#f7f5f0; --card:#ffffff; --ink:#2a2724; --muted:#6b6258; --line:#e7e1d6;
+    --accent:#1f6f8b; --accent-soft:#dceef2;         /* river blue */
+    --warm:#c2641a; --warm-soft:#f6e7d6;             /* southern / fall accent */
+    --ok:#2e7d4f; --warn:#b3541e; --danger:#b3261e;
+    --shadow:0 1px 3px rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.05);
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1000px; margin:0 auto; padding:20px 16px 72px; }
+  a { color:var(--accent); }
+  h2 { font-size:1.5rem; margin:0 0 8px; scroll-margin-top:16px; }
+  h3 { font-size:1.15rem; margin:22px 0 6px; scroll-margin-top:16px; }
+  p { margin:10px 0; }
+
+  nav.crumbs { font-size:.82rem; color:var(--muted); margin:6px 0 16px; }
+  nav.crumbs a { color:var(--muted); text-decoration:none; }
+  nav.crumbs a:hover { text-decoration:underline; }
+
+  header.hero {
+    background:linear-gradient(135deg, var(--accent), #123f52); color:#fff;
+    border-radius:18px; padding:30px 26px; box-shadow:var(--shadow);
+  }
+  header.hero h1 { margin:0 0 10px; font-size:2rem; line-height:1.2; }
+  header.hero .lede { opacity:.95; font-size:1.05rem; margin:0 0 18px; max-width:70ch; }
+  .facts { display:flex; flex-wrap:wrap; gap:8px; }
+  .fact { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.28);
+    padding:6px 12px; border-radius:999px; font-size:.82rem; }
+  .hero-cta { display:inline-flex; align-items:center; gap:8px; margin-top:20px;
+    background:#fff; color:var(--accent); font-weight:700; text-decoration:none;
+    padding:11px 18px; border-radius:12px; box-shadow:var(--shadow); }
+  .hero-cta:hover { background:#f2f8fa; }
+
+  .toc { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; margin:22px 0; box-shadow:var(--shadow); }
+  .toc b { font-size:.8rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+  .toc ul { columns:2; margin:8px 0 0; padding:0 0 0 18px; font-size:.92rem; }
+  @media (max-width:640px){ .toc ul { columns:1; } }
+  .toc li { margin:4px 0; }
+
+  section { margin-top:36px; }
+  .updated { font-size:.8rem; color:var(--muted); margin-top:6px; }
+
+  .quickfacts { width:100%; border-collapse:collapse; margin-top:14px;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); }
+  .quickfacts th, .quickfacts td { text-align:left; padding:11px 16px; border-bottom:1px solid var(--line); font-size:.95rem; }
+  .quickfacts tr:last-child th, .quickfacts tr:last-child td { border-bottom:0; }
+  .quickfacts th { width:34%; color:var(--muted); font-weight:600; background:#fbfaf7; }
+
+  table.compare { width:100%; border-collapse:collapse; margin-top:14px; font-size:.93rem;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); }
+  table.compare th, table.compare td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.compare thead th { background:#fbfaf7; color:var(--muted); font-weight:600; }
+  table.compare tr:last-child td { border-bottom:0; }
+
+  .day { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    box-shadow:var(--shadow); padding:18px 20px; margin:14px 0; }
+  .day-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; }
+  .day-badge { background:var(--accent); color:#fff; font-weight:700; border-radius:8px; padding:2px 10px; font-size:.8rem; white-space:nowrap; }
+  .day h3 { margin:0; }
+  .day-meta { color:var(--muted); font-size:.85rem; margin:4px 0 10px; }
+  .day .row { margin:8px 0; }
+  .day .row b { color:var(--ink); }
+  .skip { margin-top:10px; padding:9px 12px; background:var(--warm-soft); border:1px solid #f0d6b6;
+    border-radius:10px; font-size:.88rem; }
+  .skip b { color:var(--warn); }
+
+  ol.stops-list { padding-left:20px; }
+  ol.stops-list li { margin:12px 0; }
+  ol.stops-list li b { color:var(--ink); }
+
+  figure.map { margin:16px 0 8px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; box-shadow:var(--shadow); padding:16px; overflow-x:auto; }
+  figure.map svg { display:block; margin:0 auto; max-width:100%; height:auto; }
+  figure figcaption { color:var(--muted); font-size:.85rem; margin-top:10px; text-align:center; }
+  .maplinks { margin-top:10px; font-size:.9rem; }
+
+  .photo { display:flex; align-items:center; justify-content:center; text-align:center;
+    background:linear-gradient(135deg,#e9eef0,#dbe7ec); color:#5c7883; border:1px dashed #b8ccd4;
+    border-radius:12px; min-height:150px; padding:16px; font-size:.85rem; }
+  figure.shot { margin:16px 0; }
+  figure.shot figcaption { color:var(--muted); font-size:.83rem; margin-top:8px; }
+
+  .cta-band { background:var(--card); border:1px solid var(--line); border-left:5px solid var(--accent);
+    border-radius:14px; box-shadow:var(--shadow); padding:20px 22px; margin:30px 0; }
+  .cta-band h3 { margin:0 0 6px; }
+  .cta-band p { margin:0 0 14px; color:var(--muted); }
+  .btn { display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#fff;
+    font-weight:700; text-decoration:none; padding:11px 20px; border-radius:12px; }
+  .btn:hover { background:#185b73; }
+
+  details.faq { background:var(--card); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); padding:2px 18px; margin:10px 0; }
+  details.faq > summary { cursor:pointer; font-weight:700; padding:14px 0; list-style:none; }
+  details.faq > summary::-webkit-details-marker { display:none; }
+  details.faq > summary::before { content:"+"; color:var(--accent); font-weight:700; margin-right:10px; }
+  details.faq[open] > summary::before { content:"–"; }
+  details.faq > p { margin:0 0 14px; }
+
+  .authorbox { display:flex; gap:16px; align-items:flex-start; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:18px 20px; margin-top:36px; }
+  .authorbox .avatar { width:56px; height:56px; border-radius:50%; flex:0 0 56px;
+    background:linear-gradient(135deg,var(--accent),#123f52); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .authorbox .who { font-weight:700; }
+  .authorbox p { margin:4px 0 0; font-size:.9rem; color:var(--muted); }
+
+  .disclaimer { margin-top:28px; font-size:.82rem; color:var(--muted);
+    background:#fff; border:1px dashed var(--line); border-radius:12px; padding:14px 16px; }
+  footer.site { text-align:center; color:var(--muted); font-size:.8rem; margin-top:26px; }
+  footer.site a { color:inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="https://roadtripskill.dev">Home</a> ›
+    <a href="https://roadtripskill.dev/routes">Routes</a> ›
+    <span>Great River Road</span>
+  </nav>
+
+  <header class="hero">
+    <h1>Great River Road Itinerary: 10 Days from the Headwaters to New Orleans</h1>
+    <p class="lede">The Great River Road follows the Mississippi River for roughly 2,000 miles through 10 states — from Itasca State Park in Minnesota, where the river is narrow enough to wade across, down to New Orleans, where it empties into the Gulf. This is the full drive, day by day.</p>
+    <div class="facts">
+      <span class="fact">~2,000 miles</span>
+      <span class="fact">10 states</span>
+      <span class="fact">10 days (7 min · 14 ideal)</span>
+      <span class="fact">Fall north · Winter south</span>
+      <span class="fact">Green pilot's-wheel signs</span>
+    </div>
+    <a class="hero-cta" href="https://roadtripskill.dev/t/c70182e6">Customize this route in the planner →</a>
+  </header>
+
+  <p style="margin-top:22px;">The Great River Road follows the Mississippi River for roughly 2,000 miles through 10 states — from <b>Itasca State Park</b> in Minnesota, where the river begins, to <b>New Orleans</b>, Louisiana, where it reaches the Gulf. You can drive the whole route in 10 days at a steady pace, do it in 7 if you push, or take 14 to linger. Most people split it: a <b>northern segment</b> (Minnesota to St. Louis) that peaks in late September and October for fall color and bluff-country river views, and a <b>southern segment</b> (Memphis to New Orleans) that is best from November through March, when the Deep South is cool and the blues clubs are full. This guide covers the exact route, daily mileage, the stops worth your time, and the ones you can skip. Green pilot's-wheel signs mark the way the entire distance — this itinerary follows them from the headwaters to the Gulf.</p>
+  <p class="updated">Last updated: July 23, 2026</p>
+
+  <div class="toc" aria-label="On this page">
+    <b>On this page</b>
+    <ul>
+      <li><a href="#what-is">What is the Great River Road?</a></li>
+      <li><a href="#map">Great River Road map</a></li>
+      <li><a href="#when">When to go</a></li>
+      <li><a href="#planning">Planning the drive</a></li>
+      <li><a href="#itinerary">The 10-day itinerary</a></li>
+      <li><a href="#best-stops">15 best stops</a></li>
+      <li><a href="#north-vs-south">North vs. south</a></li>
+      <li><a href="#costs">Costs &amp; practical tips</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+  </div>
+
+  <table class="quickfacts" aria-label="Great River Road quick facts">
+    <caption class="sr-only" style="position:absolute;left:-9999px;">Great River Road quick facts</caption>
+    <tbody>
+      <tr><th>Distance</th><td>~2,000 miles (3,200 km), headwaters to Gulf on one bank</td></tr>
+      <tr><th>States</th><td>10 — MN, WI, IA, IL, MO, KY, TN, AR, MS, LA</td></tr>
+      <tr><th>Days needed</th><td>10 comfortable (7 minimum, 14 ideal)</td></tr>
+      <tr><th>Best time</th><td>Sept–Oct in the north · Nov–Mar in the south</td></tr>
+      <tr><th>Direction</th><td>North → south (with the river's flow) is the classic drive</td></tr>
+      <tr><th>Route signs</th><td>Green pilot's-wheel markers, both banks</td></tr>
+    </tbody>
+  </table>
+
+  <section id="what-is">
+    <h2>What Is the Great River Road?</h2>
+    <p>The Great River Road is not a single highway — it is a <b>network of state and local roads</b> that hug both banks of the Mississippi River, strung together and signed as one National Scenic Byway. It runs the length of the river through 10 states, and because it follows the water rather than the interstate, it threads through river towns, past locks and dams, along limestone bluffs, and out across the flat Mississippi Delta. You navigate it by watching for the <b>green pilot's-wheel signs</b> — a steamboat's wheel on a green shield — which mark the route on both sides of the river.</p>
+    <p>Because it's a network, you're often choosing a bank. In the north, the Wisconsin and Minnesota sides trade the best views back and forth; in the south, the Mississippi and Louisiana sides each have their own towns and history. This itinerary picks the more scenic or more interesting bank at each stretch and tells you when to cross.</p>
+    <figure class="shot">
+      <div class="photo">[ Photo to add: a green Great River Road pilot's-wheel sign against the river — geo-tagged, EXIF intact ]</div>
+      <figcaption>The green pilot's-wheel marker is your guide for all 2,000 miles.</figcaption>
+    </figure>
+  </section>
+
+  <section id="map">
+    <h2>Great River Road Map</h2>
+    <p>Here's the whole route at a glance — from Lake Itasca in the north Woods to the Gulf at New Orleans, with the ten overnight stops in this itinerary. Unlike the official byway map (a PDF), this one is built into the page and mirrors the day-by-day below.</p>
+    <figure class="map">
+      <svg viewBox="0 0 360 660" role="img" aria-label="Schematic map of the Great River Road showing the Mississippi River route from Lake Itasca, Minnesota south through 10 states to New Orleans, Louisiana, with ten numbered overnight stops.">
+        <!-- state bands -->
+        <g font-family="inherit" font-size="10" fill="#9aa7ad">
+          <text x="14" y="46">MN</text>
+          <text x="14" y="150">WI</text>
+          <text x="14" y="210">IA</text>
+          <text x="14" y="250">IL</text>
+          <text x="14" y="320">MO</text>
+          <text x="14" y="392">KY / TN</text>
+          <text x="14" y="452">AR</text>
+          <text x="14" y="520">MS</text>
+          <text x="14" y="612">LA</text>
+        </g>
+        <!-- river -->
+        <path d="M170 30 C 150 90, 205 130, 185 185 C 168 235, 210 270, 190 320 C 172 370, 210 405, 190 455 C 172 505, 205 545, 188 605 C 182 625, 178 635, 175 648"
+              fill="none" stroke="#1f6f8b" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
+        <!-- stop markers -->
+        <g font-family="inherit" font-size="11" fill="#2a2724">
+          <g><circle cx="170" cy="34" r="9" fill="#1f6f8b"/><text x="170" y="38" fill="#fff" font-size="10" text-anchor="middle">1</text><text x="186" y="38">Lake Itasca / Minneapolis</text></g>
+          <g><circle cx="188" cy="120" r="9" fill="#1f6f8b"/><text x="188" y="124" fill="#fff" font-size="10" text-anchor="middle">2</text><text x="204" y="124">Red Wing → La Crosse</text></g>
+          <g><circle cx="176" cy="190" r="9" fill="#1f6f8b"/><text x="176" y="194" fill="#fff" font-size="10" text-anchor="middle">3</text><text x="192" y="194">Dubuque &amp; Galena</text></g>
+          <g><circle cx="200" cy="238" r="9" fill="#1f6f8b"/><text x="200" y="242" fill="#fff" font-size="10" text-anchor="middle">4</text><text x="216" y="242">Quad Cities</text></g>
+          <g><circle cx="182" cy="292" r="9" fill="#1f6f8b"/><text x="182" y="296" fill="#fff" font-size="10" text-anchor="middle">5</text><text x="198" y="296">Hannibal</text></g>
+          <g><circle cx="196" cy="336" r="9" fill="#1f6f8b"/><text x="196" y="340" fill="#fff" font-size="10" text-anchor="middle">6</text><text x="212" y="340">St. Louis</text></g>
+          <g><circle cx="182" cy="404" r="9" fill="#c2641a"/><text x="182" y="408" fill="#fff" font-size="10" text-anchor="middle">7</text><text x="198" y="408">Memphis</text></g>
+          <g><circle cx="200" cy="452" r="9" fill="#c2641a"/><text x="200" y="456" fill="#fff" font-size="10" text-anchor="middle">8</text><text x="216" y="456">Clarksdale → Vicksburg</text></g>
+          <g><circle cx="184" cy="524" r="9" fill="#c2641a"/><text x="184" y="528" fill="#fff" font-size="10" text-anchor="middle">9</text><text x="200" y="528">Natchez → Baton Rouge</text></g>
+          <g><circle cx="176" cy="618" r="9" fill="#c2641a"/><text x="176" y="622" fill="#fff" font-size="10" text-anchor="middle">10</text><text x="192" y="622">New Orleans</text></g>
+        </g>
+      </svg>
+      <figcaption>Blue = northern bluff country (best in fall) · Orange = southern Delta &amp; River Road (best in winter). Numbers are the ten overnight stops in this itinerary.</figcaption>
+    </figure>
+    <p class="maplinks">Want it on your phone with turn-by-turn stops? <a href="https://roadtripskill.dev/t/c70182e6">Open this route in the planner</a> to get a live map, daily driving times, and where-to-stay links you can adjust.</p>
+  </section>
+
+  <section id="when">
+    <h2>When to Go: North in Fall, South in Winter</h2>
+    <p>The Great River Road runs 1,500 miles of latitude, so no single month is best for the whole thing. The trick is to match the season to the section.</p>
+    <p><b>Northern section (Minnesota → St. Louis) — late September to late October.</b> This is bluff country, and it turns gold and red in autumn. Lake Pepin, the Great River Bluffs, and the Galena hills are at their best when the maples change, usually the first three weeks of October. Summer works too, but fall is the reason to drive the north.
+      <!-- SATELLITE LINK: replace with <a href="/blog/great-river-road-fall-foliage">fall foliage guide</a> when published -->
+    </p>
+    <p><b>Southern section (Memphis → New Orleans) — November to March.</b> The Delta and the Gulf coast are hot and humid from May through September. Come in the cool months and you get comfortable walking weather in Natchez and New Orleans, thinner crowds, and the peak of the live-music calendar leading into Mardi Gras.
+      <!-- SATELLITE LINK: replace with <a href="/blog/great-river-road-southern-section-winter">southern winter guide</a> when published -->
+    </p>
+    <p>If you're driving the whole route in one push, aim for <b>mid-October</b>: you'll catch the tail of northern color and reach the Deep South as it cools off.</p>
+  </section>
+
+  <section id="planning">
+    <h2>Planning the Drive: Direction, Rentals &amp; Road Conditions</h2>
+    <p><b>Which direction?</b> The classic way is <b>north to south</b>, following the river's flow from the trickle at Lake Itasca to the mile-wide river at New Orleans — the trip builds naturally from quiet headwaters to the crescendo of the French Quarter. Driving south to north works too and is a little cheaper on one-way car rentals (you end near a major hub), but you lose that sense of the river growing beside you.</p>
+    <p><b>One-way or loop?</b> Because the route is a straight shot rather than a circle, most people fly into <b>Minneapolis</b>, drive south, and fly home from <b>New Orleans</b> — a one-way rental. Expect a drop-off fee (often $150–$400) for leaving the car in a different city; factor it into the budget above, or build a return leg on the interstate if you'd rather avoid it. If you only have time for half, the northern and southern segments each start and end at a good airport (Minneapolis/St. Louis, and Memphis/New Orleans).</p>
+    <p><b>What are the roads like?</b> This is easy driving — paved two-lane and small highways the whole way, no mountain passes. The northern bluff roads wind and climb a little; the southern Delta is dead flat and straight. Gas and cell coverage are reliable in the towns but thin on the rural stretches between them, especially in the Delta between Memphis and Vicksburg, so top up when you can. A few riverside spots use <b>seasonal ferries</b> rather than bridges — check the schedule before you count on a crossing.</p>
+    <p><b>How long is each half?</b> Roughly 1,000 miles and five days per segment. Split at St. Louis (where Route 66 crosses) or at Memphis if you want the whole Deep South in one trip.</p>
+  </section>
+
+  <section id="itinerary">
+    <h2>The 10-Day Itinerary, Day by Day</h2>
+    <p>Daily mileages below are planning estimates for the scenic route (not the interstate), so build in extra time for overlooks and river-town main streets. Every day pairs 2–3 highlights with a place to eat or stay and one honest "skip this."</p>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 1</span><h3>Itasca State Park to Minneapolis</h3></div>
+      <div class="day-meta">200 miles · ~4 hours driving</div>
+      <p class="row"><b>Highlights:</b> Start where the river does — at <b>Lake Itasca</b>, walk across the line of stepping stones at the Mississippi Headwaters, narrow enough to hop the river on foot. Then drive south through Minnesota's pine-and-lake country. Stop at <b>Charles A. Lindbergh State Park</b> near Little Falls if you want to stretch your legs.</p>
+      <p class="row"><b>Eat / stay:</b> Overnight in <b>Minneapolis</b>; dinner in the North Loop, then walk the Stone Arch Bridge for your first big-city river view.</p>
+      <div class="skip"><b>Skip:</b> The "world's largest" roadside statues along US-71 are a two-minute photo stop at most — don't plan the day around them.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 2</span><h3>Minneapolis to La Crosse via Red Wing &amp; Winona</h3></div>
+      <div class="day-meta">160 miles · ~3.5 hours driving</div>
+      <p class="row"><b>Highlights:</b> The bluffs begin. <b>Red Wing</b> for the pottery, the Barn Bluff climb, and the historic riverfront; <b>Lake Pepin</b>, the widest natural stretch of the Mississippi; and the overlooks around <b>Winona</b>. This is arguably the prettiest driving day of the entire route.</p>
+      <p class="row"><b>Eat / stay:</b> Lunch in Red Wing; overnight in <b>La Crosse, Wisconsin</b>. Drive up to Grandad Bluff at sunset for a three-state view.</p>
+      <div class="skip"><b>Skip:</b> Don't detour inland to save time. The whole point today is staying on the river road (Minnesota 61 / Wisconsin 35) for the water and the cliffs.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 3</span><h3>La Crosse to Dubuque &amp; Galena</h3></div>
+      <div class="day-meta">110 miles · ~2.5 hours driving</div>
+      <p class="row"><b>Highlights:</b> Cross into Iowa for <b>Effigy Mounds National Monument</b>, where ancient peoples built animal-shaped earthworks on the bluffs above the river. Take in the view from <b>Pikes Peak State Park</b>, then finish in <b>Galena, Illinois</b> — Ulysses S. Grant's town, with a preserved 19th-century main street.</p>
+      <p class="row"><b>Eat / stay:</b> Overnight in <b>Galena</b>; dinner on Main Street. If you'd rather stay riverside, <b>Dubuque</b> is 20 minutes west.</p>
+      <div class="skip"><b>Skip:</b> The riverboat casinos in Dubuque unless gambling is your thing — you'll get more out of Galena's old town.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 4</span><h3>Dubuque to the Quad Cities</h3></div>
+      <div class="day-meta">90 miles · ~2 hours driving</div>
+      <p class="row"><b>Highlights:</b> A shorter, easy day. Hike the river overlooks at <b>Mississippi Palisades State Park</b>, then watch barges lock through at <b>Lock &amp; Dam 15</b> in the Quad Cities — the visitor area lets you see the river's engineering up close. Art lovers should stop at the <b>Figge Art Museum</b> in Davenport.</p>
+      <p class="row"><b>Eat / stay:</b> Overnight in the <b>Quad Cities</b> (Davenport, Bettendorf, Rock Island, or Moline).</p>
+      <div class="skip"><b>Skip:</b> Over-scheduling. This is a built-in breather between the northern bluffs and the run to Mark Twain country — use the spare hours.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 5</span><h3>Quad Cities to Hannibal</h3></div>
+      <div class="day-meta">150 miles · ~3 hours driving</div>
+      <p class="row"><b>Highlights:</b> <b>Hannibal, Missouri</b> is the boyhood home of Samuel Clemens — Mark Twain — and it leans into it well. Tour the <b>Mark Twain Boyhood Home &amp; Museum</b>, go underground at <b>Mark Twain Cave</b> (the one from Tom Sawyer), and take a paddle-wheeler cruise on the river.</p>
+      <p class="row"><b>Eat / stay:</b> Overnight in Hannibal's historic district so you can walk the old streets after the day-trippers leave.</p>
+      <div class="skip"><b>Skip:</b> The kitschier Twain-themed gift shops. The cave and the museum are the real thing; the T-shirt stores aren't.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 6</span><h3>Hannibal to St. Louis</h3></div>
+      <div class="day-meta">120 miles · ~2.5 hours driving</div>
+      <p class="row"><b>Highlights:</b> <b>Gateway Arch National Park</b> — ride the tram to the top for the river-and-city view, and see the museum on Westward Expansion beneath it. On the way in, detour to the <b>Old Chain of Rocks Bridge</b>, the former Route 66 crossing (the two great American road trips meet here).</p>
+      <p class="row"><b>Eat / stay:</b> Overnight in <b>St. Louis</b>; try toasted ravioli in The Hill or St. Louis-style barbecue.</p>
+      <div class="skip"><b>Skip:</b> Turning up at the Arch tram mid-afternoon without a ticket — book a morning slot to avoid the lines.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 7</span><h3>St. Louis to Memphis via New Madrid</h3></div>
+      <div class="day-meta">285 miles · ~5 hours driving</div>
+      <p class="row"><b>Highlights:</b> The longest driving day, and the transition into the South. Break it up at <b>Trail of Tears State Park</b> and at <b>New Madrid, Missouri</b>, epicenter of the enormous 1811–12 earthquakes, where a riverside observation deck explains what happened. By evening you cross into the Delta at <b>Memphis</b>.</p>
+      <p class="row"><b>Eat / stay:</b> Overnight in <b>Memphis</b>; ribs near Beale Street, and save the National Civil Rights Museum for the morning.</p>
+      <div class="skip"><b>Skip:</b> Trying to see everything today. This is a mileage day — pick one or two stops and keep moving.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 8</span><h3>Memphis to Clarksdale &amp; Vicksburg</h3></div>
+      <div class="day-meta">240 miles · ~4.5 hours driving</div>
+      <p class="row"><b>Highlights:</b> This is the blues day. <b>Clarksdale, Mississippi</b> sits at the legendary Crossroads of Highways 61 and 49; visit the <b>Delta Blues Museum</b> and catch live music at a juke joint like Ground Zero. Then cross the flat, wide-open Delta to <b>Vicksburg</b> and its sprawling <b>National Military Park</b>.</p>
+      <p class="row"><b>Eat / stay:</b> Lunch and museum in Clarksdale; overnight in <b>Vicksburg</b> above the river.</p>
+      <div class="skip"><b>Skip:</b> Rushing the Delta after dark. Arrive in Clarksdale with daylight left for the museum and the Crossroads.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 9</span><h3>Vicksburg to Natchez &amp; Baton Rouge</h3></div>
+      <div class="day-meta">170 miles · ~3.5 hours driving</div>
+      <p class="row"><b>Highlights:</b> <b>Natchez, Mississippi</b> is the oldest town on the river and one of the prettiest — bluff-top views, antebellum architecture, and the northern end of the Natchez Trace. Cross the river bridge and continue into Louisiana toward the state capital.</p>
+      <p class="row"><b>Eat / stay:</b> Lunch on the bluff in Natchez; overnight in <b>Baton Rouge</b>.</p>
+      <div class="skip"><b>Skip:</b> Backtracking onto the Natchez Trace Parkway unless you have a spare day — it's beautiful but heads away from the river.</div>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="day-badge">Day 10</span><h3>Baton Rouge to New Orleans via the River Road plantations</h3></div>
+      <div class="day-meta">110 miles · ~2.5 hours driving (allow extra for a plantation tour)</div>
+      <p class="row"><b>Highlights:</b> The final stretch runs the <b>River Road</b> plantation corridor between Baton Rouge and New Orleans. For an honest telling of this landscape's history, tour the <b>Whitney Plantation</b>, the one museum here built to center the lives of the enslaved people who worked it. Then arrive in <b>New Orleans</b>: the French Quarter, the river walk at Woldenberg Park, and beignets at Café du Monde.</p>
+      <p class="row"><b>Eat / stay:</b> Finish in <b>New Orleans</b> — dinner in the Marigny or a po'boy in the Quarter, and live music to close out the drive.</p>
+      <div class="skip"><b>Skip:</b> The house-and-gardens plantation tours that gloss over slavery. Choose Whitney for the history that actually happened here.</div>
+    </div>
+  </section>
+
+  <div class="cta-band">
+    <h3>Not driving all 10 days?</h3>
+    <p>Shorten it, flip the direction, add nights in the towns you care about, or split it into a northern-fall and southern-winter trip. Open this exact route in the planner and adjust the days, stops, and budget to your dates.</p>
+    <a class="btn" href="https://roadtripskill.dev/t/c70182e6">Customize the Great River Road route →</a>
+  </div>
+
+  <section id="best-stops">
+    <h2>15 Best Stops on the Great River Road</h2>
+    <p>If you can't do the full drive, these are the stops worth building a trip around, north to south.</p>
+    <ol class="stops-list">
+      <li><b>Mississippi Headwaters, Lake Itasca (MN).</b> Where the river begins — a shallow, clear outlet you can literally walk across. The symbolic start of the whole route.</li>
+      <li><b>Red Wing (MN).</b> Bluffs, pottery, and a walkable historic riverfront. Climb Barn Bluff for the view down Lake Pepin.</li>
+      <li><b>Lake Pepin (MN/WI).</b> The river's widest natural lake, ringed by bluffs. The prettiest slow-driving stretch in the north.</li>
+      <li><b>Effigy Mounds National Monument (IA).</b> Ancient animal-shaped earthworks on the bluffs — a moving, uncrowded stop with big river views.</li>
+      <li><b>Galena (IL).</b> A preserved 19th-century town and Ulysses S. Grant's home, tucked into the hills just off the river.</li>
+      <li><b>Mississippi Palisades State Park (IL).</b> Cliffs, hiking, and overlooks near the Iowa border — an easy leg-stretch with a payoff.</li>
+      <li><b>Lock &amp; Dam 15, Quad Cities (IA/IL).</b> Watch barges rise and fall through the locks; the best place to understand how the river is engineered.</li>
+      <li><b>Hannibal (MO).</b> Mark Twain's boyhood town — the museum, the cave from Tom Sawyer, and a paddle-wheeler on the river.</li>
+      <li><b>Gateway Arch National Park (MO).</b> Ride to the top of the Arch for the classic river-and-city panorama; the underground museum is excellent.</li>
+      <li><b>New Madrid (MO).</b> Epicenter of the 1811–12 earthquakes that briefly ran the Mississippi backward; a quiet riverside stop with a good story.</li>
+      <li><b>Memphis (TN).</b> Beale Street music, world-class barbecue, and the National Civil Rights Museum at the Lorraine Motel — a must.</li>
+      <li><b>Clarksdale (MS).</b> The Crossroads of the blues: the Delta Blues Museum, juke joints, and Highway 61 running dead straight through the cotton.</li>
+      <li><b>Vicksburg National Military Park (MS).</b> A vast, walkable Civil War battlefield on the bluffs above the river.</li>
+      <li><b>Natchez (MS).</b> The oldest town on the river — bluff-top overlooks, historic architecture, and the head of the Natchez Trace.</li>
+      <li><b>Whitney Plantation &amp; the River Road (LA).</b> The plantation museum that centers the history of slavery, on the road into New Orleans.</li>
+    </ol>
+  </section>
+
+  <section id="north-vs-south">
+    <h2>Northern vs. Southern Section: Which Is Better?</h2>
+    <p>Short answer: drive the <b>north for scenery</b> and the <b>south for culture and food</b>. If you can only do one half, let the season decide — the north in fall, the south in winter.</p>
+    <table class="compare">
+      <thead>
+        <tr><th></th><th>Northern section (MN → St. Louis)</th><th>Southern section (Memphis → New Orleans)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Best for</b></td><td>Scenery: bluffs, river lakes, fall color</td><td>Culture: blues, food, Civil War &amp; river history</td></tr>
+        <tr><td><b>Signature stretch</b></td><td>Red Wing → Dubuque (bluff country)</td><td>Clarksdale → Natchez → New Orleans</td></tr>
+        <tr><td><b>Best season</b></td><td>Late Sept–Oct (fall foliage)</td><td>Nov–Mar (cool, live-music season)</td></tr>
+        <tr><td><b>Driving feel</b></td><td>Winding river roads, overlooks, small towns</td><td>Flat, wide-open Delta; straight Highway 61</td></tr>
+        <tr><td><b>Don't miss</b></td><td>Lake Pepin, Effigy Mounds, Galena</td><td>Memphis, the Delta, Whitney Plantation</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="costs">
+    <h2>Costs &amp; Practical Tips</h2>
+    <p>Rough per-person budget for the 10-day drive, based on two people sharing a car and mid-range motels. These are planning estimates, not live prices — check current fuel and lodging before you book.</p>
+    <table class="compare">
+      <thead><tr><th>Item</th><th>Estimate</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Fuel</td><td>$220–$280 (whole car)</td><td>~2,000 mi at ~28 MPG ≈ 71 gallons; scenic detours add 10–15%.</td></tr>
+        <tr><td>Lodging</td><td>$110–$180 / night</td><td>Mid-range motels and river-town inns; New Orleans and fall-weekend Galena run higher.</td></tr>
+        <tr><td>Food</td><td>$45–$70 / person / day</td><td>Cheaper in the Midwest, worth splurging in Memphis and New Orleans.</td></tr>
+        <tr><td>Attractions</td><td>$120–$200 / person total</td><td>Arch tram, museums, plantation and blues-museum tickets.</td></tr>
+        <tr><td><b>10-day total</b></td><td><b>~$1,600–$2,400 / person</b></td><td>Two sharing a car; less if you camp, more with a rental.</td></tr>
+      </tbody>
+    </table>
+    <h3>Practical tips</h3>
+    <ul>
+      <li><b>Follow the pilot's wheel, not just your GPS.</b> Navigation apps default to the interstate; the green signs keep you on the scenic river route.</li>
+      <li><b>Pick your bank.</b> In the north, the Wisconsin and Minnesota sides trade the best views — cross at the bridges. In the south, the east bank has most of the towns.</li>
+      <li><b>Book the big-ticket stops ahead.</b> The Arch tram, Whitney Plantation tours, and fall weekends in Galena and Red Wing sell out.</li>
+      <li><b>Drive north-to-south.</b> Going with the river's flow builds the trip from quiet headwaters to the crescendo of New Orleans.</li>
+      <li><b>Driving an EV?</b> Fast charging is easy in the cities; plan a buffer through the rural northern bluffs and the Delta between Memphis and Vicksburg.
+        <!-- SATELLITE LINK: replace with <a href="/blog/great-river-road-ev-charging">EV charging guide</a> when published -->
+      </li>
+    </ul>
+  </section>
+
+  <section id="faq">
+    <h2>Frequently Asked Questions</h2>
+
+    <details class="faq" open>
+      <summary>How many days do you need to drive the Great River Road?</summary>
+      <p>Plan for <b>10 days</b> to drive the full 2,000-mile route comfortably. You can do it in 7 at a fast pace, or split it into a 5-day northern segment (Minnesota to St. Louis) and a 5-day southern segment (St. Louis to New Orleans). Two weeks lets you slow down for state parks, blues clubs, and river towns.</p>
+    </details>
+
+    <details class="faq">
+      <summary>What states does the Great River Road go through?</summary>
+      <p>Ten, following the river north to south: <b>Minnesota, Wisconsin, Iowa, Illinois, Missouri, Kentucky, Tennessee, Arkansas, Mississippi, and Louisiana.</b></p>
+    </details>
+
+    <details class="faq">
+      <summary>Is the Great River Road worth driving?</summary>
+      <p>Yes — if you like variety over a single dramatic landscape. The northern bluff country between Red Wing and Dubuque rivals any river drive in the country, and the southern Delta from Memphis to New Orleans is the heart of American blues and food history. It's also less crowded than the coastal highways and cheap to drive.</p>
+    </details>
+
+    <details class="faq">
+      <summary>What is the best part of the Great River Road?</summary>
+      <p>For scenery, the northern stretch from <b>Red Wing to Dubuque</b> — bluffs, Lake Pepin, and river overlooks. For culture and food, the southern stretch from <b>Memphis through Clarksdale, Vicksburg, and Natchez to New Orleans</b>. If you can only drive one half, pick the north in fall or the south in winter.</p>
+    </details>
+
+    <details class="faq">
+      <summary>Great River Road vs Route 66: which should you drive?</summary>
+      <p><b>Route 66</b> is a west-bound nostalgia drive across the desert Southwest; the <b>Great River Road</b> is a north-south river drive through green bluff country and the Deep South. Choose Route 66 for retro Americana and open landscapes, the Great River Road for water views, small river towns, blues, and Southern food. Fittingly, the two cross in St. Louis.</p>
+    </details>
+
+    <details class="faq">
+      <summary>Can you drive the Great River Road in an EV?</summary>
+      <p>Yes. Fast charging is easy along the cities of the route — Minneapolis, the Quad Cities, St. Louis, Memphis, Baton Rouge, and New Orleans all have DC fast chargers. The gaps to plan for are the rural northern bluffs and the Delta between Memphis and Vicksburg: arrive with a comfortable buffer and charge in town rather than counting on roadside stalls.</p>
+    </details>
+  </section>
+
+  <div class="cta-band">
+    <h3>Plan your own Great River Road trip</h3>
+    <p>Turn this itinerary into a personalized plan — your start date, your pace, your car — with a live map, daily driving times, weather, fuel or charging estimates, and where-to-stay links.</p>
+    <a class="btn" href="https://roadtripskill.dev/t/c70182e6">Open the Great River Road planner →</a>
+  </div>
+
+  <div class="authorbox">
+    <div class="avatar">RS</div>
+    <div>
+      <div class="who">RoadTrip Skill Editorial</div>
+      <p>We build road-trip itineraries the same way a careful friend would — checking distances, seasons, and what's actually worth stopping for, and saying plainly what to skip. Routes are reviewed against official sources (the National Park Service and the Mississippi River Parkway Commission) and refreshed as they change.
+      <!-- TODO (E-E-A-T): replace with a named author + headshot + a first-hand line, e.g. "I drove all 10 states in October 2025." -->
+      </p>
+    </div>
+  </div>
+
+  <p class="disclaimer">This guide is for planning. Mileage, drive times, and costs are estimates, not live data — we don't publish real-time fuel prices, charger availability, traffic, or campground vacancies. Confirm hours, tickets, road and ferry status, and reservations with each site's official source before you go. Sources: <a href="https://www.nps.gov" rel="nofollow">National Park Service</a>, <a href="https://experiencemississippiriver.com" rel="nofollow">Mississippi River Parkway Commission</a>.</p>
+
+  <footer class="site">
+    <p>© 2026 RoadTrip Skill · <a href="https://roadtripskill.dev">roadtripskill.dev</a> · Built for people who'd rather be driving.</p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,3 +1,9 @@
 # The Chicago sample endpoint 500s until the tripData.chicago.json added in this
 # branch is merged and deployed to roadtripskill.dev — remove this line after that.
 https://roadtripskill\.dev/api/sample\?name=chicago$
+
+# The Great River Road pillar page (routes/great-river-road/index.html) references its
+# own not-yet-deployed URL, breadcrumb, and OG image. Remove after the page is live.
+https://roadtripskill\.dev/routes
+# Publisher-logo placeholder in the pillar page's JSON-LD — swap for a real asset, then drop this.
+https://roadtripskill\.dev/logo\.png
