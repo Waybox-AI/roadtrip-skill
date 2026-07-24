@@ -296,10 +296,26 @@ def build_user(payload, region):
     user = json.dumps({k: v for k, v in payload.items() if v and k != "route"}, ensure_ascii=False)
     eff = payload.get("efficiency")
     if (payload.get("vehicle") or "").lower() == "ev":
+        rng_in = _as_positive_number(payload.get("rangeMiles"))
         energy_rule = ("- The EV travels about %s miles per kWh. Estimate a realistic current public "
                        "DC fast-charging price (per kWh, in the trip's currency) YOURSELF from typical regional rates (the user "
                        "won't know it) and compute the charging budget; show the assumed price in the "
                        "budget line label.\n" % (eff or "3.3"))
+        rng_txt = ("%d" % rng_in) if rng_in else "your best estimate for a typical mainstream EV (~280)"
+        energy_rule += (
+            "- EV RANGE & CHARGING STOPS: set vehicle.rangeMiles to %s. For ANY day whose "
+            "driveMiles exceeds ~80%% of that range, you MUST place one or more DC fast-charging "
+            "stops ALONG the route inside that day's fuelCharging (type \"charge\", with realistic "
+            "name, lat/lng positioned mid-route between the day's endpoints, and powerKW), spaced "
+            "so no charger-to-charger stretch exceeds ~80%% of range. Never leave a long day "
+            "without mid-route charging.\n"
+            "- EV OVERNIGHT CHARGING: every day of an EV trip must ALSO include a charging "
+            "option at (or near) that day's overnight stop in fuelCharging — a DC fast charger "
+            "in town or the hotel's destination charging — so each morning can start near a "
+            "full charge. A day whose destination has no charging entry is a planning error. "
+            "(In Chinese itineraries, write 中途 — not 途中 — in "
+            "charging-stop names and notes.)\n"
+            % rng_txt)
     else:
         energy_rule = ("- The vehicle averages about %s MPG. Estimate realistic current gas prices "
                        "(per gallon or litre, in the trip's currency) YOURSELF for the regions on the route (the user won't know them) and "
@@ -611,6 +627,112 @@ def _regenerate_day_with_instruction(trip, day_index, instruction, log_fn=None):
     # Preserve the original date so the calendar doesn't drift.
     new_day["date"] = day.get("date", new_day.get("date", ""))
     return new_day
+
+
+def _propose_charging_stops(trip, day_index, log_fn=None):
+    """Model call for add_charging_stops: return the raw list of proposed
+    charge-stop dicts for one day. Separated so tests can stub it."""
+    import anthropic
+    client = anthropic.Anthropic()
+    days = trip.get("days") or []
+    day = days[day_index]
+    vehicle = trip.get("vehicle") or {}
+    rng = _as_positive_number(vehicle.get("rangeMiles"))
+    origin = day.get("from") or (days[day_index - 1].get("to", "") if day_index else "")
+    stop_lines = "\n".join(
+        "- %s (%.4f, %.4f)" % (s.get("name", "?"), s["lat"], s["lng"])
+        for s in (day.get("stops") or [])
+        if isinstance(s.get("lat"), (int, float)) and isinstance(s.get("lng"), (int, float)))
+    prompt = (
+        "An EV road-trip day needs extra DC fast charging along its driving route.\n\n"
+        "Trip: %s\n"
+        "Day %d: %s\n"
+        "Drives from '%s' to '%s', about %s miles.%s\n"
+        "Existing fuelCharging entries:\n%s\n"
+        "Day stops (driving order):\n%s\n\n"
+        "The trip's battery simulation says this day CANNOT be driven with the "
+        "charging currently listed — the existing entries are missing, mis-placed, "
+        "or their coordinates are wrong. Return 1-2 DC fast-charging stops ALONG "
+        "this route — at towns or highway service areas actually on the way between "
+        "the day's origin and destination — with ACCURATE lat/lng, positioned so no "
+        "charger-to-charger stretch exceeds ~80%% of the vehicle's range. If an "
+        "existing entry is genuinely right but its coordinates are wrong or missing, "
+        "re-emit that entry (same name) with accurate coordinates. NEVER return an "
+        "empty array. Match the language of the existing itinerary for names and "
+        "notes (in Chinese, write 中途 — not 途中 — for mid-route "
+        "wording).\n"
+        "Output ONLY a JSON array of stops, each exactly: "
+        '{"name":str,"type":"charge","lat":float,"lng":float,"powerKW":int,"note":str} '
+        "— no prose, no markdown fences. Return JSON only."
+    ) % (
+        trip.get("title", ""),
+        day_index + 1, day.get("title", ""),
+        origin, day.get("to", ""), day.get("driveMiles", "?"),
+        (" Vehicle range: ~%d miles." % rng) if rng else "",
+        json.dumps(day.get("fuelCharging") or [], ensure_ascii=False),
+        stop_lines or "- (no coordinates recorded)",
+    )
+
+    def create_once(p):
+        msg = client.messages.create(
+            model=_MODEL, max_tokens=1500,
+            messages=[{"role": "user", "content": p}])
+        t = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+        if log_fn:
+            log_fn(msg.usage)
+        return t, getattr(msg, "stop_reason", None)
+
+    text, stop = create_once(prompt)
+    return _parse_with_retry(
+        text, lambda: create_once(prompt + _STRICT_JSON_NUDGE),
+        "add_charging", stop)
+
+
+def add_charging_stops(trip, day_index, log_fn=None):
+    """Append 1-2 model-proposed DC fast-charging stops to ONE day's
+    fuelCharging list. Nothing else about the day (or any other day) is
+    touched, so — unlike the stay-based edits — this works for every day,
+    including the final one. Raises ValueError on bad input or an unusable
+    model answer; returns the trip."""
+    days = trip.get("days") or []
+    if not isinstance(day_index, int) or isinstance(day_index, bool) \
+            or not 0 <= day_index < len(days):
+        raise ValueError("invalid day index")
+    proposed = _propose_charging_stops(trip, day_index, log_fn=log_fn)
+    if isinstance(proposed, dict):     # tolerate {"fuelCharging": [...]}
+        proposed = proposed.get("fuelCharging") or proposed.get("stops") or []
+    if not isinstance(proposed, list):
+        raise ValueError("model did not return a list of charging stops")
+    existing = days[day_index].setdefault("fuelCharging", [])
+    by_name = {(e.get("name") or "").strip(): e for e in existing}
+    added = []
+    for s in proposed:
+        if not isinstance(s, dict):
+            continue
+        if not isinstance(s.get("lat"), (int, float)) \
+                or not isinstance(s.get("lng"), (int, float)):
+            continue
+        kw = s.get("powerKW")
+        entry = {"name": _s(s.get("name")) or "DC fast charging",
+                 "type": "charge",
+                 "lat": s["lat"], "lng": s["lng"],
+                 # mid-leg stops must be DC-fast to matter (see corridor rules)
+                 "powerKW": int(kw) if isinstance(kw, (int, float)) and kw >= 50 else 120}
+        note = _s(s.get("note"))
+        if note:
+            entry["note"] = note
+        current = by_name.get(entry["name"])
+        if current is not None:
+            # a re-emitted existing entry corrects its coordinates in place
+            current.update({"type": "charge", "lat": entry["lat"],
+                            "lng": entry["lng"], "powerKW": entry["powerKW"]})
+            added.append(current)
+        else:
+            existing.append(entry)
+            added.append(entry)
+    if not added:
+        raise ValueError("no usable charging stops returned")
+    return trip
 
 
 def regenerate_day(trip, day_index, comment_body, log_fn=None):
@@ -1508,11 +1630,57 @@ def refresh_trip_fuel(trip, efficiency=None):
     return trip
 
 
+def _day_charge_frac(day, charger, origin=None):
+    """Position of a charge stop along a day's drive (0..1) from coordinates —
+    straight-line apportioning between the day's origin and its last stop.
+
+    `origin` is where the day really starts (the previous day's end); a day's
+    stop list often begins at the first *sight*, not at the overnight town, so
+    without it a charger near the first sight would look like frac≈0. Falls
+    back to the day's first stop. None when coordinates are missing,
+    degenerate, or implausible for the day's mileage (a mis-geocoded endpoint,
+    or an out-and-back day)."""
+    try:
+        pts = [(s.get("lat"), s.get("lng")) for s in (day.get("stops") or [])
+               if isinstance(s.get("lat"), (int, float)) and isinstance(s.get("lng"), (int, float))]
+        cla, cln = charger.get("lat"), charger.get("lng")
+        if not isinstance(cla, (int, float)) or not isinstance(cln, (int, float)):
+            return None
+        start = origin or (pts[0] if pts else None)
+        end = pts[-1] if pts else None
+        if not start or not end:
+            return None
+        # Sanity: a day that drives N miles should have endpoints a meaningful
+        # fraction of that apart — otherwise the geocodes can't be trusted to
+        # place a charger along the leg.
+        miles = _as_positive_number(day.get("driveMiles"))
+        span_km = _routes.haversine_km(start[0], start[1], end[0], end[1])
+        if miles and span_km < 0.25 * miles * 1.609:
+            # The day's own stop geocodes are unreliable. When the origin
+            # anchor (yesterday's end) is sound, fall back to distance-from-
+            # origin over road miles — slightly early-biased (crow-fly ≤ road),
+            # which is the safe direction for charge planning.
+            if origin is None:
+                return None
+            frac = _routes.haversine_km(start[0], start[1], cla, cln) / (miles * 1.609)
+            return max(0.0, min(0.95, frac))
+        a = _routes.haversine_km(start[0], start[1], cla, cln)
+        b = _routes.haversine_km(cla, cln, end[0], end[1])
+        if a + b <= 0:
+            return None
+        return a / (a + b)
+    except Exception:
+        return None
+
+
 def refresh_trip_ev_corridor(trip):
     """Fill trip['evPlan'] for an EV trip from tools/charging_client.corridor —
-    per-leg state-of-charge from the days' driveMiles and charge stops. Purely
-    computational (no network). Respects an existing evPlan (agent- or demo-
-    built). Best-effort, never raises; returns the trip."""
+    per-leg state-of-charge from the days' driveMiles and charge stops. Charge
+    stops positioned mid-route (by their coordinates) split the day into
+    charger-to-charger sub-legs; stops at/near the destination count as the
+    arrival charger, as before. Purely computational (no network). Respects an
+    existing evPlan (agent- or demo-built). Best-effort, never raises; returns
+    the trip."""
     try:
         vehicle = trip.get("vehicle") or {}
         if (vehicle.get("type") or "").lower() != "ev" or trip.get("evPlan"):
@@ -1521,18 +1689,44 @@ def refresh_trip_ev_corridor(trip):
         if rng is None:
             return trip
         legs = []
-        for d in (trip.get("days") or []):
+        prev_end = None   # where yesterday ended = today's true origin
+        for i, d in enumerate(trip.get("days") or []):
+            day_pts = [(s.get("lat"), s.get("lng")) for s in (d.get("stops") or [])
+                       if isinstance(s.get("lat"), (int, float))
+                       and isinstance(s.get("lng"), (int, float))]
             miles = _as_positive_number(d.get("driveMiles"))
             if miles is None:
+                if day_pts:
+                    prev_end = day_pts[-1]
                 continue
             chargers = [f for f in (d.get("fuelCharging") or [])
                         if (f.get("type") or "").lower() == "charge"]
-            kws = [f.get("powerKW") for f in chargers
+            mids, at_dest = [], []
+            for f in chargers:
+                kw = f.get("powerKW")
+                # Only DC-fast stops can be mid-leg splitters — a Level-2 /
+                # hotel charger (< 50 kW) is an overnight top-up, wherever its
+                # pin happens to sit along the day.
+                fast = isinstance(kw, (int, float)) and kw >= 50
+                frac = _day_charge_frac(d, f, prev_end) if fast else None
+                if frac is not None and 0.05 < frac < 0.85:
+                    mids.append({"name": f.get("name"),
+                                 "powerKW": kw, "frac": frac})
+                else:
+                    # slow charger, no/degenerate coordinates, or at the ends
+                    # of the day — counts as the arrival charger
+                    at_dest.append(f)
+            mids.sort(key=lambda s: s["frac"])
+            kws = [f.get("powerKW") for f in at_dest
                    if isinstance(f.get("powerKW"), (int, float))]
             legs.append({"to": d.get("to") or d.get("overnight") or d.get("title"),
                          "miles": miles,
-                         "charger": bool(chargers),
-                         "chargerKW": int(max(kws)) if kws else None})
+                         "charger": bool(at_dest),
+                         "chargerKW": int(max(kws)) if kws else None,
+                         "dayIndex": i,
+                         "stops": mids})
+            if day_pts:
+                prev_end = day_pts[-1]
         if not legs:
             return trip
         if _ROOT not in sys.path:

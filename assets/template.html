@@ -147,6 +147,11 @@
   .soc-fill.low { background: var(--warn); }
   .soc-fill.bad { background: var(--danger); }
   .soc-num { font-size: .78rem; color: var(--muted); }
+  tr.ev-mid td { background: rgba(0,0,0,.022); font-size: .88em; }
+  tr.ev-mid td:first-child { padding-left: 22px; }
+  .ev-midtag { font-size: .68rem; font-weight: 600; color: var(--muted);
+    border: 1px solid rgba(0,0,0,.14); border-radius: 999px; padding: 1px 7px;
+    margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
   .ev-warn { margin-top: 10px; padding: 10px 12px; background: #fdecec; border: 1px solid #f3b8b8;
     border-radius: 10px; font-size: .85rem; }
   .ev-assume { font-size: .78rem; color: var(--muted); margin-top: 8px; }
@@ -357,34 +362,86 @@ var TRIP_DATA = __TRIP_DATA__;
   function renderEvPlan() {
     var ev = T.evPlan;
     if (!ev || !ev.legs || !ev.legs.length) { el("evplan").innerHTML = ""; return; }
+    var zh = T.lang === "zh";
+    var badCount = 0;
     var rows = ev.legs.map(function (l) {
       var p = l.arriveSoC;
       var cls = socClass(p);
       var w = Math.max(0, Math.min(100, p == null ? 0 : p));
+      // Negative SoC is a planning gap, not a physical state — show the
+      // shortfall in miles instead of a negative percentage.
+      var short = l.shortByMiles != null ? l.shortByMiles : (p != null && p < 0 ? Math.round(-p) : null);
+      var socTxt;
+      if (p == null) socTxt = "—";
+      else if (p < 0) socTxt = zh ? ("到达 0%（缺 ~" + short + " " + distUnit + "）")
+                                  : ("arrive 0% (short ~" + short + " " + distUnit + ")");
+      else socTxt = (zh ? "到达 " : "arrive ") + p + "%";
+      if (l.chargeTo != null) socTxt += (zh ? " → 充至 " : " → charge ") + l.chargeTo + "%";
       var bar = '<div class="soc-cell"><div class="soc-bar"><div class="soc-fill ' + cls +
-        '" style="width:' + w + '%"></div></div><span class="soc-num">' +
-        (p == null ? "—" : "arrive " + p + "%") +
-        (l.chargeTo != null ? " → charge " + l.chargeTo + "%" : "") + "</span></div>";
-      var note = l.note ? "<div class='charge-note' style='color:var(--danger)'>⚠️ " + esc(l.note) + "</div>" : "";
-      note += l.chargeNote ? "<div class='charge-note'>🔌 " + esc(l.chargeNote) + "</div>" : "";
-      return "<tr><td>" + esc(l.to) + (l.ok ? "" : " ❗") + "</td>" +
+        '" style="width:' + w + '%"></div></div><span class="soc-num">' + socTxt + "</span></div>";
+      var note = "";
+      if (!l.ok) {
+        badCount++;
+        var n = l.stopsNeeded || 1;
+        var failTxt;
+        if (p != null && p < 0) {
+          failTxt = zh ? ("本段一次充电跑不完 — 建议中途充电约 " + n + " 次")
+                       : ("Won't make it on one charge — add ~" + n +
+                          " mid-leg charging stop" + (n > 1 ? "s" : ""));
+        } else {
+          failTxt = zh ? "到达电量低于 10% 缓冲 — 建议在本段提前补电"
+                       : "Arrives below the 10% buffer — top up earlier on this stretch";
+        }
+        note = "<div class='charge-note' style='color:var(--danger)'>⚠️ " + failTxt + "</div>";
+      }
+      if (l.chargeTo != null) {
+        var kwTxt = l.chargerKW ? (zh ? "（" + l.chargerKW + "kW）" : " (" + l.chargerKW + "kW)") : "";
+        note += "<div class='charge-note'>🔌 " +
+          (l.midLeg
+            ? (zh ? ("此站充电至 ~" + l.chargeTo + "%" + kwTxt + " 再出发")
+                  : ("charge to ~" + l.chargeTo + "%" + kwTxt + " before the next leg"))
+            : (zh ? ("过夜充电至 ~" + l.chargeTo + "%" + kwTxt)
+                  : ("charge overnight to ~" + l.chargeTo + "%" + kwTxt))) +
+          "</div>";
+      } else if (l.chargeNote) {
+        note += "<div class='charge-note' style='color:var(--danger)'>🔌 " +
+          (zh ? ("此站没有充电桩，但下一段需要 ~" +
+                 (l.chargeTargetPct != null ? l.chargeTargetPct + "%" : "补电") + " — 请在附近找桩")
+              : esc(l.chargeNote)) + "</div>";
+      }
+      var name = esc(l.to) + (l.ok ? "" : " ❗");
+      if (l.midLeg) name = "⚡ " + name +
+        ' <span class="ev-midtag">' + (zh ? "中途充电" : "mid-leg charge") + "</span>";
+      return "<tr" + (l.midLeg ? " class='ev-mid'" : "") +
+        (l.dayIndex != null ? " data-day='" + l.dayIndex + "'" : "") +
+        (l.ok ? "" : " data-evbad='1'") + "><td>" + name + "</td>" +
         "<td class='num'>" + (l.miles != null ? l.miles + " " + distUnit : "—") + "</td>" +
         "<td>" + bar + note + "</td></tr>";
     }).join("");
-    var warns = (ev.warnings || []).length
-      ? '<div class="ev-warn"><b>⚠️ Range alerts:</b><br>' + ev.warnings.map(esc).join("<br>") + "</div>"
+    var warns = badCount
+      ? '<div class="ev-warn"><b>⚠️ ' +
+        (zh ? ("有 " + badCount + " 段一次充电跑不完 — 请为红色行安排中途充电。")
+            : (badCount + " leg" + (badCount > 1 ? "s" : "") + " won't make it on one charge — " +
+               "add mid-leg charging on the red rows.")) + "</b></div>"
       : "";
     var a = ev.assumptions || {};
-    var assume = '<div class="ev-assume">Assumptions: usable range ' +
-      esc(ev.usableRange) + distUnit +
-      (ev.winterDerate ? ", winter derate −" + Math.round(ev.winterDerate * 100) + "% (eff. " +
-        esc(ev.effectiveRange) + distUnit + ")" : "") +
-      ", start " + esc(a.startSoC) + "%, keep ≥ " + esc(a.minSoC) + "% buffer. " +
-      (ev.note || "") + "</div>";
+    var assume = zh
+      ? '<div class="ev-assume">假设：可用续航 ' + esc(ev.usableRange) + " " + distUnit +
+        (ev.winterDerate ? "，冬季衰减 −" + Math.round(ev.winterDerate * 100) + "%（有效 " +
+          esc(ev.effectiveRange) + " " + distUnit + "）" : "") +
+        "，出发电量 " + esc(a.startSoC) + "%，全程保留 ≥ " + esc(a.minSoC) +
+        "% 缓冲。线性估算仅供规划参考 — 请以车机 / ABRP 为准。</div>"
+      : '<div class="ev-assume">Assumptions: usable range ' +
+        esc(ev.usableRange) + distUnit +
+        (ev.winterDerate ? ", winter derate −" + Math.round(ev.winterDerate * 100) + "% (eff. " +
+          esc(ev.effectiveRange) + distUnit + ")" : "") +
+        ", start " + esc(a.startSoC) + "%, keep ≥ " + esc(a.minSoC) + "% buffer. " +
+        (ev.note || "") + "</div>";
     el("evplan").innerHTML =
-      '<div class="section"><h2>⚡ EV charging corridor</h2>' +
+      '<div class="section"><h2>⚡ ' + (zh ? "EV 充电走廊" : "EV charging corridor") + "</h2>" +
       '<div class="card ev-card"><table><thead><tr>' +
-      "<th>Arrive at</th><th class='num'>Leg</th><th>Battery on arrival → plan</th>" +
+      (zh ? "<th>到达</th><th class='num'>里程</th><th>到达电量 → 充电安排</th>"
+          : "<th>Arrive at</th><th class='num'>Leg</th><th>Battery on arrival → plan</th>") +
       "</tr></thead><tbody>" + rows + "</tbody></table></div>" + warns + assume + "</div>";
   }
 

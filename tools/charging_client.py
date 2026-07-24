@@ -14,6 +14,7 @@ CLI:
 """
 
 import json
+import math
 import os
 import sys
 from urllib.parse import urlencode
@@ -83,20 +84,71 @@ def leg_ok(leg_miles, usable_range_miles, safe_fraction=SAFE_FRACTION):
     }
 
 
+def _expand_legs(legs):
+    """Split legs that carry mid-leg charge stops into charger-to-charger
+    sub-legs.
+
+    A leg may include "stops": ordered list of {"name": str, "powerKW": int|None,
+    "frac": float|None} where frac is the stop's position along the leg (0..1).
+    Fracs are used as given when they are all present, valid and increasing;
+    otherwise the stops are spaced evenly. Mid-leg stops always count as
+    chargers; the leg's own charger/chargerKW stay on the final sub-leg (the
+    day's destination). Legs without stops pass through unchanged.
+    """
+    flat = []
+    for leg in legs:
+        miles = float(leg.get("miles") or 0)
+        stops = [s for s in (leg.get("stops") or []) if s]
+        if not stops or miles <= 0:
+            flat.append(dict(leg))
+            continue
+        fracs = [s.get("frac") for s in stops]
+        usable = all(isinstance(f, (int, float)) and 0 < f < 1 for f in fracs)
+        if usable and list(fracs) != sorted(fracs):
+            usable = False
+        if not usable:
+            n = len(stops)
+            fracs = [(i + 1.0) / (n + 1.0) for i in range(n)]
+        cuts = [0.0] + [float(f) for f in fracs] + [1.0]
+        for i, stop in enumerate(stops):
+            flat.append({
+                "to": stop.get("name") or "charging stop",
+                "miles": (cuts[i + 1] - cuts[i]) * miles,
+                "charger": True,
+                "chargerKW": stop.get("powerKW"),
+                "midLeg": True,
+                "dayIndex": leg.get("dayIndex"),
+            })
+        flat.append({
+            "to": leg.get("to"),
+            "miles": (cuts[-1] - cuts[-2]) * miles,
+            "charger": bool(leg.get("charger")),
+            "chargerKW": leg.get("chargerKW"),
+            "dayIndex": leg.get("dayIndex"),
+        })
+    return flat
+
+
 def corridor(legs, usable_range_miles, start_soc=90, min_soc=10,
              buffer_soc=10, max_charge_soc=90, winter_derate=0.0):
     """Simulate state-of-charge (SoC) along an EV route ("充电走廊精算").
 
     legs: ordered list of dicts: {"to": str, "miles": float,
-          "charger": bool (charger available at this stop), "chargerKW": int|None}
+          "charger": bool (charger available at this stop), "chargerKW": int|None,
+          "dayIndex": int|None (carried through to the output),
+          "stops": optional mid-leg charge stops — see _expand_legs()}
           (the first leg starts from the trip origin; "to" is each leg's destination)
     usable_range_miles: vehicle usable range at 100%.
     start_soc / min_soc / buffer_soc / max_charge_soc: percentages.
     winter_derate: fraction (e.g. 0.25) to shave off effective range for cold.
 
     Returns per-leg arrival SoC, recommended charge-to at each stop, ok flags,
-    and a list of warnings. Energy is modeled simply as miles vs. effective range
-    (linear) — good enough for planning, not a substitute for ABRP/the car.
+    and a list of warnings. Legs with mid-leg stops are simulated as
+    charger-to-charger sub-legs (output rows carry midLeg: true). Infeasible
+    legs additionally carry shortByMiles and stopsNeeded (how many mid-leg
+    charges would make the leg work). Energy is modeled simply as miles vs.
+    effective range (linear) — good enough for planning, not a substitute for
+    ABRP/the car.
     """
     eff_range = usable_range_miles * (1.0 - winter_derate)
     if eff_range <= 0:
@@ -105,6 +157,7 @@ def corridor(legs, usable_range_miles, start_soc=90, min_soc=10,
     def pct_for_miles(mi):
         return (mi / eff_range) * 100.0
 
+    legs = _expand_legs(legs)
     soc = float(start_soc)
     out_legs = []
     warnings = []
@@ -124,8 +177,19 @@ def corridor(legs, usable_range_miles, start_soc=90, min_soc=10,
             "charger": bool(leg.get("charger")),
             "chargerKW": leg.get("chargerKW"),
         }
+        if leg.get("midLeg"):
+            leg_rec["midLeg"] = True
+        if leg.get("dayIndex") is not None:
+            leg_rec["dayIndex"] = leg.get("dayIndex")
         if arrive_soc < min_soc:
             short_by = (min_soc - arrive_soc) / 100.0 * eff_range
+            # How many extra mid-leg charges would make this sub-leg work:
+            # the first chunk runs on the departure charge, every later chunk
+            # on a max_charge top-up, always keeping the min_soc floor.
+            first = max(0.0, (depart_soc - min_soc)) / 100.0 * eff_range
+            chunk = max(1.0, (max_charge_soc - min_soc) / 100.0 * eff_range)
+            leg_rec["shortByMiles"] = round(short_by)
+            leg_rec["stopsNeeded"] = max(1, math.ceil((miles - first) / chunk))
             leg_rec["note"] = ("WON'T MAKE IT on this charge — short by ~%d %s; "
                                "add a charging stop mid-leg." % (round(short_by), "mi"))
             warnings.append("Leg to %s arrives at %d%% (below %d%% buffer)%s"
@@ -133,12 +197,18 @@ def corridor(legs, usable_range_miles, start_soc=90, min_soc=10,
                                " — winter derate applied" if winter_derate else ""))
         soc = max(arrive_soc, 0.0)
 
-        # Decide a charge at this stop, based on the NEXT leg's need.
+        # Decide a charge at this stop. A mid-leg fast stop charges just enough
+        # for the next hop; a day-end stop is an overnight charge — the car is
+        # plugged in for the night, so it fills to the max charge target.
         nxt = legs[i + 1] if i + 1 < len(legs) else None
         if nxt is not None:
-            next_need = pct_for_miles(float(nxt.get("miles") or 0))
-            target = min(max_charge_soc, next_need + min_soc + buffer_soc)
+            if leg.get("midLeg"):
+                next_need = pct_for_miles(float(nxt.get("miles") or 0))
+                target = min(max_charge_soc, next_need + min_soc + buffer_soc)
+            else:
+                target = max_charge_soc
             if target > soc:
+                leg_rec["chargeTargetPct"] = round(target)
                 if leg.get("charger"):
                     leg_rec["chargeTo"] = round(target)
                     kw = leg.get("chargerKW")

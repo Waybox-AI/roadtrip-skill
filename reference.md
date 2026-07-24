@@ -125,6 +125,9 @@ result straight into `tripData.json`.
 
 // EV charging corridor — renders a per-leg state-of-charge table.
 // Build with tools/charging_client.corridor(legs, usableRange, winter_derate=...).
+// Input legs may carry "stops": mid-leg charge stops [{name, powerKW, frac}]
+// (frac = 0..1 position along the leg; invalid/missing fracs → even spacing) —
+// the leg is then simulated as charger-to-charger sub-legs.
 "evPlan": {
   "usableRange": 280, "effectiveRange": 280, "winterDerate": 0,
   "assumptions": { "startSoC": 90, "minSoC": 10, "bufferSoC": 10, "maxChargeSoC": 90 },
@@ -132,7 +135,12 @@ result straight into `tripData.json`.
     { "to": "Bellingham, WA", "miles": 90, "departSoC": 90, "arriveSoC": 58,
       "ok": true, "charger": true, "chargerKW": 350,
       "chargeTo": 49, "chargeNote": "charge to ~49% before the next leg",
-      "note": "WON'T MAKE IT ..." }     // only when a leg fails the buffer
+      "chargeTargetPct": 49,            // set whenever a top-up is needed here
+      "midLeg": true,                   // only on sub-legs from a mid-leg stop
+      "dayIndex": 0,                    // index into days[] (when built per-day)
+      "note": "WON'T MAKE IT ...",      // only when a leg fails the buffer
+      "shortByMiles": 258,              // ditto: miles missing to reach minSoC
+      "stopsNeeded": 1 }                // ditto: mid-leg charges that would fix it
   ],
   "warnings": ["..."]
 }

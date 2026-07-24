@@ -84,3 +84,80 @@ class TestCorridor:
     def test_non_positive_range_returns_error(self):
         result = corridor(self.LEGS, 0)
         assert result["source"] == "error"
+
+
+class TestCorridorMidLegStops:
+    def test_stop_splits_leg_into_sublegs(self):
+        legs = [{"to": "Far City", "miles": 400, "charger": True, "chargerKW": 120,
+                 "dayIndex": 2,
+                 "stops": [{"name": "Midway SC", "powerKW": 250, "frac": 0.5}]}]
+        out = corridor(legs, 280, start_soc=90)["legs"]
+        assert len(out) == 2
+        assert out[0]["to"] == "Midway SC" and out[0]["midLeg"] is True
+        assert out[0]["miles"] == 200 and out[1]["miles"] == 200
+        assert out[0]["charger"] is True and out[0]["chargerKW"] == 250
+        assert out[1]["to"] == "Far City" and "midLeg" not in out[1]
+        assert out[0]["dayIndex"] == 2 and out[1]["dayIndex"] == 2
+
+    def test_split_makes_long_leg_feasible(self):
+        base = {"to": "Far City", "miles": 400, "charger": True, "chargerKW": 120}
+        unsplit = corridor([dict(base)], 280, start_soc=90)
+        assert unsplit["legs"][0]["ok"] is False
+        split = corridor(
+            [dict(base, stops=[{"name": "Mid", "powerKW": 250, "frac": 0.5}])],
+            280, start_soc=90)
+        assert all(l["ok"] for l in split["legs"])
+        assert split["warnings"] == []
+
+    def test_missing_fracs_space_evenly(self):
+        legs = [{"to": "End", "miles": 300, "charger": True,
+                 "stops": [{"name": "S1", "powerKW": 150},
+                           {"name": "S2", "powerKW": 150}]}]
+        out = corridor(legs, 280)["legs"]
+        assert [round(l["miles"]) for l in out] == [100, 100, 100]
+
+    def test_unsorted_fracs_fall_back_to_even(self):
+        legs = [{"to": "End", "miles": 300, "charger": True,
+                 "stops": [{"name": "S1", "powerKW": 150, "frac": 0.9},
+                           {"name": "S2", "powerKW": 150, "frac": 0.2}]}]
+        out = corridor(legs, 280)["legs"]
+        assert [round(l["miles"]) for l in out] == [100, 100, 100]
+
+    def test_infeasible_leg_reports_shortfall_and_stops_needed(self):
+        legs = [{"to": "Far", "miles": 500, "charger": False}]
+        out = corridor(legs, 280, start_soc=90)["legs"][0]
+        assert out["ok"] is False
+        assert out["shortByMiles"] == 276
+        assert out["stopsNeeded"] == 2
+
+    def test_charge_target_pct_field(self):
+        legs = [
+            {"to": "A", "miles": 60, "charger": True, "chargerKW": 150},
+            {"to": "B", "miles": 200, "charger": False},
+        ]
+        out = corridor(legs, 280, start_soc=90)["legs"]
+        assert out[0]["chargeTargetPct"] == out[0]["chargeTo"]
+
+    def test_legs_without_stops_unchanged(self):
+        legs = [{"to": "A", "miles": 60, "charger": True, "chargerKW": 150}]
+        out = corridor(legs, 280)["legs"]
+        assert len(out) == 1 and "midLeg" not in out[0]
+
+    def test_day_end_charges_overnight_to_max(self):
+        # A day-end stop is an overnight charge: fill to the max target, not
+        # merely enough for the next morning's short hop.
+        legs = [
+            {"to": "A", "miles": 60, "charger": True, "chargerKW": 7},
+            {"to": "B", "miles": 30, "charger": True, "chargerKW": 150},
+            {"to": "C", "miles": 30, "charger": False},
+        ]
+        out = corridor(legs, 280, start_soc=90)["legs"]
+        assert out[0]["chargeTo"] == 90
+
+    def test_mid_leg_stop_charges_just_enough(self):
+        # A mid-leg fast stop still charges only what the next hop needs.
+        legs = [{"to": "End", "miles": 200, "charger": True,
+                 "stops": [{"name": "Mid", "powerKW": 250, "frac": 0.5}]}]
+        out = corridor(legs, 280, start_soc=90)["legs"]
+        # next hop is 100 mi = 35.7% + 20% floor/buffer ≈ 56%
+        assert out[0]["midLeg"] is True and out[0]["chargeTo"] == 56
