@@ -582,6 +582,7 @@ var TRIP_DATA = __TRIP_DATA__;
     var L = T.lodging || [];
     if (!L.length) { el("lodging").innerHTML = ""; return; }
     var linkNames = [["booking", "Booking"], ["airbnb", "Airbnb"], ["google_hotels", "Hotels"],
+                     ["ctrip", "携程"],
                      ["koa", "KOA"], ["hipcamp", "Hipcamp"], ["recreation_gov", "Rec.gov"]];
     var rows = L.map(function (h) {
       var lk = h.links || {};
