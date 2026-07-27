@@ -32,6 +32,7 @@ packages = ["mcp_server"]
 "tools/__init__.py" = "mcp_server/_vendor/tools/__init__.py"
 "tools/border_client.py" = "mcp_server/_vendor/tools/border_client.py"
 "tools/charging_client.py" = "mcp_server/_vendor/tools/charging_client.py"
+"tools/ctrip_city_ids.py" = "mcp_server/_vendor/tools/ctrip_city_ids.py"
 "tools/customs_client.py" = "mcp_server/_vendor/tools/customs_client.py"
 "tools/fuel_client.py" = "mcp_server/_vendor/tools/fuel_client.py"
 "tools/lodging_client.py" = "mcp_server/_vendor/tools/lodging_client.py"

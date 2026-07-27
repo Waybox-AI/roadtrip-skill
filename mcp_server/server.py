@@ -344,7 +344,8 @@ def lodging_quote(place: str, checkin: str = "", checkout: str = "",
                   tier: Literal["budget", "midrange", "upscale", "campground",
                                 "rv-site", "in-park-lodge"] = "midrange") -> dict:
     """Nightly reference price by lodging tier plus deep links to quote live
-    (Booking, Airbnb, Google Hotels, KOA, Hipcamp, Recreation.gov).
+    (Booking, Airbnb, Google Hotels, KOA, Hipcamp, Recreation.gov; a
+    China-domestic place also gets a Ctrip 携程 city-page deep link).
 
     checkin/checkout (YYYY-MM-DD, both or neither) pre-fill the Booking link.
     The price is graded 'reference' — replace with a live quote when accuracy

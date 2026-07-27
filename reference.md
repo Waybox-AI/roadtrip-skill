@@ -190,7 +190,7 @@ hit official/free APIs first and fall back to web search only on failure.
 | Duty-free exemption (免税额) | CBP / CBSA / SAT rules table | `tools/customs_client.py` | search current allowances |
 | Multi-route compare | computed | `scripts/helper.compare_routes()` | — |
 | Fuel price | GasBuddy | `tools/fuel_client.py` | regional average estimate |
-| Lodging / campgrounds | Booking/Expedia/Airbnb, KOA/Hipcamp | `tools/lodging_client.py` | search reference price |
+| Lodging / campgrounds | Booking/Expedia/Airbnb (+携程 city pages, China-domestic only), KOA/Hipcamp | `tools/lodging_client.py` | search reference price |
 | Hikes | AllTrails | (via `web_search`) | search |
 | Scenic byways | FHWA National Scenic Byways | (via `web_search`) | search |
 | Live road conditions / closures | State DOT 511, Caltrans, park alerts | `tools/weather_client.py` notes | search |
