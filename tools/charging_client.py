@@ -130,7 +130,7 @@ def _expand_legs(legs):
 
 
 def corridor(legs, usable_range_miles, start_soc=90, min_soc=10,
-             buffer_soc=10, max_charge_soc=90, winter_derate=0.0):
+             buffer_soc=10, max_charge_soc=90, winter_derate=0.0, mid_target=80):
     """Simulate state-of-charge (SoC) along an EV route ("充电走廊精算").
 
     legs: ordered list of dicts: {"to": str, "miles": float,
@@ -204,7 +204,12 @@ def corridor(legs, usable_range_miles, start_soc=90, min_soc=10,
         if nxt is not None:
             if leg.get("midLeg"):
                 next_need = pct_for_miles(float(nxt.get("miles") or 0))
-                target = min(max_charge_soc, next_need + min_soc + buffer_soc)
+                # A DC fast stop tops up to ~80% (charging is fast up to there);
+                # "charge to just above what the next hop needs" reads as absurd
+                # ("charge to 21%") when stops sit close. Floor it at mid_target,
+                # still capped at the overnight max.
+                floor = min(mid_target, max_charge_soc)
+                target = min(max_charge_soc, max(floor, next_need + min_soc + buffer_soc))
             else:
                 target = max_charge_soc
             if target > soc:

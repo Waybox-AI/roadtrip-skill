@@ -152,6 +152,7 @@
   .ev-midtag { font-size: .68rem; font-weight: 600; color: var(--muted);
     border: 1px solid rgba(0,0,0,.14); border-radius: 999px; padding: 1px 7px;
     margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+  .ev-stay { font-size: .8rem; color: var(--muted); font-weight: 500; }
   .ev-warn { margin-top: 10px; padding: 10px 12px; background: #fdecec; border: 1px solid #f3b8b8;
     border-radius: 10px; font-size: .85rem; }
   .ev-assume { font-size: .78rem; color: var(--muted); margin-top: 8px; }
@@ -364,6 +365,7 @@ var TRIP_DATA = __TRIP_DATA__;
     if (!ev || !ev.legs || !ev.legs.length) { el("evplan").innerHTML = ""; return; }
     var zh = T.lang === "zh";
     var badCount = 0;
+    var stayTo = null, stayNight = 0;   // consecutive same-destination overnight rows
     var rows = ev.legs.map(function (l) {
       var p = l.arriveSoC;
       var cls = socClass(p);
@@ -410,11 +412,17 @@ var TRIP_DATA = __TRIP_DATA__;
               : esc(l.chargeNote)) + "</div>";
       }
       var name = esc(l.to) + (l.ok ? "" : " ❗");
-      if (l.midLeg) name = "⚡ " + name +
-        ' <span class="ev-midtag">' + (zh ? "中途充电" : "mid-leg charge") + "</span>";
-      return "<tr" + (l.midLeg ? " class='ev-mid'" : "") +
-        (l.dayIndex != null ? " data-day='" + l.dayIndex + "'" : "") +
-        (l.ok ? "" : " data-evbad='1'") + "><td>" + name + "</td>" +
+      if (l.midLeg) {
+        name = "⚡ " + name +
+          ' <span class="ev-midtag">' + (zh ? "中途充电" : "mid-leg charge") + "</span>";
+      } else {
+        // A multi-night stay repeats the same overnight destination on several
+        // rows; number them so they don't read as duplicate cities.
+        if (l.to === stayTo) { stayNight++; } else { stayTo = l.to; stayNight = 1; }
+        if (stayNight > 1) name += '<span class="ev-stay">' +
+          (zh ? " · 第" + stayNight + "晚" : " · night " + stayNight) + "</span>";
+      }
+      return "<tr" + (l.midLeg ? " class='ev-mid'" : "") + "><td>" + name + "</td>" +
         "<td class='num'>" + (l.miles != null ? l.miles + " " + distUnit : "—") + "</td>" +
         "<td>" + bar + note + "</td></tr>";
     }).join("");

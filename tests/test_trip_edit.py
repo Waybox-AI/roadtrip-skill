@@ -767,77 +767,136 @@ class TestWeatherRefresh:
         assert out["days"][3]["weather"] == before                # shifted, unchanged
 
 
-class TestAddChargingStops:
-    """add_charging_stops: append-only fuelCharging edit, valid for every day
-    (including the final one, which the stay-based edits cannot touch)."""
+class TestAutofillEvCharging:
+    """autofill_ev_charging: after generation, back-fill evenly-spaced mid-route
+    DC charging on every EV day that needs it — no manual step. Feasibility is
+    the backend's (interpolated coordinates); the model only NAMES the stops."""
 
     @pytest.fixture
     def ev_trip(self, trip):
         trip["vehicle"] = {"type": "EV", "rangeMiles": 280}
         return trip
 
-    def test_appends_validated_stops(self, ev_trip, monkeypatch):
-        monkeypatch.setattr(
-            planner, "_propose_charging_stops",
-            lambda t, i, log_fn=None: [
-                {"name": "Midway SC", "type": "charge",
-                 "lat": 36.0, "lng": -113.0, "powerKW": 250, "note": "x"},
-                {"name": "no coords", "type": "charge", "powerKW": 350},
-                {"name": "slow", "type": "charge",
-                 "lat": 36.1, "lng": -113.1, "powerKW": 7},
-            ])
-        before = len(ev_trip["days"][2].get("fuelCharging") or [])
-        planner.add_charging_stops(ev_trip, 2)
-        added = ev_trip["days"][2]["fuelCharging"][before:]
-        # coordless entry dropped; slow charger floored to a DC-fast default
-        assert [a["name"] for a in added] == ["Midway SC", "slow"]
-        assert added[0]["powerKW"] == 250 and added[1]["powerKW"] == 120
-        assert all(a["type"] == "charge" for a in added)
+    def _make_sound_day(self, ev_trip, idx=0, miles=400):
+        """Day `idx` (default 0, no previous-day anchor needed): a long drive with
+        well-separated endpoints and a UNIQUE from/to, so coordinate healing
+        leaves it — and the example trip's other days — untouched."""
+        d = ev_trip["days"][idx]
+        d["driveMiles"] = miles
+        d["from"], d["to"] = "TestOrigin", "TestDest"
+        d["stops"] = [{"name": "Origin", "type": "city", "lat": 37.5, "lng": -115.5},
+                      {"name": "Dest", "type": "city", "lat": 33.6, "lng": -112.0}]
+        return d
 
-    def test_final_day_is_allowed(self, ev_trip, monkeypatch):
-        last = len(ev_trip["days"]) - 1
-        monkeypatch.setattr(
-            planner, "_propose_charging_stops",
-            lambda t, i, log_fn=None: [{"name": "S", "type": "charge",
-                                        "lat": 36.0, "lng": -113.0,
-                                        "powerKW": 150}])
-        planner.add_charging_stops(ev_trip, last)
-        assert any(f.get("name") == "S"
-                   for f in ev_trip["days"][last]["fuelCharging"])
+    # ── deterministic auto-placement (the main path) ─────────────────────────
 
-    def test_other_days_untouched(self, ev_trip, monkeypatch):
+    def test_places_even_mids_replacing_stale(self, ev_trip, monkeypatch):
+        monkeypatch.setattr(planner, "_name_charging_points",
+                            lambda t, i, coords, log_fn=None:
+                            ["Mid %d" % (n + 1) for n in range(len(coords))])
+        d = self._make_sound_day(ev_trip, 0, miles=400)
+        d["fuelCharging"] = [
+            {"name": "stale mid", "type": "charge",
+             "lat": 35.5, "lng": -113.5, "powerKW": 120},
+            {"name": "过夜 — Dest hotel", "type": "charge",
+             "lat": 33.6, "lng": -112.0, "powerKW": 120}]
+        planner.autofill_ev_charging(ev_trip)
+        fc = ev_trip["days"][0]["fuelCharging"]
+        mids = [f for f in fc if f["name"].startswith("Mid ")]
+        # 400 mi / (0.82 · 0.8 · 280 ≈ 184) → 3 pieces → 2 evenly-spaced mids
+        assert [m["name"] for m in mids] == ["Mid 1", "Mid 2"]
+        lats = [m["lat"] for m in mids]
+        assert 33.6 < lats[1] < lats[0] < 37.5      # strictly between, in order
+        assert any("过夜" in f["name"] for f in fc)  # overnight kept
+        assert not any(f["name"] == "stale mid" for f in fc)  # old mid replaced
+
+    def test_makes_the_day_feasible(self, ev_trip, monkeypatch):
+        # Day 0 starts at the 90% start-of-trip charge (no depleted-start cascade
+        # to confound the spacing check), drives 460 mi.
+        monkeypatch.setattr(planner, "_name_charging_points",
+                            lambda t, i, coords, log_fn=None: ["" for _ in coords])
+        self._make_sound_day(ev_trip, 0, miles=460)
+        ev_trip["days"][0]["fuelCharging"] = [
+            {"name": "过夜 — Dest", "type": "charge",
+             "lat": 33.6, "lng": -112.0, "powerKW": 120}]
+        planner.autofill_ev_charging(ev_trip)
+        ev_trip.pop("evPlan", None)
+        planner.refresh_trip_ev_corridor(ev_trip)
+        day0 = [l for l in ev_trip["evPlan"]["legs"] if l.get("dayIndex") == 0]
+        assert day0 and all(l.get("ok") for l in day0)   # evenly spaced → all feasible
+
+    def test_very_long_day_late_stop_still_splits(self, monkeypatch):
+        # A 1200 mi day needs ~6 mid stops; the last lands ~0.86 of the way in.
+        # An absolute end-margin (not a fixed 0.85 fraction) keeps it a splitter,
+        # so the whole day stays feasible.
+        monkeypatch.setattr(planner, "_name_charging_points",
+                            lambda t, i, coords, log_fn=None: ["" for _ in coords])
+        trip = {"vehicle": {"type": "EV", "rangeMiles": 280},
+                "days": [{"from": "Start", "to": "Finish", "driveMiles": 1200,
+                          "stops": [{"name": "s", "lat": 40.0, "lng": -110.0},
+                                    {"name": "f", "lat": 31.0, "lng": -104.0}],
+                          "fuelCharging": [{"name": "过夜 — Finish", "type": "charge",
+                                            "lat": 31.0, "lng": -104.0, "powerKW": 120}]}]}
+        planner.autofill_ev_charging(trip)
+        planner.refresh_trip_ev_corridor(trip)
+        legs = trip["evPlan"]["legs"]
+        assert len(legs) >= 6 and all(l.get("ok") for l in legs)
+
+    def test_short_day_gets_no_mids(self, ev_trip, monkeypatch):
+        monkeypatch.setattr(planner, "_name_charging_points",
+                            lambda t, i, coords, log_fn=None: ["X" for _ in coords])
+        d = self._make_sound_day(ev_trip, 0, miles=120)   # under one charge
+        d["fuelCharging"] = []
+        planner.autofill_ev_charging(ev_trip)
+        assert ev_trip["days"][0]["fuelCharging"] == []    # nothing to space
+
+    def test_unreliable_coords_get_no_mids(self, ev_trip, monkeypatch):
+        monkeypatch.setattr(planner, "_name_charging_points",
+                            lambda t, i, coords, log_fn=None: ["X" for _ in coords])
+        # A 400 mi day whose stops are clustered ~1 km apart AND whose cities are
+        # unique (so healing can't re-anchor it) — can't be placed on.
+        d = ev_trip["days"][0]
+        d["driveMiles"] = 400
+        d["from"], d["to"] = "UnknownA", "UnknownB"
+        d["stops"] = [{"name": "A", "lat": 30.005, "lng": 90.505},
+                      {"name": "B", "lat": 30.010, "lng": 90.510}]
+        d["fuelCharging"] = []
+        planner.autofill_ev_charging(ev_trip)
+        assert ev_trip["days"][0]["fuelCharging"] == []
+
+    def test_non_ev_trip_is_noop(self, trip):
         import copy as _copy
-        monkeypatch.setattr(
-            planner, "_propose_charging_stops",
-            lambda t, i, log_fn=None: [{"name": "S", "type": "charge",
-                                        "lat": 36.0, "lng": -113.0,
-                                        "powerKW": 150}])
-        before = _copy.deepcopy([d for j, d in enumerate(ev_trip["days"]) if j != 2])
-        planner.add_charging_stops(ev_trip, 2)
-        after = [d for j, d in enumerate(ev_trip["days"]) if j != 2]
-        assert after == before
+        trip["vehicle"] = {"type": "gas"}
+        before = _copy.deepcopy(trip)
+        planner.autofill_ev_charging(trip)
+        assert trip == before
 
-    def test_invalid_day_index_raises(self, ev_trip):
-        with pytest.raises(ValueError):
-            planner.add_charging_stops(ev_trip, 99)
-        with pytest.raises(ValueError):
-            planner.add_charging_stops(ev_trip, -1)
+    # ── coordinate self-heal (mis-geocoded return-leg days) ──────────────────
 
-    def test_unusable_model_answer_raises(self, ev_trip, monkeypatch):
-        monkeypatch.setattr(planner, "_propose_charging_stops",
-                            lambda t, i, log_fn=None: [{"name": "no coords"}])
-        with pytest.raises(ValueError):
-            planner.add_charging_stops(ev_trip, 1)
+    def test_heals_collapsed_return_day(self):
+        # Return leg B→A has all stops collapsed near B; the last stop should be
+        # re-anchored to A's coordinate learned from the sound outbound day.
+        trip = {"days": [
+            {"from": "A", "to": "B", "driveMiles": 300,
+             "stops": [{"name": "a", "lat": 36.0, "lng": -115.0},
+                       {"name": "b", "lat": 34.0, "lng": -112.0}]},
+            {"from": "B", "to": "A", "driveMiles": 300,
+             "stops": [{"name": "r1", "lat": 34.00, "lng": -112.00},
+                       {"name": "r2", "lat": 34.02, "lng": -112.02}]}]}
+        assert planner._heal_day_coords(trip) == 1
+        last = trip["days"][1]["stops"][-1]
+        assert abs(last["lat"] - 36.0) < 0.02 and abs(last["lng"] + 115.0) < 0.02
 
-    def test_reemitted_existing_entry_updates_in_place(self, ev_trip, monkeypatch):
-        d = ev_trip["days"][2]
-        d["fuelCharging"] = [{"name": "Old Station", "type": "charge"}]  # no coords
-        monkeypatch.setattr(
-            planner, "_propose_charging_stops",
-            lambda t, i, log_fn=None: [{"name": "Old Station", "type": "charge",
-                                        "lat": 36.0, "lng": -113.0,
-                                        "powerKW": 150}])
-        planner.add_charging_stops(ev_trip, 2)
-        fc = d["fuelCharging"]
-        assert len(fc) == 1                       # updated, not duplicated
-        assert fc[0]["lat"] == 36.0 and fc[0]["powerKW"] == 150
+    def test_heal_leaves_sound_trip_untouched(self):
+        import copy as _copy
+        trip = {"days": [
+            {"from": "A", "to": "B", "driveMiles": 300,
+             "stops": [{"name": "a", "lat": 36.0, "lng": -115.0},
+                       {"name": "b", "lat": 34.0, "lng": -112.0}]},
+            {"from": "B", "to": "C", "driveMiles": 300,
+             "stops": [{"name": "b", "lat": 34.0, "lng": -112.0},
+                       {"name": "c", "lat": 32.0, "lng": -110.0}]}]}
+        before = _copy.deepcopy(trip)
+        assert planner._heal_day_coords(trip) == 0
+        assert trip == before
+
