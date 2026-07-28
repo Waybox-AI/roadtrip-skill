@@ -12,9 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Markdown only: template/preview HTML contain Leaflet tile URL
-      # placeholders ({s}.tile.openstreetmap.org/...) that are not real links.
       - name: Link Checker (lychee)
         uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
        
@@ -40,29 +37,8 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -v
 
-  code-review:
-    needs: test
-    if: ${{ github.event_name == 'pull_request' && github.event.sender.type != 'Bot' }}
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
-      contents: write
-    steps:
-      - name: PR Agent action step
-        uses: the-pr-agent/pr-agent@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          config.model: "gemini/gemini-3.5-flash"
-          config.fallback_models: '["gemini/gemini-3.5-flash"]'
-          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          github_action_config.auto_review: "true"
-          github_action_config.auto_describe: "true"
-          github_action_config.auto_improve: "true"
-
   notify:
-    needs: [test, code-review]
-    if: ${{ always() && needs.test.result == 'success' && (needs.code-review.result == 'success' || needs.code-review.result == 'skipped') }}
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: Waybox-AI/feishu-notification@main
