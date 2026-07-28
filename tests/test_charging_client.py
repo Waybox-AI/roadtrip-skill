@@ -154,10 +154,20 @@ class TestCorridorMidLegStops:
         out = corridor(legs, 280, start_soc=90)["legs"]
         assert out[0]["chargeTo"] == 90
 
-    def test_mid_leg_stop_charges_just_enough(self):
-        # A mid-leg fast stop still charges only what the next hop needs.
+    def test_mid_leg_stop_charges_to_fast_target(self):
+        # A DC fast mid-stop tops up to the ~80% fast target even when the next
+        # hop needs less — so a plan never reads an absurd "charge to 21%".
         legs = [{"to": "End", "miles": 200, "charger": True,
                  "stops": [{"name": "Mid", "powerKW": 250, "frac": 0.5}]}]
         out = corridor(legs, 280, start_soc=90)["legs"]
-        # next hop is 100 mi = 35.7% + 20% floor/buffer ≈ 56%
-        assert out[0]["midLeg"] is True and out[0]["chargeTo"] == 56
+        # next hop 100 mi ≈ 36% + 20% buffers = 56%, floored up to the 80% target
+        assert out[0]["midLeg"] is True and out[0]["chargeTo"] == 80
+
+    def test_mid_leg_stop_charges_more_when_next_hop_is_long(self):
+        # When the next hop needs more than the fast target, charge that much
+        # (still capped at the overnight max).
+        legs = [{"to": "End", "miles": 400, "charger": True,
+                 "stops": [{"name": "Mid", "powerKW": 250, "frac": 0.5}]}]
+        out = corridor(legs, 280, start_soc=90)["legs"]
+        # next hop 200 mi ≈ 71% + 20% buffers = 91% → capped at 90
+        assert out[0]["chargeTo"] == 90
