@@ -129,6 +129,13 @@
   ul.tips { margin: 0; padding-left: 18px; }
   ul.tips li { margin: 6px 0; }
 
+  .share-button { width: 100%; border: 0; border-radius: 999px; padding: 13px 20px;
+    background: var(--accent); color: var(--on-accent); cursor: pointer;
+    font: 750 .95rem/1 inherit; box-shadow: var(--shadow); }
+  .share-button:hover { transform: translateY(-1px); }
+  .share-status { min-height: 1.4em; margin-top: 7px; text-align: center;
+    color: var(--muted); font-size: .8rem; }
+
   .disclaimer { margin-top: 26px; font-size: .82rem; color: var(--muted);
     background: var(--card); border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; }
   .footer-meta { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 14px; }
@@ -241,6 +248,7 @@
     <div id="budget"></div>
   </div>
   <div id="tips" class="section"></div>
+  <div id="share" class="section"></div>
   <div id="disclaimer"></div>
   <div class="footer-meta" id="footer-meta"></div>
 </div>
@@ -695,6 +703,22 @@ var TRIP_DATA = __TRIP_DATA__;
       "<ul class='tips'>" + t.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
   }
 
+  // ---------- Share ----------
+  function renderShare() {
+    var label = isZh() ? "分享这份行程" : "Share this trip";
+    el("share").innerHTML = '<button class="share-button" id="shareButton" type="button">↗ ' +
+      label + '</button><div class="share-status" id="shareStatus" aria-live="polite"></div>';
+    el("shareButton").addEventListener("click", function () {
+      var data = { title: T.title || "Road Trip", url: window.location.href };
+      if (navigator.share) { navigator.share(data).catch(function () {}); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(data.url).then(function () {
+          el("shareStatus").textContent = isZh() ? "链接已复制" : "Link copied";
+        }).catch(function () {});
+      }
+    });
+  }
+
   // ---------- Disclaimer ----------
   function renderDisclaimer() {
     var d = T.disclaimer || "Information assembled by AI; verify with official sources before travel.";
@@ -708,7 +732,7 @@ var TRIP_DATA = __TRIP_DATA__;
   try {
     renderHero(); renderRoutes(); renderCountdown(); renderCrossBorder();
     renderDays(); renderEvPlan();
-    renderLodging(); renderBudget(); renderTips(); renderDisclaimer();
+    renderLodging(); renderBudget(); renderTips(); renderShare(); renderDisclaimer();
     renderMap();
   } catch (err) {
     el("app").insertAdjacentHTML("afterbegin",
