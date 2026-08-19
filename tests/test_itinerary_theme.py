@@ -10,8 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _render():
-    trip = json.loads((ROOT / "assets" / "tripData.example.json").read_text())
-    template = (ROOT / "assets" / "template.html").read_text()
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    template = (ROOT / "assets" / "template.html").read_text(encoding="utf-8")
     return build_html(trip, template)
 
 
