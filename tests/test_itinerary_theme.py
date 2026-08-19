@@ -23,6 +23,9 @@ def test_itinerary_defaults_to_webapp_dark_theme_with_light_option():
     assert '--accent: #fffbbb' in html
     assert 'html[data-theme="light"]' in html
     assert 'localStorage.getItem("rtn_theme")' in html
+    assert 'themeColor.setAttribute("content", theme === "light"' in html
+    assert ':root, html[data-theme="light"]' in html
+    assert '--bg: #fff; --card: #fff; --card-2: #f5f5f3' in html
 
 
 def test_itinerary_renders_an_accessible_theme_toggle():
