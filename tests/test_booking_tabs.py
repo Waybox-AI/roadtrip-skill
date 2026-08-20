@@ -48,6 +48,19 @@ def test_example_renders_explicit_categories_and_legacy_fallback():
     assert '"category": "hotel"' in html
     assert 'function bookingCategory(item)' in html
     assert 'return "attraction";' in html
+    assert '"amount": 90' in html
+    assert '"unit": "person"' in html
+    assert 'function bookingPriceMarkup(item)' in html
+    assert 'Check price' in html
+
+
+def test_lodging_table_is_removed_but_budget_rendering_remains():
+    template = _template()
+    assert 'id="lodging"' not in template
+    assert 'function renderLodging()' not in template
+    assert '🛏️ Lodging' not in template
+    assert 'id="budget"' in template
+    assert 'renderBudget(); renderTips(); renderShare();' in template
 
 
 def test_parks_countdown_assigns_categories():
@@ -59,9 +72,19 @@ def test_stay_edit_preserves_valid_category_and_drops_invalid_category():
     trip = {"bookingCountdown": []}
     planner._apply_stay_bookings(trip, [], [
         {"item": "Dinner", "bookBy": "2030-08-12", "where": "Cafe",
-         "category": "restaurant", "priority": "medium"},
+         "category": "restaurant", "priority": "medium",
+         "price": {"amount": 45.5, "currency": "usd", "unit": "person",
+                   "reliability": "estimate"}},
         {"item": "Permit", "bookBy": "2030-08-13", "where": "Park",
-         "category": "other", "priority": "high"},
+         "category": "other", "priority": "high",
+         "price": {"amount": -1, "currency": "USD", "unit": "person"}},
     ])
     assert trip["bookingCountdown"][0]["category"] == "restaurant"
+    assert trip["bookingCountdown"][0]["price"] == {
+        "amount": 45.5,
+        "currency": "USD",
+        "unit": "person",
+        "reliability": "estimate",
+    }
     assert "category" not in trip["bookingCountdown"][1]
+    assert "price" not in trip["bookingCountdown"][1]

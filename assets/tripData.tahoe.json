@@ -83,7 +83,7 @@
     { "name": "South Lake Tahoe hotel / cabin", "area": "South Lake Tahoe, CA", "nights": 2, "pricePerNight": 190, "rating": "4.2", "booked": false }
   ],
   "bookingCountdown": [
-    { "item": "South Lake Tahoe lodging (weekend)", "bookBy": "2026-09-16", "where": "Booking / Airbnb / hotel direct", "category": "hotel", "priority": "high", "note": "Tahoe weekends sell out and surge-price; lock a refundable rate early." },
+    { "item": "South Lake Tahoe lodging (weekend)", "bookBy": "2026-09-16", "where": "Booking / Airbnb / hotel direct", "category": "hotel", "price": { "amount": 190, "currency": "USD", "unit": "night", "reliability": "reference" }, "priority": "high", "note": "Tahoe weekends sell out and surge-price; lock a refundable rate early." },
     { "item": "Vikingsholm castle tour (if wanted)", "bookBy": "2026-10-01", "where": "Sierra State Parks / vikingsholm.com", "category": "attraction", "priority": "low", "note": "Seasonal tours often end by late Sept/Oct — confirm it's still running." },
     { "item": "Campground (if camping instead): D.L. Bliss / Emerald Bay = ReserveCalifornia; Fallen Leaf = Recreation.gov", "bookBy": "2026-04-16", "where": "ReserveCalifornia.com (state) / Recreation.gov (USFS)", "category": "hotel", "priority": "medium", "note": "California STATE parks use ReserveCalifornia, NOT Recreation.gov. Both release ~6 months out. Many Tahoe campgrounds close for the season by mid-Oct." }
   ],

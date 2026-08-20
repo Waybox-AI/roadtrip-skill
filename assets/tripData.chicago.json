@@ -122,7 +122,7 @@
   ],
   "bookingCountdown": [
     { "item": "Chicago Architecture Foundation River Cruise", "bookBy": "2026-07-01", "where": "architecture.org", "category": "attraction", "priority": "high", "note": "Summer slots sell out weeks ahead; early-morning or evening tours are cooler and less crowded." },
-    { "item": "Chicago hotel (Loop or River North)", "bookBy": "2026-06-07", "where": "Booking / hotel direct", "category": "hotel", "priority": "high", "note": "August is peak summer season — rates and availability tighten fast." },
+    { "item": "Chicago hotel (Loop or River North)", "bookBy": "2026-06-07", "where": "Booking / hotel direct", "category": "hotel", "price": { "amount": 195, "currency": "USD", "unit": "night", "reliability": "reference" }, "priority": "high", "note": "August is peak summer season — rates and availability tighten fast." },
     { "item": "Frank Lloyd Wright Home & Studio tour", "bookBy": "2026-07-25", "where": "gowright.org", "category": "attraction", "priority": "medium", "note": "Timed-entry tours; weekend slots book out fast in summer." },
     { "item": "Shedd Aquarium / Museum of Science & Industry (optional rainy-day)", "bookBy": "2026-07-15", "where": "sheddaquarium.org / msichicago.org", "category": "attraction", "priority": "low", "note": "Timed tickets save long queues; worth adding if afternoon storms hit." }
   ],

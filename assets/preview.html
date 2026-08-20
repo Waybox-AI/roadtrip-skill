@@ -106,7 +106,13 @@
     box-shadow: 0 0 0 4px var(--card); }
   .booking-timeline-dot.pri-high { background: var(--danger); }
   .booking-copy { min-width: 0; }
+  .booking-title-row { display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; }
   .booking-copy h3 { margin: 0 0 4px; font-size: .95rem; }
+  .booking-price { flex: none; border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 8px; background: var(--card-2); color: var(--ink);
+    font-size: .72rem; font-weight: 700; white-space: nowrap; }
+  .booking-price.unknown { color: var(--muted); font-weight: 600; }
   .booking-copy p { margin: 0; color: var(--muted); font-size: .82rem; }
   .booking-copy p + p { margin-top: 3px; }
   .booking-empty { margin: 18px 0 8px; color: var(--muted); font-size: .88rem; }
@@ -152,9 +158,6 @@
   .rel.reference { background: var(--accent-soft); color: var(--accent); }
   .rel.estimate { background: var(--card-2); color: var(--muted); }
   tfoot td { font-weight: 700; border-top: 2px solid var(--ink); border-bottom: 0; }
-
-  .grid2 { display: grid; grid-template-columns: 1fr; gap: 14px; }
-  @media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } }
 
   ul.tips { margin: 0; padding-left: 18px; }
   ul.tips li { margin: 6px 0; }
@@ -279,8 +282,7 @@
     <h2>📅 Day by day</h2>
     <div id="days"></div>
   </div>
-  <div class="section grid2">
-    <div id="lodging"></div>
+  <div class="section">
     <div id="budget"></div>
   </div>
   <div id="tips" class="section"></div>
@@ -677,6 +679,12 @@ var TRIP_DATA = {
       "bookBy": "2026-08-12",
       "where": "Authorized Navajo tour operator",
       "category": "attraction",
+      "price": {
+        "amount": 90,
+        "currency": "USD",
+        "unit": "person",
+        "reliability": "reference"
+      },
       "priority": "high",
       "note": "Sells out weeks ahead in peak season."
     },
@@ -685,6 +693,12 @@ var TRIP_DATA = {
       "bookBy": "2026-03-18",
       "where": "Xanterra / GrandCanyonLodges.com",
       "category": "hotel",
+      "price": {
+        "amount": 230,
+        "currency": "USD",
+        "unit": "night",
+        "reliability": "reference"
+      },
       "priority": "high",
       "note": "In-park lodges can book ~13 months out."
     },
@@ -693,6 +707,12 @@ var TRIP_DATA = {
       "bookBy": "2026-08-18",
       "where": "GrandCanyonLodges.com",
       "category": "restaurant",
+      "price": {
+        "amount": 45,
+        "currency": "USD",
+        "unit": "person",
+        "reliability": "estimate"
+      },
       "priority": "medium",
       "note": "Dinner reservations open ahead of arrival."
     },
@@ -701,6 +721,12 @@ var TRIP_DATA = {
       "bookBy": "2026-06-12",
       "where": "Booking / hotel direct",
       "category": "hotel",
+      "price": {
+        "amount": 245,
+        "currency": "USD",
+        "unit": "night",
+        "reliability": "reference"
+      },
       "priority": "medium",
       "note": "Springdale is small; rooms tighten in fall."
     }
@@ -1047,6 +1073,31 @@ var TRIP_DATA = {
     };
   }
 
+  function bookingPriceMarkup(item) {
+    var price = item.price;
+    if (typeof price === "number") price = { amount: price };
+    if (!price || typeof price !== "object" || typeof price.amount !== "number" ||
+        !isFinite(price.amount) || price.amount < 0) {
+      return '<span class="booking-price unknown">' +
+        (isZh() ? "价格待确认" : "Check price") + "</span>";
+    }
+    if (price.amount === 0) {
+      return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";
+    }
+    var code = String(price.currency || cur).toUpperCase();
+    var symbols = { USD: "$", CAD: "C$", MXN: "MX$", CNY: "¥", RMB: "¥" };
+    var symbol = symbols[code] || code + " ";
+    var prefix = price.reliability === "estimate" ? "≈" :
+      (price.reliability === "reference" ? "~" : "");
+    var unit = String(price.unit || "total").toLowerCase();
+    var units = isZh()
+      ? { person: "/人", night: "/晚", vehicle: "/车", group: "/组", booking: "/次", total: "" }
+      : { person: "/person", night: "/night", vehicle: "/vehicle", group: "/group",
+          booking: "/booking", total: "" };
+    return '<span class="booking-price">' + prefix + symbol +
+      Number(price.amount).toLocaleString("en-US") + esc(units[unit] || ("/" + unit)) + "</span>";
+  }
+
   function bookingPanelMarkup(category, items, active) {
     var label = isZh() ? category.zh : category.en;
     var first = items.length ? bookingDateParts(items[0].bookBy) : null;
@@ -1063,13 +1114,15 @@ var TRIP_DATA = {
       var source = item.where
         ? "<p>" + (isZh() ? "预订渠道：" : "via ") + esc(item.where) + "</p>" : "";
       var note = item.note ? "<p>" + esc(item.note) + "</p>" : "";
+      var price = bookingPriceMarkup(item);
       var priority = item.priority === "high" ? " pri-high" : "";
       return '<article class="booking-timeline-row">' +
         '<time class="booking-timeline-date" datetime="' + esc(date.iso) + '" aria-label="' +
           (isZh() ? "预订截止 " : "Book by ") + esc(item.bookBy) + '"><strong>' +
           date.short + "</strong><span>" + date.year + "</span></time>" +
         '<span class="booking-timeline-dot' + priority + '" aria-hidden="true"></span>' +
-        '<div class="booking-copy"><h3>' + esc(item.item) + "</h3>" + source + note + "</div></article>";
+        '<div class="booking-copy"><div class="booking-title-row"><h3>' + esc(item.item) +
+        "</h3>" + price + "</div>" + source + note + "</div></article>";
     }).join("");
     if (!rows) rows = '<p class="booking-empty">' +
       (isZh() ? "这个分类暂时没有需要提前预订的项目。" :
@@ -1245,32 +1298,6 @@ var TRIP_DATA = {
     return r + "</li>";
   }
 
-  // ---------- Lodging ----------
-  function renderLodging() {
-    var L = T.lodging || [];
-    if (!L.length) { el("lodging").innerHTML = ""; return; }
-    var linkNames = [["booking", "Booking"], ["airbnb", "Airbnb"], ["google_hotels", "Hotels"],
-                     ["ctrip", "携程"],
-                     ["koa", "KOA"], ["hipcamp", "Hipcamp"], ["recreation_gov", "Rec.gov"]];
-    var rows = L.map(function (h) {
-      var lk = h.links || {};
-      var links = linkNames.filter(function (p) { return lk[p[0]]; }).map(function (p) {
-        return '<a href="' + esc(lk[p[0]]) + '" target="_blank" rel="noopener">' + p[1] + "</a>";
-      }).join(" · ");
-      return "<tr><td>" + esc(h.name) + (h.booked ? " ✅" : "") +
-        "<div class='stop-note'>" + esc(h.area || "") +
-        (links ? (h.area ? " · " : "") + links : "") + "</div></td>" +
-        "<td class='num'>" + (h.nights || 1) + "</td>" +
-        "<td class='num'>" + (h.rating ? "★ " + esc(h.rating) : "—") + "</td>" +
-        "<td class='num'>" + money(h.pricePerNight) + "</td></tr>";
-    }).join("");
-    el("lodging").innerHTML =
-      '<div><h2 style="font-size:1.15rem;margin:0 0 12px">🛏️ Lodging</h2>' +
-      '<div class="card" style="padding:6px 10px"><table><thead><tr>' +
-      "<th>Place</th><th class='num'>Nights</th><th class='num'>Rating</th><th class='num'>/night</th>" +
-      "</tr></thead><tbody>" + rows + "</tbody></table></div></div>";
-  }
-
   // ---------- Budget ----------
   function renderBudget() {
     var b = T.budget;
@@ -1330,7 +1357,7 @@ var TRIP_DATA = {
   try {
     renderHero(); renderRoutes(); renderBookingTabs(); renderCrossBorder();
     renderDays(); renderEvPlan();
-    renderLodging(); renderBudget(); renderTips(); renderShare(); renderDisclaimer();
+    renderBudget(); renderTips(); renderShare(); renderDisclaimer();
     renderMap();
   } catch (err) {
     el("app").insertAdjacentHTML("afterbegin",

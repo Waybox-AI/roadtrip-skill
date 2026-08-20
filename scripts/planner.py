@@ -288,7 +288,11 @@ def build_user(payload, region):
    "meal":{"name":str,"perPerson":int},"risks":[str]}],
  "lodging":[{"name":str,"area":str,"nights":int,"pricePerNight":int,"rating":str,"booked":false}],
  "bookingCountdown":[{"item":str,"bookBy":"YYYY-MM-DD","where":str,
-   "category":"attraction|restaurant|hotel","priority":"high|medium|low","note":str}],
+   "category":"attraction|restaurant|hotel",
+   "price":{"amount":number,"currency":str,
+     "unit":"person|night|vehicle|group|booking|total",
+     "reliability":"verified|reference|estimate"}?,
+   "priority":"high|medium|low","note":str}],
  "budget":{"currency":"USD|CAD|MXN|CNY","items":[{"label":str,"amount":int,"reliability":"verified|reference|estimate"}],
    "total":int,"perPerson":int},
  "tips":[str], "disclaimer":str, "generationDate":"YYYY-MM-DD",
@@ -376,6 +380,10 @@ def build_user(payload, region):
         "Mexico→MXN, China→CNY). NEVER convert amounts into another currency — a trip "
         "entirely within China prices every line in CNY yuan. Cross-border US/CA/MX trips keep "
         "the existing USD convention with local-currency notes.\n"
+        "- Every bookingCountdown item should include price when supportable: hotels per night, "
+        "restaurants per person, and attraction tickets/permits when required. Use amount 0 for "
+        "free reservations; use the trip currency's ISO code unless the item is explicitly priced "
+        "locally, and omit price rather than inventing an unsupported exact live price.\n"
         "- No reservation 'bookBy' date may be before today.\n"
         "- Include \"crossings\" ONLY if the route crosses a US/Canada/Mexico border: one entry "
         "per crossing in driving order, with the trip day number it happens on; omit the key "
@@ -1017,6 +1025,9 @@ def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
         extra_schema += (
             ',\n "bookingCountdown": [{"item":str,"bookBy":"YYYY-MM-DD","where":str,'
             '"category":"attraction|restaurant|hotel",'
+            '"price":{"amount":number,"currency":str,"unit":'
+            '"person|night|vehicle|group|booking|total",'
+            '"reliability":"verified|reference|estimate"}?, '
             '"priority":"high|medium|low","note":str}]'
             "   // OPTIONAL — include ONLY if the request changes what must be"
             " reserved for this stay; return the FULL replacement list for it"
@@ -1600,6 +1611,22 @@ def _apply_stay_bookings(trip, stale, new_bookings):
         category = b.get("category")
         if category in ("attraction", "restaurant", "hotel"):
             entry["category"] = category
+        raw_price = b.get("price")
+        if isinstance(raw_price, dict):
+            amount = raw_price.get("amount")
+            if (isinstance(amount, (int, float)) and not isinstance(amount, bool)
+                    and amount >= 0):
+                price = {"amount": round(amount, 2)}
+                currency = _s(raw_price.get("currency")).strip().upper()[:3]
+                if currency:
+                    price["currency"] = currency
+                unit = raw_price.get("unit")
+                if unit in ("person", "night", "vehicle", "group", "booking", "total"):
+                    price["unit"] = unit
+                reliability = raw_price.get("reliability")
+                if reliability in ("verified", "reference", "estimate"):
+                    price["reliability"] = reliability
+                entry["price"] = price
         note = _s(b.get("note")).strip()
         if note:
             entry["note"] = note[:240]

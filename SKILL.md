@@ -142,6 +142,9 @@ one-way car/RV rental (lock price early). Render at the top of the page as
 Attractions / Restaurants / Hotels tabs, each with its own deadline timeline.
 Populate `bookingCountdown[]` and set each item's optional `category` to
 `attraction`, `restaurant`, or `hotel` (use the closest category for legacy tasks).
+Include a structured `price` when known: hotel per night, restaurant per person,
+and attraction ticket/permit price when required. Use amount `0` for a free reservation;
+never invent an exact live price when it cannot be supported.
 
 ### Step 6 — Budget (with reliability grading)
 Tag every line **verified / reference(~) / estimate(≈)**. Road-trip specifics:

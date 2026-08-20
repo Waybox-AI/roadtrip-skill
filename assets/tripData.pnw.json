@@ -445,6 +445,12 @@
       "bookBy": "2026-03-15",
       "where": "Booking / hotel direct",
       "category": "hotel",
+      "price": {
+        "amount": 250,
+        "currency": "USD",
+        "unit": "night",
+        "reliability": "estimate"
+      },
       "priority": "medium",
       "note": "Whistler is cheap off-season but books up on weekends."
     },
