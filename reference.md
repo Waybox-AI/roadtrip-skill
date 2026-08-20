@@ -78,6 +78,8 @@ missing.
       // category: attraction | restaurant | hotel; optional for backward compatibility
       // price.unit: person | night | vehicle | group | booking | total
       // amount 0 means free; omit price only when it is genuinely unknown
+      // the view shows a matched date, "no advance booking" for unmatched
+      // attractions/meals, or "deadline unknown" for unmatched lodging
   ],
 
   "budget": {

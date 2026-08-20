@@ -1146,6 +1146,7 @@ var TRIP_DATA = {
         note: deadline.note,
         stayArea: hotel.area || "",
         nights: hotel.nights,
+        bookingRequired: true,
         booked: hotel.booked === true
       };
     });
@@ -1195,7 +1196,8 @@ var TRIP_DATA = {
         price: deadline.price || meal.price,
         priority: deadline.priority,
         note: deadline.note,
-        visitDates: meal.visitDates
+        visitDates: meal.visitDates,
+        bookingRequired: Boolean(deadline.bookBy)
       };
     });
     deadlines.forEach(function (deadline, deadlineIndex) {
@@ -1245,7 +1247,8 @@ var TRIP_DATA = {
         priceLabel: attraction.priceLabel,
         priority: deadline.priority,
         note: deadline.note,
-        visitDates: attraction.visitDates
+        visitDates: attraction.visitDates,
+        bookingRequired: Boolean(deadline.bookBy)
       };
     });
     deadlines.forEach(function (deadline, deadlineIndex) {
@@ -1254,9 +1257,18 @@ var TRIP_DATA = {
     return merged;
   }
 
-  function bookingDateParts(value) {
+  function bookingDateParts(value, bookingRequired) {
     var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
-    if (!match) return { short: esc(value || (isZh() ? "待确认" : "TBD")), year: "", iso: "" };
+    if (!match) {
+      var noAdvanceBooking = bookingRequired === false;
+      return {
+        short: esc(value || (noAdvanceBooking
+          ? (isZh() ? "无需提前预约" : "No advance booking")
+          : (isZh() ? "暂时不知道截止日期" : "Deadline unknown"))),
+        year: "",
+        iso: ""
+      };
+    }
     var months = isZh()
       ? ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
       : ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -1321,7 +1333,19 @@ var TRIP_DATA = {
     return bits.length ? '<p class="booking-item-meta">' + bits.join(" · ") + "</p>" : "";
   }
 
-  function bookingPanelTitle(category, count) {
+  function bookingPanelTitle(category, items) {
+    var count = items.length;
+    if (category.id === "hotel") {
+      var totalNights = items.reduce(function (sum, item) {
+        return sum + (typeof item.nights === "number" && item.nights > 0 ? item.nights : 0);
+      }, 0);
+      if (totalNights) {
+        return isZh()
+          ? count + " 个住宿 · " + totalNights + " 晚"
+          : count + " stay" + (count === 1 ? "" : "s") + " · " + totalNights +
+            " night" + (totalNights === 1 ? "" : "s");
+      }
+    }
     if (isZh()) {
       if (category.id === "restaurant") return count + " 个用餐安排与预订截止日期";
       if (category.id === "hotel") return count + " 个住宿安排与预订截止日期";
@@ -1336,7 +1360,7 @@ var TRIP_DATA = {
     var label = isZh() ? category.zh : category.en;
     var first = null;
     items.some(function (item) {
-      var date = bookingDateParts(item.bookBy);
+      var date = bookingDateParts(item.bookBy, item.bookingRequired);
       if (!date.iso) return false;
       first = date;
       return true;
@@ -1344,9 +1368,9 @@ var TRIP_DATA = {
     var earliest = first
       ? (isZh() ? "最早截止 · " : "Earliest deadline · ") + first.short
       : (isZh() ? "暂无截止日期" : "No deadlines yet");
-    var title = bookingPanelTitle(category, items.length);
+    var title = bookingPanelTitle(category, items);
     var rows = items.map(function (item) {
-      var date = bookingDateParts(item.bookBy);
+      var date = bookingDateParts(item.bookBy, item.bookingRequired);
       var source = item.where
         ? "<p>" + (isZh() ? "预订渠道：" : "via ") + esc(item.where) + "</p>" : "";
       var meta = bookingItemMetaMarkup(item);
@@ -1355,7 +1379,9 @@ var TRIP_DATA = {
       var priority = item.priority === "high" ? " pri-high" : "";
       var deadlineLabel = date.iso
         ? (isZh() ? "预订截止 " : "Book by ") + item.bookBy
-        : (isZh() ? "截止日期待确认" : "Deadline to confirm");
+        : (item.bookingRequired === false
+          ? (isZh() ? "无需提前预约" : "No advance booking required")
+          : (isZh() ? "暂时不知道截止日期" : "Booking deadline unknown"));
       return '<article class="booking-timeline-row">' +
         '<time class="booking-timeline-date" datetime="' + esc(date.iso) + '" aria-label="' +
           esc(deadlineLabel) + '"><strong>' +

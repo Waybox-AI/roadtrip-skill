@@ -135,7 +135,16 @@ def test_booking_items_show_trip_dates_and_honest_missing_deadlines():
     template = _template()
     assert "function tripDateLabel(value)" in template
     assert "function bookingItemMetaMarkup(item)" in template
-    assert 'isZh() ? "待确认" : "TBD"' in template
+    assert 'isZh() ? "无需提前预约" : "No advance booking"' in template
+    assert 'isZh() ? "暂时不知道截止日期" : "Deadline unknown"' in template
+    assert "bookingRequired: Boolean(deadline.bookBy)" in template
+
+
+def test_hotel_title_sums_stays_and_nights():
+    template = _template()
+    assert "var totalNights = items.reduce" in template
+    assert '" stay" + (count === 1 ? "" : "s") + " · " + totalNights' in template
+    assert '" night" + (totalNights === 1 ? "" : "s")' in template
 
 
 def test_parks_countdown_assigns_categories():
