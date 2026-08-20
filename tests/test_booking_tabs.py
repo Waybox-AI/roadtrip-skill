@@ -63,6 +63,31 @@ def test_lodging_table_is_removed_but_budget_rendering_remains():
     assert 'renderBudget(); renderTips(); renderShare();' in template
 
 
+def test_hotel_tab_merges_every_lodging_with_matching_deadlines():
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    hotel_deadlines = [
+        item for item in trip["bookingCountdown"] if item.get("category") == "hotel"
+    ]
+    assert len(trip["lodging"]) == 4
+    assert len(hotel_deadlines) == 2
+
+    template = _template()
+    assert "function hotelBookingItems(list)" in template
+    assert "var hotels = Array.isArray(T.lodging)" in template
+    assert 'groups.hotel = hotelBookingItems(list);' in template
+    assert 'stayArea: hotel.area || ""' in template
+    assert "nights: hotel.nights" in template
+    assert 'item.nights + " night"' in template
+
+
+def test_lodging_alone_still_renders_booking_tabs():
+    template = _template()
+    assert "if (!list.length && !lodging.length)" in template
+    assert "if (!hotels.length) return deadlines;" in template
+
+
 def test_parks_countdown_assigns_categories():
     items = countdown("2030-09-12")["bookingCountdown"]
     assert [item["category"] for item in items] == ["hotel", "attraction", "hotel"]

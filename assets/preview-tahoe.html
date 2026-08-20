@@ -114,6 +114,7 @@
     font-size: .72rem; font-weight: 700; white-space: nowrap; }
   .booking-price.unknown { color: var(--muted); font-weight: 600; }
   .booking-copy p { margin: 0; color: var(--muted); font-size: .82rem; }
+  .booking-copy .booking-stay-meta { color: var(--ink); font-weight: 600; }
   .booking-copy p + p { margin-top: 3px; }
   .booking-empty { margin: 18px 0 8px; color: var(--muted); font-size: .88rem; }
 
@@ -836,9 +837,89 @@ var TRIP_DATA = {
     return "attraction";
   }
 
+  function bookingMatchTokens(value) {
+    var stop = ["and", "area", "book", "booking", "cabin", "camp", "campsite", "canyon",
+      "city", "direct", "grand", "hotel", "hostel", "inn", "lodge", "lodging", "motel",
+      "resort", "the"];
+    return (String(value || "").toLowerCase().match(/[a-z0-9\u3400-\u9fff]{3,}/g) || [])
+      .filter(function (token) { return stop.indexOf(token) < 0; });
+  }
+
+  function sharedBookingTokens(left, right) {
+    var rightTokens = bookingMatchTokens(right);
+    return bookingMatchTokens(left).filter(function (token, index, tokens) {
+      return tokens.indexOf(token) === index && rightTokens.indexOf(token) >= 0;
+    }).length;
+  }
+
+  function hotelDeadlineScore(hotel, deadline) {
+    var deadlineText = [deadline.item, deadline.where, deadline.note].join(" ").toLowerCase();
+    var name = String(hotel.name || "").toLowerCase();
+    var area = String(hotel.area || "").toLowerCase();
+    var score = sharedBookingTokens(hotel.name, deadlineText) * 3 +
+      sharedBookingTokens(hotel.area, deadlineText);
+    if (name.length >= 4 && deadlineText.indexOf(name) >= 0) score += 10;
+    if (area.length >= 4 && deadlineText.indexOf(area) >= 0) score += 8;
+    return score;
+  }
+
+  function hotelBookingItems(list) {
+    var deadlines = list.filter(function (item) { return bookingCategory(item) === "hotel"; });
+    var hotels = Array.isArray(T.lodging) ? T.lodging.filter(function (hotel) {
+      return hotel && (hotel.name || hotel.area);
+    }) : [];
+    if (!hotels.length) return deadlines;
+
+    var matches = {};
+    var usedDeadlines = {};
+    deadlines.forEach(function (deadline, deadlineIndex) {
+      var bestHotel = -1;
+      var bestScore = 1;
+      hotels.forEach(function (hotel, hotelIndex) {
+        if (matches[hotelIndex]) return;
+        var score = hotelDeadlineScore(hotel, deadline);
+        if (score > bestScore) { bestScore = score; bestHotel = hotelIndex; }
+      });
+      if (bestHotel >= 0) {
+        matches[bestHotel] = deadline;
+        usedDeadlines[deadlineIndex] = true;
+      }
+    });
+
+    var merged = hotels.map(function (hotel, hotelIndex) {
+      var deadline = matches[hotelIndex] || {};
+      var price = deadline.price;
+      if (typeof hotel.pricePerNight === "number" && isFinite(hotel.pricePerNight) &&
+          hotel.pricePerNight >= 0) {
+        price = {
+          amount: hotel.pricePerNight,
+          currency: price && price.currency ? price.currency : cur,
+          unit: "night",
+          reliability: price && price.reliability ? price.reliability : "reference"
+        };
+      }
+      return {
+        item: hotel.name || deadline.item || hotel.area,
+        bookBy: deadline.bookBy || "",
+        where: deadline.where || "",
+        category: "hotel",
+        price: price,
+        priority: deadline.priority,
+        note: deadline.note,
+        stayArea: hotel.area || "",
+        nights: hotel.nights,
+        booked: hotel.booked === true
+      };
+    });
+    deadlines.forEach(function (deadline, deadlineIndex) {
+      if (!usedDeadlines[deadlineIndex]) merged.push(deadline);
+    });
+    return merged;
+  }
+
   function bookingDateParts(value) {
     var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
-    if (!match) return { short: esc(value || "—"), year: "", iso: "" };
+    if (!match) return { short: esc(value || (isZh() ? "待确认" : "TBD")), year: "", iso: "" };
     var months = isZh()
       ? ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
       : ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -876,29 +957,48 @@ var TRIP_DATA = {
 
   function bookingPanelMarkup(category, items, active) {
     var label = isZh() ? category.zh : category.en;
-    var first = items.length ? bookingDateParts(items[0].bookBy) : null;
+    var first = null;
+    items.some(function (item) {
+      var date = bookingDateParts(item.bookBy);
+      if (!date.iso) return false;
+      first = date;
+      return true;
+    });
     var earliest = first
       ? (isZh() ? "最早截止 · " : "Earliest deadline · ") + first.short
       : (isZh() ? "暂无截止日期" : "No deadlines yet");
     var title = isZh()
       ? items.length + " 个" + label + "预订需要安排"
-      : items.length + " " + (items.length === 1 ? category.singular : label.toLowerCase()) +
+      : items.length + " " + category.singular +
         " booking" + (items.length === 1 ? "" : "s") +
         " to schedule";
     var rows = items.map(function (item) {
       var date = bookingDateParts(item.bookBy);
       var source = item.where
         ? "<p>" + (isZh() ? "预订渠道：" : "via ") + esc(item.where) + "</p>" : "";
+      var stay = "";
+      if (item.stayArea || (typeof item.nights === "number" && item.nights > 0)) {
+        var stayBits = [];
+        if (item.stayArea) stayBits.push(esc(item.stayArea));
+        if (typeof item.nights === "number" && item.nights > 0) {
+          stayBits.push(isZh() ? item.nights + " 晚" :
+            item.nights + " night" + (item.nights === 1 ? "" : "s"));
+        }
+        stay = '<p class="booking-stay-meta">' + stayBits.join(" · ") + "</p>";
+      }
       var note = item.note ? "<p>" + esc(item.note) + "</p>" : "";
       var price = bookingPriceMarkup(item);
       var priority = item.priority === "high" ? " pri-high" : "";
+      var deadlineLabel = date.iso
+        ? (isZh() ? "预订截止 " : "Book by ") + item.bookBy
+        : (isZh() ? "截止日期待确认" : "Deadline to confirm");
       return '<article class="booking-timeline-row">' +
         '<time class="booking-timeline-date" datetime="' + esc(date.iso) + '" aria-label="' +
-          (isZh() ? "预订截止 " : "Book by ") + esc(item.bookBy) + '"><strong>' +
+          esc(deadlineLabel) + '"><strong>' +
           date.short + "</strong><span>" + date.year + "</span></time>" +
         '<span class="booking-timeline-dot' + priority + '" aria-hidden="true"></span>' +
         '<div class="booking-copy"><div class="booking-title-row"><h3>' + esc(item.item) +
-        "</h3>" + price + "</div>" + source + note + "</div></article>";
+        "</h3>" + price + "</div>" + stay + source + note + "</div></article>";
     }).join("");
     if (!rows) rows = '<p class="booking-empty">' +
       (isZh() ? "这个分类暂时没有需要提前预订的项目。" :
@@ -913,9 +1013,14 @@ var TRIP_DATA = {
 
   function renderBookingTabs() {
     var list = T.bookingCountdown || [];
-    if (!list.length) { el("bookingTabs").innerHTML = ""; return; }
+    var lodging = Array.isArray(T.lodging) ? T.lodging : [];
+    if (!list.length && !lodging.length) { el("bookingTabs").innerHTML = ""; return; }
     var groups = { attraction: [], restaurant: [], hotel: [] };
-    list.forEach(function (item) { groups[bookingCategory(item)].push(item); });
+    list.forEach(function (item) {
+      var category = bookingCategory(item);
+      if (category !== "hotel") groups[category].push(item);
+    });
+    groups.hotel = hotelBookingItems(list);
     BOOKING_CATEGORIES.forEach(function (category) {
       groups[category.id].sort(function (a, b) {
         return String(a.bookBy || "9999").localeCompare(String(b.bookBy || "9999"));
