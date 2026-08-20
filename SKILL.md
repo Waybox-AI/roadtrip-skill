@@ -138,8 +138,10 @@ on failure.** See `reference.md` for the tool routing table and `tools/`.
 From the departure date, generate a "book by" to-do list:
 campgrounds (Recreation.gov, ~T-6 months), timed-entry / wilderness permits
 (per park rule, T-X days), popular in-park lodges (up to ~T-13 months),
-one-way car/RV rental (lock price early). Render as a ⚠️ checklist at the top of
-the page + a timeline. Populate `bookingCountdown[]`.
+one-way car/RV rental (lock price early). Render at the top of the page as
+Attractions / Restaurants / Hotels tabs, each with its own deadline timeline.
+Populate `bookingCountdown[]` and set each item's optional `category` to
+`attraction`, `restaurant`, or `hotel` (use the closest category for legacy tasks).
 
 ### Step 6 — Budget (with reliability grading)
 Tag every line **verified / reference(~) / estimate(≈)**. Road-trip specifics:

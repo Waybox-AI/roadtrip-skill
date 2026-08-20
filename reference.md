@@ -65,10 +65,12 @@ missing.
       // as a small links row under the name
   ],
 
-  "bookingCountdown": [            // drives the top ⚠️ countdown banner
+  "bookingCountdown": [            // drives the categorized booking-deadline tabs
     { "item": "Watchman Campground", "bookBy": "2026-03-12",
-      "where": "Recreation.gov", "priority": "high", "note": "T-6 months.",
+      "where": "Recreation.gov", "category": "hotel",
+      "priority": "high", "note": "T-6 months.",
       "source": "parks_client" }   // set when bookBy came from the release-rule table
+      // category: attraction | restaurant | hotel; optional for backward compatibility
   ],
 
   "budget": {

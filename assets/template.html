@@ -69,17 +69,47 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     box-shadow: var(--shadow); }
 
-  /* Booking countdown */
-  .countdown { border-left: 5px solid var(--warn); padding: 16px 18px; }
-  .countdown h2 { color: var(--warn); }
-  .cd-item { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline;
-    padding: 10px 0; border-bottom: 1px dashed var(--line); }
-  .cd-item:last-child { border-bottom: 0; }
-  .cd-by { font-weight: 700; color: var(--warn); white-space: nowrap; }
-  .cd-name { font-weight: 600; }
-  .cd-where { color: var(--muted); font-size: .88rem; }
-  .cd-note { color: var(--muted); font-size: .85rem; flex-basis: 100%; }
-  .pri-high { color: var(--danger); }
+  /* Categorized booking deadlines */
+  .booking-zone { overflow: hidden; }
+  .booking-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    padding: 8px; background: var(--card-2); border-bottom: 1px solid var(--line); }
+  .booking-tab { display: flex; align-items: center; justify-content: center; gap: 8px;
+    min-width: 0; border: 0; border-radius: 999px; padding: 10px 12px;
+    background: transparent; color: var(--muted); cursor: pointer;
+    font: 650 .88rem/1 inherit; }
+  .booking-tab:hover { color: var(--ink); }
+  .booking-tab[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+  .booking-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .booking-tab-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px;
+    border-radius: 999px; padding: 0 5px; background: rgba(127,127,127,.16);
+    color: inherit; font-size: .7rem; }
+  .booking-panel { padding: 20px; }
+  .booking-panel[hidden] { display: none; }
+  .booking-panel-head { display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; margin-bottom: 8px; }
+  .booking-kicker { margin: 0 0 4px; color: var(--muted); font-size: .72rem;
+    font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }
+  .booking-panel-head h2 { margin: 0; font-size: 1.1rem; }
+  .booking-earliest { flex: none; border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 10px; background: var(--accent-soft); color: var(--accent);
+    font-size: .75rem; white-space: nowrap; }
+  .booking-timeline { position: relative; display: grid; }
+  .booking-timeline::before { content: ""; position: absolute; top: 18px; bottom: 18px;
+    left: 91px; width: 1px; background: var(--line); }
+  .booking-timeline-row { position: relative; display: grid;
+    grid-template-columns: 74px 18px minmax(0, 1fr); gap: 10px; padding: 12px 0; }
+  .booking-timeline-date { color: var(--muted); font-size: .72rem; line-height: 1.35;
+    text-align: right; text-decoration: none; }
+  .booking-timeline-date strong { display: block; color: var(--ink); font-size: .78rem; }
+  .booking-timeline-dot { position: relative; z-index: 1; width: 10px; height: 10px;
+    margin-top: 4px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 4px var(--card); }
+  .booking-timeline-dot.pri-high { background: var(--danger); }
+  .booking-copy { min-width: 0; }
+  .booking-copy h3 { margin: 0 0 4px; font-size: .95rem; }
+  .booking-copy p { margin: 0; color: var(--muted); font-size: .82rem; }
+  .booking-copy p + p { margin-top: 3px; }
+  .booking-empty { margin: 18px 0 8px; color: var(--muted); font-size: .88rem; }
 
   /* Map */
   #map { height: 460px; border-radius: 14px; border: 1px solid var(--line); }
@@ -205,7 +235,11 @@
     table { font-size: .84rem; }
     th, td { padding: 7px 8px; }
     .routes-table { min-width: 600px; }   /* keep columns legible; scroll within .scrollx */
-    .cd-by { white-space: normal; }
+    .booking-panel { padding: 16px 14px; }
+    .booking-panel-head { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .booking-tab { gap: 5px; padding: 9px 6px; font-size: .8rem; }
+    .booking-timeline::before { left: 77px; }
+    .booking-timeline-row { grid-template-columns: 60px 18px minmax(0, 1fr); gap: 8px; }
     .theme-toggle { position: static; margin: 14px 0 0; }
   }
 
@@ -220,7 +254,9 @@
     body { background: #fff; color: #1f1f1e; }
     #map { height: 320px; }
     .card, header.hero { box-shadow: none; }
-    .countdown { break-inside: avoid; }
+    .booking-tabs { display: none; }
+    .booking-panel, .booking-panel[hidden] { display: block !important; break-inside: avoid; }
+    .booking-panel + .booking-panel { border-top: 1px solid var(--line); }
     .day { break-inside: avoid; }
   }
 </style>
@@ -229,7 +265,7 @@
 <div class="wrap" id="app">
   <header class="hero" id="hero"></header>
   <div id="routes"></div>
-  <div id="countdown"></div>
+  <div id="bookingTabs"></div>
   <div id="crossborder"></div>
   <div class="section">
     <h2>🗺️ Route map</h2>
@@ -515,24 +551,123 @@ var TRIP_DATA = __TRIP_DATA__;
       "</tr></thead><tbody>" + rows + "</tbody></table></div>" + warns + assume + "</div>";
   }
 
-  // ---------- Booking countdown ----------
-  function renderCountdown() {
-    var list = T.bookingCountdown || [];
-    if (!list.length) { el("countdown").innerHTML = ""; return; }
-    var rows = list.map(function (c) {
-      var pri = c.priority === "high" ? " pri-high" : "";
-      var s = '<div class="cd-item">';
-      s += '<span class="cd-by' + pri + '">⏳ Book by ' + esc(c.bookBy) + "</span>";
-      s += '<span class="cd-name">' + esc(c.item) + "</span>";
-      if (c.where) s += '<span class="cd-where">via ' + esc(c.where) + "</span>";
-      if (c.note) s += '<span class="cd-note">' + esc(c.note) + "</span>";
-      s += "</div>";
-      return s;
+  // ---------- Categorized booking deadlines ----------
+  var BOOKING_CATEGORIES = [
+    { id: "attraction", icon: "◇", en: "Attractions", singular: "attraction", zh: "景点" },
+    { id: "restaurant", icon: "⌁", en: "Restaurants", singular: "restaurant", zh: "餐厅" },
+    { id: "hotel", icon: "▣", en: "Hotels", singular: "hotel", zh: "酒店" }
+  ];
+
+  function bookingCategory(item) {
+    var explicit = String(item.category || "").toLowerCase();
+    if (["attraction", "restaurant", "hotel"].indexOf(explicit) >= 0) return explicit;
+    var text = [item.item, item.where, item.note].join(" ").toLowerCase();
+    if (/restaurant|dining|dinner|lunch|breakfast|cafe|bistro|meal|餐厅|餐馆|餐饮|晚餐|午餐|早餐|咖啡/.test(text)) {
+      return "restaurant";
+    }
+    if (/hotel|lodg|motel|inn|resort|hostel|cabin|camp|airbnb|住宿|酒店|旅馆|民宿|营地|露营|山庄/.test(text)) {
+      return "hotel";
+    }
+    return "attraction";
+  }
+
+  function bookingDateParts(value) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+    if (!match) return { short: esc(value || "—"), year: "", iso: "" };
+    var months = isZh()
+      ? ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
+      : ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    return {
+      short: isZh() ? months[Number(match[2]) - 1] + Number(match[3]) + "日"
+                    : months[Number(match[2]) - 1] + " " + Number(match[3]),
+      year: match[1], iso: value
+    };
+  }
+
+  function bookingPanelMarkup(category, items, active) {
+    var label = isZh() ? category.zh : category.en;
+    var first = items.length ? bookingDateParts(items[0].bookBy) : null;
+    var earliest = first
+      ? (isZh() ? "最早截止 · " : "Earliest deadline · ") + first.short
+      : (isZh() ? "暂无截止日期" : "No deadlines yet");
+    var title = isZh()
+      ? items.length + " 个" + label + "预订需要安排"
+      : items.length + " " + (items.length === 1 ? category.singular : label.toLowerCase()) +
+        " booking" + (items.length === 1 ? "" : "s") +
+        " to schedule";
+    var rows = items.map(function (item) {
+      var date = bookingDateParts(item.bookBy);
+      var source = item.where
+        ? "<p>" + (isZh() ? "预订渠道：" : "via ") + esc(item.where) + "</p>" : "";
+      var note = item.note ? "<p>" + esc(item.note) + "</p>" : "";
+      var priority = item.priority === "high" ? " pri-high" : "";
+      return '<article class="booking-timeline-row">' +
+        '<time class="booking-timeline-date" datetime="' + esc(date.iso) + '" aria-label="' +
+          (isZh() ? "预订截止 " : "Book by ") + esc(item.bookBy) + '"><strong>' +
+          date.short + "</strong><span>" + date.year + "</span></time>" +
+        '<span class="booking-timeline-dot' + priority + '" aria-hidden="true"></span>' +
+        '<div class="booking-copy"><h3>' + esc(item.item) + "</h3>" + source + note + "</div></article>";
     }).join("");
-    el("countdown").innerHTML =
-      '<div class="section"><div class="card countdown">' +
-      "<h2>⚠️ Reservation countdown — book these before they sell out</h2>" +
-      rows + "</div></div>";
+    if (!rows) rows = '<p class="booking-empty">' +
+      (isZh() ? "这个分类暂时没有需要提前预订的项目。" :
+        "Nothing in this category needs advance booking yet.") + "</p>";
+    return '<section class="booking-panel" id="booking-panel-' + category.id +
+      '" role="tabpanel" tabindex="0" aria-labelledby="booking-tab-' + category.id + '"' +
+      (active ? "" : " hidden") + '><div class="booking-panel-head"><div>' +
+      '<p class="booking-kicker">' + label + (isZh() ? "预订" : " reservations") + "</p>" +
+      "<h2>" + title + '</h2></div><span class="booking-earliest">' + earliest + "</span></div>" +
+      '<div class="booking-timeline">' + rows + "</div></section>";
+  }
+
+  function renderBookingTabs() {
+    var list = T.bookingCountdown || [];
+    if (!list.length) { el("bookingTabs").innerHTML = ""; return; }
+    var groups = { attraction: [], restaurant: [], hotel: [] };
+    list.forEach(function (item) { groups[bookingCategory(item)].push(item); });
+    BOOKING_CATEGORIES.forEach(function (category) {
+      groups[category.id].sort(function (a, b) {
+        return String(a.bookBy || "9999").localeCompare(String(b.bookBy || "9999"));
+      });
+    });
+    var tabs = BOOKING_CATEGORIES.map(function (category, index) {
+      var label = isZh() ? category.zh : category.en;
+      return '<button class="booking-tab" id="booking-tab-' + category.id +
+        '" type="button" role="tab" aria-selected="' + (index === 0 ? "true" : "false") +
+        '" aria-controls="booking-panel-' + category.id + '" tabindex="' + (index === 0 ? "0" : "-1") +
+        '" data-booking-category="' + category.id + '"><span aria-hidden="true">' + category.icon +
+        '</span><span>' + label + '</span><span class="booking-tab-count">' + groups[category.id].length +
+        "</span></button>";
+    }).join("");
+    var panels = BOOKING_CATEGORIES.map(function (category, index) {
+      return bookingPanelMarkup(category, groups[category.id], index === 0);
+    }).join("");
+    el("bookingTabs").innerHTML = '<div class="section"><div class="card booking-zone">' +
+      '<nav class="booking-tabs" role="tablist" aria-label="' +
+      (isZh() ? "预订分类" : "Booking categories") + '">' + tabs +
+      '</nav><div class="booking-panels">' + panels + "</div></div></div>";
+
+    var tabButtons = Array.prototype.slice.call(
+      el("bookingTabs").querySelectorAll("[data-booking-category]"));
+    function activate(button, focus) {
+      tabButtons.forEach(function (candidate) {
+        var selected = candidate === button;
+        candidate.setAttribute("aria-selected", selected ? "true" : "false");
+        candidate.setAttribute("tabindex", selected ? "0" : "-1");
+        el(candidate.getAttribute("aria-controls")).hidden = !selected;
+      });
+      if (focus) button.focus();
+    }
+    tabButtons.forEach(function (button, index) {
+      button.addEventListener("click", function () { activate(button, false); });
+      button.addEventListener("keydown", function (event) {
+        var next = null;
+        if (event.key === "ArrowRight") next = (index + 1) % tabButtons.length;
+        if (event.key === "ArrowLeft") next = (index - 1 + tabButtons.length) % tabButtons.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = tabButtons.length - 1;
+        if (next !== null) { event.preventDefault(); activate(tabButtons[next], true); }
+      });
+    });
   }
 
   // ---------- Map ----------
@@ -730,7 +865,7 @@ var TRIP_DATA = __TRIP_DATA__;
 
   // ---------- Boot ----------
   try {
-    renderHero(); renderRoutes(); renderCountdown(); renderCrossBorder();
+    renderHero(); renderRoutes(); renderBookingTabs(); renderCrossBorder();
     renderDays(); renderEvPlan();
     renderLodging(); renderBudget(); renderTips(); renderShare(); renderDisclaimer();
     renderMap();

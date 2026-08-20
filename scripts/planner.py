@@ -287,7 +287,8 @@ def build_user(payload, region):
    "fuelCharging":[{"name":str,"type":"gas|charge","lat":float,"lng":float,"powerKW":int?,"note":str}],
    "meal":{"name":str,"perPerson":int},"risks":[str]}],
  "lodging":[{"name":str,"area":str,"nights":int,"pricePerNight":int,"rating":str,"booked":false}],
- "bookingCountdown":[{"item":str,"bookBy":"YYYY-MM-DD","where":str,"priority":"high|medium|low","note":str}],
+ "bookingCountdown":[{"item":str,"bookBy":"YYYY-MM-DD","where":str,
+   "category":"attraction|restaurant|hotel","priority":"high|medium|low","note":str}],
  "budget":{"currency":"USD|CAD|MXN|CNY","items":[{"label":str,"amount":int,"reliability":"verified|reference|estimate"}],
    "total":int,"perPerson":int},
  "tips":[str], "disclaimer":str, "generationDate":"YYYY-MM-DD",
@@ -1015,6 +1016,7 @@ def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
                    % json.dumps(cur_bookings, ensure_ascii=False))
         extra_schema += (
             ',\n "bookingCountdown": [{"item":str,"bookBy":"YYYY-MM-DD","where":str,'
+            '"category":"attraction|restaurant|hotel",'
             '"priority":"high|medium|low","note":str}]'
             "   // OPTIONAL — include ONLY if the request changes what must be"
             " reserved for this stay; return the FULL replacement list for it"
@@ -1595,6 +1597,9 @@ def _apply_stay_bookings(trip, stale, new_bookings):
                  "priority": (b.get("priority")
                               if b.get("priority") in ("high", "medium", "low")
                               else "medium")}
+        category = b.get("category")
+        if category in ("attraction", "restaurant", "hotel"):
+            entry["category"] = category
         note = _s(b.get("note")).strip()
         if note:
             entry["note"] = note[:240]
