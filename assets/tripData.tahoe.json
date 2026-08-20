@@ -21,7 +21,7 @@
       "weather": { "icon": "partly-cloudy", "high": 60, "low": 33 },
       "stops": [
         { "name": "Sunnyvale (start)", "type": "city", "lat": 37.3688, "lng": -122.0363, "note": "Fuel up; Sacramento and Placerville have the last cheap gas before the climb." },
-        { "name": "Apple Hill, Placerville", "type": "scenic", "lat": 38.7296, "lng": -120.7985, "note": "October = apple/harvest season; orchards, cider, pie. Weekends get crowded — go early." },
+        { "name": "Apple Hill, Placerville", "type": "scenic", "lat": 38.7296, "lng": -120.7985, "admission": { "status": "free", "label": "General area visit; purchases extra" }, "note": "October = apple/harvest season; orchards, cider, pie. Weekends get crowded — go early." },
         { "name": "Heavenly Village, South Lake Tahoe", "type": "city", "lat": 38.9399, "lng": -119.9772, "note": "Arrive, check in, walk the lakefront at Lakeview Commons." }
       ],
       "fuelCharging": [
@@ -44,9 +44,9 @@
       "timezoneNote": "East shore (Sand Harbor) is in Nevada — same Pacific time, but you cross the state line",
       "weather": { "icon": "sunny", "high": 62, "low": 34 },
       "stops": [
-        { "name": "Emerald Bay / Vikingsholm", "type": "scenic", "lat": 38.9542, "lng": -120.1095, "note": "Iconic overlook; steep 1-mi trail down to Vikingsholm castle if you want the legs workout." },
-        { "name": "Eagle Falls Trailhead", "type": "hike", "lat": 38.9519, "lng": -120.1133, "ticket": "day-use parking fee", "note": "Short hike to the falls / Eagle Lake. Tiny lot — arrive before 9am or it's full." },
-        { "name": "Sand Harbor, NV (Lake Tahoe NV State Park)", "type": "scenic", "lat": 39.1986, "lng": -119.9301, "ticket": "NV state park day-use fee", "note": "Best swimming/boulders & clearest water. Parking lot closes when full (often mid-morning summer; easier in Oct)." }
+        { "name": "Emerald Bay / Vikingsholm", "type": "scenic", "lat": 38.9542, "lng": -120.1095, "admission": { "status": "paid", "label": "Day-use parking or optional castle tour" }, "note": "Iconic overlook; steep 1-mi trail down to Vikingsholm castle if you want the legs workout." },
+        { "name": "Eagle Falls Trailhead", "type": "hike", "lat": 38.9519, "lng": -120.1133, "ticket": "day-use parking fee", "admission": { "status": "paid", "label": "Day-use parking fee" }, "note": "Short hike to the falls / Eagle Lake. Tiny lot — arrive before 9am or it's full." },
+        { "name": "Sand Harbor, NV (Lake Tahoe NV State Park)", "type": "scenic", "lat": 39.1986, "lng": -119.9301, "ticket": "NV state park day-use fee", "admission": { "status": "paid", "label": "Nevada state park day-use fee" }, "note": "Best swimming/boulders & clearest water. Parking lot closes when full (often mid-morning summer; easier in Oct)." }
       ],
       "fuelCharging": [],
       "meal": { "name": "Picnic at Sand Harbor or lunch in Tahoe City", "perPerson": 22 },
@@ -66,7 +66,7 @@
       "weather": { "icon": "partly-cloudy", "high": 58, "low": 31 },
       "stops": [
         { "name": "Tahoe City", "type": "city", "lat": 39.1677, "lng": -120.1435, "note": "Coffee + the Truckee River outlet; quick stop before heading to I-80." },
-        { "name": "Donner Memorial State Park, Truckee", "type": "scenic", "lat": 39.3236, "lng": -120.2336, "ticket": "state park day-use fee", "note": "Donner Lake, visitor center & the Pioneer Monument — history of Donner Pass." },
+        { "name": "Donner Memorial State Park, Truckee", "type": "scenic", "lat": 39.3236, "lng": -120.2336, "ticket": "state park day-use fee", "admission": { "status": "paid", "label": "California state park day-use fee" }, "note": "Donner Lake, visitor center & the Pioneer Monument — history of Donner Pass." },
         { "name": "Sunnyvale (end)", "type": "city", "lat": 37.3688, "lng": -122.0363, "note": "Refuel before returning home/rental." }
       ],
       "fuelCharging": [

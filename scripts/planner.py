@@ -283,7 +283,11 @@ def build_user(payload, region):
    "driveTime":"Xh YYm","overnight":str|null,"timezoneNote":str?,
    "weather":{"icon":"sunny|partly-cloudy|cloudy|rain|snow|storm|windy|fog","high":int,"low":int},
    "stops":[{"name":str,"type":"park|hike|scenic|city|tour|food|lodging","lat":float,"lng":float,
-     "timedEntry":bool?,"ticket":str?,"note":str}],
+     "timedEntry":bool?,"ticket":str?,
+     "admission":{"status":"free|included|paid|unknown","label":str?,
+       "price":{"amount":number,"currency":str,
+         "unit":"person|vehicle|group|booking|total",
+         "reliability":"verified|reference|estimate"}?}?,"note":str}],
    "fuelCharging":[{"name":str,"type":"gas|charge","lat":float,"lng":float,"powerKW":int?,"note":str}],
    "meal":{"name":str,"perPerson":int},"risks":[str]}],
  "lodging":[{"name":str,"area":str,"nights":int,"pricePerNight":int,"rating":str,"booked":false}],
@@ -384,6 +388,12 @@ def build_user(payload, region):
         "restaurants per person, and attraction tickets/permits when required. Use amount 0 for "
         "free reservations; use the trip currency's ISO code unless the item is explicitly priced "
         "locally, and omit price rather than inventing an unsupported exact live price.\n"
+        "- Every planned park/hike/scenic/tour stop MUST include admission. Use status 'free' when "
+        "the planned visit has no admission charge, 'included' when a park or attraction pass "
+        "already covers it, 'paid' when a ticket/fee is required, and 'unknown' only when whether "
+        "payment is required cannot be determined. For 'paid', include admission.price only when "
+        "supportable; otherwise omit it so the view says the price is unavailable. Do not infer an "
+        "individual stop price from an aggregate budget line.\n"
         "- No reservation 'bookBy' date may be before today.\n"
         "- Include \"crossings\" ONLY if the route crosses a US/Canada/Mexico border: one entry "
         "per crossing in driving order, with the trip day number it happens on; omit the key "
@@ -607,7 +617,10 @@ def _regenerate_day_with_instruction(trip, day_index, instruction, log_fn=None):
         '"overnight":str|null,"timezoneNote":str?,'
         '"weather":{"icon":"sunny|partly-cloudy|cloudy|rain|snow|storm|windy|fog","high":int,"low":int},'
         '"stops":[{"name":str,"type":"park|hike|scenic|city|tour|food|lodging",'
-        '"lat":float,"lng":float,"note":str}],'
+        '"lat":float,"lng":float,"admission":{"status":"free|included|paid|unknown",'
+        '"label":str?,"price":{"amount":number,"currency":str,"unit":'
+        '"person|vehicle|group|booking|total","reliability":'
+        '"verified|reference|estimate"}?}?,"note":str}],'
         '"fuelCharging":[{"name":str,"type":"gas|charge","lat":float,"lng":float,"note":str}],'
         '"meal":{"name":str,"perPerson":int},"risks":[str]}'
     )
@@ -618,7 +631,8 @@ def _regenerate_day_with_instruction(trip, day_index, instruction, log_fn=None):
         "Current Day %d:\n%s\n\n"
         "%s\n\n"
         "Rewrite ONLY Day %d to honour this request. %s"
-        "Keep the same 'date' value. Use accurate lat/lng for all stops. "
+        "Keep the same 'date' value. Use accurate lat/lng for all stops and include admission "
+        "status for every park/hike/scenic/tour stop. "
         "Output ONLY the JSON object for this single day — no prose, no markdown "
         "fences; any double quote inside a string value must be escaped as \\\":\n%s\n"
         "Return JSON only."
@@ -1005,7 +1019,10 @@ def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
         '"overnight":str|null,"timezoneNote":str?,'
         '"weather":{"icon":"sunny|partly-cloudy|cloudy|rain|snow|storm|windy|fog","high":int,"low":int},'
         '"stops":[{"name":str,"type":"park|hike|scenic|city|tour|food|lodging",'
-        '"lat":float,"lng":float,"note":str}],'
+        '"lat":float,"lng":float,"admission":{"status":"free|included|paid|unknown",'
+        '"label":str?,"price":{"amount":number,"currency":str,"unit":'
+        '"person|vehicle|group|booking|total","reliability":'
+        '"verified|reference|estimate"}?}?,"note":str}],'
         '"fuelCharging":[{"name":str,"type":"gas|charge","lat":float,"lng":float,"note":str}],'
         '"meal":{"name":str,"perPerson":int},"risks":[str]}'
     )
@@ -1040,7 +1057,8 @@ def _regenerate_span_with_instruction(trip, day_start, day_end, out_count,
         "%s\n\n"
         "Rewrite ONLY this run, as EXACTLY %d day(s) total. %s"
         "You MAY update this run's driving distance/time, stops, meals, fuel/charging, "
-        "risks%s — whatever the request calls for. Use accurate lat/lng for all stops.\n"
+        "risks%s — whatever the request calls for. Use accurate lat/lng for all stops and "
+        "include admission status for every park/hike/scenic/tour stop.\n"
         "Output ONLY a JSON object — no prose, no markdown fences; any double quote "
         'inside a string value must be escaped as \\". Shape:\n'
         '{\n "days": [day, ...]   // EXACTLY %d element(s)%s\n}\n'

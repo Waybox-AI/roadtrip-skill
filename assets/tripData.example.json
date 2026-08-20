@@ -22,7 +22,7 @@
       "weather": { "icon": "sunny", "high": 88, "low": 60 },
       "stops": [
         { "name": "Las Vegas (start)", "type": "city", "lat": 36.1699, "lng": -115.1398, "note": "Pick up rental, fuel up, stock water & snacks." },
-        { "name": "Zion National Park", "type": "park", "lat": 37.2982, "lng": -113.0263, "timedEntry": false, "ticket": "park pass", "note": "Park at Springdale, ride free shuttle into the canyon." }
+        { "name": "Zion National Park", "type": "park", "lat": 37.2982, "lng": -113.0263, "timedEntry": false, "ticket": "park pass", "admission": { "status": "included", "label": "America the Beautiful park pass" }, "note": "Park at Springdale, ride free shuttle into the canyon." }
       ],
       "fuelCharging": [
         { "name": "Fuel @ St. George, UT", "type": "gas", "lat": 37.0965, "lng": -113.5684, "note": "Last cheap fuel before the park." }
@@ -40,8 +40,8 @@
       "overnight": "Springdale, UT",
       "weather": { "icon": "sunny", "high": 90, "low": 62 },
       "stops": [
-        { "name": "Riverside Walk / Narrows", "type": "hike", "lat": 37.2853, "lng": -112.9479, "note": "Easy paved walk; The Narrows if water levels & weather allow." },
-        { "name": "Emerald Pools", "type": "hike", "lat": 37.2519, "lng": -112.9572, "note": "Moderate loop, shaded." }
+        { "name": "Riverside Walk / Narrows", "type": "hike", "lat": 37.2853, "lng": -112.9479, "admission": { "status": "included", "label": "Zion park admission" }, "note": "Easy paved walk; The Narrows if water levels & weather allow." },
+        { "name": "Emerald Pools", "type": "hike", "lat": 37.2519, "lng": -112.9572, "admission": { "status": "included", "label": "Zion park admission" }, "note": "Moderate loop, shaded." }
       ],
       "fuelCharging": [],
       "meal": { "name": "Picnic in the canyon", "perPerson": 15 },
@@ -57,8 +57,8 @@
       "overnight": "Bryce Canyon City, UT",
       "weather": { "icon": "partly-cloudy", "high": 72, "low": 42 },
       "stops": [
-        { "name": "Zion–Mt Carmel Tunnel", "type": "scenic", "lat": 37.2133, "lng": -112.9402, "note": "Historic 1.1-mi tunnel; oversized vehicles need a permit." },
-        { "name": "Bryce Canyon NP — Sunset Point", "type": "park", "lat": 37.6244, "lng": -112.1656, "ticket": "park pass", "note": "Walk part of the Navajo Loop into the hoodoos." }
+        { "name": "Zion–Mt Carmel Tunnel", "type": "scenic", "lat": 37.2133, "lng": -112.9402, "admission": { "status": "included", "label": "Zion park admission for a standard-size vehicle" }, "note": "Historic 1.1-mi tunnel; oversized vehicles need a permit." },
+        { "name": "Bryce Canyon NP — Sunset Point", "type": "park", "lat": 37.6244, "lng": -112.1656, "ticket": "park pass", "admission": { "status": "included", "label": "America the Beautiful park pass" }, "note": "Walk part of the Navajo Loop into the hoodoos." }
       ],
       "fuelCharging": [
         { "name": "Fuel @ Mount Carmel Junction", "type": "gas", "lat": 37.2247, "lng": -112.6886, "note": "Top up; sparse stations ahead." }
@@ -77,8 +77,8 @@
       "timezoneNote": "AZ does not observe DST — clocks may differ from UT in summer",
       "weather": { "icon": "sunny", "high": 91, "low": 64 },
       "stops": [
-        { "name": "Antelope Canyon (guided tour)", "type": "tour", "lat": 36.8619, "lng": -111.3743, "timedEntry": true, "ticket": "guided tour required", "note": "Bookable only via authorized Navajo tour operators — reserve ahead." },
-        { "name": "Horseshoe Bend", "type": "scenic", "lat": 36.8791, "lng": -111.5104, "note": "0.75-mi walk from lot; best light late afternoon. $10 parking." }
+        { "name": "Antelope Canyon (guided tour)", "type": "tour", "lat": 36.8619, "lng": -111.3743, "timedEntry": true, "ticket": "guided tour required", "admission": { "status": "paid", "label": "Authorized guided tour", "price": { "amount": 90, "currency": "USD", "unit": "person", "reliability": "reference" } }, "note": "Bookable only via authorized Navajo tour operators — reserve ahead." },
+        { "name": "Horseshoe Bend", "type": "scenic", "lat": 36.8791, "lng": -111.5104, "admission": { "status": "paid", "label": "Parking fee", "price": { "amount": 10, "currency": "USD", "unit": "vehicle", "reliability": "reference" } }, "note": "0.75-mi walk from lot; best light late afternoon. $10 parking." }
       ],
       "fuelCharging": [
         { "name": "Fuel @ Page, AZ", "type": "gas", "lat": 36.9147, "lng": -111.4558, "note": "Full services in Page." }
@@ -96,8 +96,8 @@
       "overnight": "Grand Canyon Village (or Tusayan), AZ",
       "weather": { "icon": "sunny", "high": 78, "low": 45 },
       "stops": [
-        { "name": "Cameron Trading Post", "type": "scenic", "lat": 35.8530, "lng": -111.4160, "note": "Historic stop on US-89; good break point." },
-        { "name": "Grand Canyon South Rim — Desert View", "type": "park", "lat": 36.0441, "lng": -111.8266, "ticket": "park pass", "note": "Enter via east gate; Watchtower + first canyon views." }
+        { "name": "Cameron Trading Post", "type": "scenic", "lat": 35.8530, "lng": -111.4160, "admission": { "status": "free" }, "note": "Historic stop on US-89; good break point." },
+        { "name": "Grand Canyon South Rim — Desert View", "type": "park", "lat": 36.0441, "lng": -111.8266, "ticket": "park pass", "admission": { "status": "included", "label": "America the Beautiful park pass" }, "note": "Enter via east gate; Watchtower + first canyon views." }
       ],
       "fuelCharging": [
         { "name": "Fuel @ Cameron, AZ", "type": "gas", "lat": 35.8530, "lng": -111.4160, "note": "Fuel scarce near the rim — top up here." }
@@ -115,8 +115,8 @@
       "overnight": "Grand Canyon Village (or Tusayan), AZ",
       "weather": { "icon": "partly-cloudy", "high": 76, "low": 44 },
       "stops": [
-        { "name": "Hermit Road viewpoints (shuttle)", "type": "scenic", "lat": 36.0668, "lng": -112.1399, "note": "Free shuttle along the west rim; cars restricted in season." },
-        { "name": "Mather Point sunrise/sunset", "type": "scenic", "lat": 36.0608, "lng": -112.1083, "note": "Iconic first view near the visitor center." }
+        { "name": "Hermit Road viewpoints (shuttle)", "type": "scenic", "lat": 36.0668, "lng": -112.1399, "admission": { "status": "included", "label": "Grand Canyon park admission" }, "note": "Free shuttle along the west rim; cars restricted in season." },
+        { "name": "Mather Point sunrise/sunset", "type": "scenic", "lat": 36.0608, "lng": -112.1083, "admission": { "status": "included", "label": "Grand Canyon park admission" }, "note": "Iconic first view near the visitor center." }
       ],
       "fuelCharging": [],
       "meal": { "name": "Bright Angel Restaurant", "perPerson": 30 },
@@ -133,8 +133,8 @@
       "timezoneNote": "AZ → PT (clock may shift -1h entering NV)",
       "weather": { "icon": "sunny", "high": 95, "low": 70 },
       "stops": [
-        { "name": "Route 66 / Williams, AZ", "type": "scenic", "lat": 35.2494, "lng": -112.1910, "note": "Classic Route 66 main street; lunch & legs stretch." },
-        { "name": "Hoover Dam (optional)", "type": "scenic", "lat": 36.0161, "lng": -114.7377, "note": "Short detour off US-93; allow time for the security checkpoint." },
+        { "name": "Route 66 / Williams, AZ", "type": "scenic", "lat": 35.2494, "lng": -112.1910, "admission": { "status": "free" }, "note": "Classic Route 66 main street; lunch & legs stretch." },
+        { "name": "Hoover Dam (optional)", "type": "scenic", "lat": 36.0161, "lng": -114.7377, "admission": { "status": "free", "label": "Exterior visit; parking and tours extra" }, "note": "Short detour off US-93; allow time for the security checkpoint." },
         { "name": "Las Vegas (end / drop rental)", "type": "city", "lat": 36.1699, "lng": -115.1398, "note": "Refuel before returning the car to avoid rental fuel fees." }
       ],
       "fuelCharging": [

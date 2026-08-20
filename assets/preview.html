@@ -114,6 +114,7 @@
     font-size: .72rem; font-weight: 700; white-space: nowrap; }
   .booking-price.unknown { color: var(--muted); font-weight: 600; }
   .booking-copy p { margin: 0; color: var(--muted); font-size: .82rem; }
+  .booking-copy .booking-item-meta { color: var(--ink); font-weight: 600; }
   .booking-copy p + p { margin-top: 3px; }
   .booking-empty { margin: 18px 0 8px; color: var(--muted); font-size: .88rem; }
 
@@ -345,6 +346,10 @@ var TRIP_DATA = {
           "lng": -113.0263,
           "timedEntry": false,
           "ticket": "park pass",
+          "admission": {
+            "status": "included",
+            "label": "America the Beautiful park pass"
+          },
           "note": "Park at Springdale, ride free shuttle into the canyon."
         }
       ],
@@ -384,6 +389,10 @@ var TRIP_DATA = {
           "type": "hike",
           "lat": 37.2853,
           "lng": -112.9479,
+          "admission": {
+            "status": "included",
+            "label": "Zion park admission"
+          },
           "note": "Easy paved walk; The Narrows if water levels & weather allow."
         },
         {
@@ -391,6 +400,10 @@ var TRIP_DATA = {
           "type": "hike",
           "lat": 37.2519,
           "lng": -112.9572,
+          "admission": {
+            "status": "included",
+            "label": "Zion park admission"
+          },
           "note": "Moderate loop, shaded."
         }
       ],
@@ -422,6 +435,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 37.2133,
           "lng": -112.9402,
+          "admission": {
+            "status": "included",
+            "label": "Zion park admission for a standard-size vehicle"
+          },
           "note": "Historic 1.1-mi tunnel; oversized vehicles need a permit."
         },
         {
@@ -430,6 +447,10 @@ var TRIP_DATA = {
           "lat": 37.6244,
           "lng": -112.1656,
           "ticket": "park pass",
+          "admission": {
+            "status": "included",
+            "label": "America the Beautiful park pass"
+          },
           "note": "Walk part of the Navajo Loop into the hoodoos."
         }
       ],
@@ -472,6 +493,16 @@ var TRIP_DATA = {
           "lng": -111.3743,
           "timedEntry": true,
           "ticket": "guided tour required",
+          "admission": {
+            "status": "paid",
+            "label": "Authorized guided tour",
+            "price": {
+              "amount": 90,
+              "currency": "USD",
+              "unit": "person",
+              "reliability": "reference"
+            }
+          },
           "note": "Bookable only via authorized Navajo tour operators — reserve ahead."
         },
         {
@@ -479,6 +510,16 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.8791,
           "lng": -111.5104,
+          "admission": {
+            "status": "paid",
+            "label": "Parking fee",
+            "price": {
+              "amount": 10,
+              "currency": "USD",
+              "unit": "vehicle",
+              "reliability": "reference"
+            }
+          },
           "note": "0.75-mi walk from lot; best light late afternoon. $10 parking."
         }
       ],
@@ -518,6 +559,9 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 35.853,
           "lng": -111.416,
+          "admission": {
+            "status": "free"
+          },
           "note": "Historic stop on US-89; good break point."
         },
         {
@@ -526,6 +570,10 @@ var TRIP_DATA = {
           "lat": 36.0441,
           "lng": -111.8266,
           "ticket": "park pass",
+          "admission": {
+            "status": "included",
+            "label": "America the Beautiful park pass"
+          },
           "note": "Enter via east gate; Watchtower + first canyon views."
         }
       ],
@@ -565,6 +613,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.0668,
           "lng": -112.1399,
+          "admission": {
+            "status": "included",
+            "label": "Grand Canyon park admission"
+          },
           "note": "Free shuttle along the west rim; cars restricted in season."
         },
         {
@@ -572,6 +624,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.0608,
           "lng": -112.1083,
+          "admission": {
+            "status": "included",
+            "label": "Grand Canyon park admission"
+          },
           "note": "Iconic first view near the visitor center."
         }
       ],
@@ -604,6 +660,9 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 35.2494,
           "lng": -112.191,
+          "admission": {
+            "status": "free"
+          },
           "note": "Classic Route 66 main street; lunch & legs stretch."
         },
         {
@@ -611,6 +670,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.0161,
           "lng": -114.7377,
+          "admission": {
+            "status": "free",
+            "label": "Exterior visit; parking and tours extra"
+          },
           "note": "Short detour off US-93; allow time for the security checkpoint."
         },
         {
@@ -1060,9 +1123,226 @@ var TRIP_DATA = {
     return "attraction";
   }
 
-  function bookingDateParts(value) {
+  function bookingMatchTokens(value) {
+    var stop = ["and", "area", "book", "booking", "cabin", "camp", "campsite", "canyon",
+      "cafe", "city", "dining", "direct", "grand", "guided", "hotel", "hostel", "inn",
+      "lodge", "lodging", "meal", "motel", "national", "park", "point", "reservation",
+      "reserve", "resort", "restaurant", "room", "the", "tour"];
+    return (String(value || "").toLowerCase().match(/[a-z0-9\u3400-\u9fff]{3,}/g) || [])
+      .filter(function (token) { return stop.indexOf(token) < 0; });
+  }
+
+  function sharedBookingTokens(left, right) {
+    var rightTokens = bookingMatchTokens(right);
+    return bookingMatchTokens(left).filter(function (token, index, tokens) {
+      return tokens.indexOf(token) === index && rightTokens.indexOf(token) >= 0;
+    }).length;
+  }
+
+  function bookingDeadlineScore(item, deadline) {
+    var deadlineText = [deadline.item, deadline.where, deadline.note].join(" ").toLowerCase();
+    var name = String(item.item || item.name || "").toLowerCase();
+    var context = String(item.matchContext || item.area || "").toLowerCase();
+    var score = sharedBookingTokens(name, deadlineText) * 3 +
+      sharedBookingTokens(context, deadlineText);
+    if (name.length >= 4 && deadlineText.indexOf(name) >= 0) score += 10;
+    if (context.length >= 4 && deadlineText.indexOf(context) >= 0) score += 8;
+    return score;
+  }
+
+  function bookingDeadlineAssignments(items, deadlines) {
+    var matches = {};
+    var usedDeadlines = {};
+    deadlines.forEach(function (deadline, deadlineIndex) {
+      var bestItem = -1;
+      var bestScore = 1;
+      items.forEach(function (item, itemIndex) {
+        if (matches[itemIndex]) return;
+        var score = bookingDeadlineScore(item, deadline);
+        if (score > bestScore) { bestScore = score; bestItem = itemIndex; }
+      });
+      if (bestItem >= 0) {
+        matches[bestItem] = deadline;
+        usedDeadlines[deadlineIndex] = true;
+      }
+    });
+    return { matches: matches, usedDeadlines: usedDeadlines };
+  }
+
+  function bookingItemKey(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9\u3400-\u9fff]+/g, " ").trim();
+  }
+
+  function appendVisitDate(item, date) {
+    if (date && item.visitDates.indexOf(date) < 0) item.visitDates.push(date);
+  }
+
+  function hotelBookingItems(list) {
+    var deadlines = list.filter(function (item) { return bookingCategory(item) === "hotel"; });
+    var hotels = Array.isArray(T.lodging) ? T.lodging.filter(function (hotel) {
+      return hotel && (hotel.name || hotel.area);
+    }) : [];
+    if (!hotels.length) return deadlines;
+
+    var assignments = bookingDeadlineAssignments(hotels, deadlines);
+
+    var merged = hotels.map(function (hotel, hotelIndex) {
+      var deadline = assignments.matches[hotelIndex] || {};
+      var price = deadline.price;
+      if (typeof hotel.pricePerNight === "number" && isFinite(hotel.pricePerNight) &&
+          hotel.pricePerNight >= 0) {
+        price = {
+          amount: hotel.pricePerNight,
+          currency: price && price.currency ? price.currency : cur,
+          unit: "night",
+          reliability: price && price.reliability ? price.reliability : "reference"
+        };
+      }
+      return {
+        item: hotel.name || deadline.item || hotel.area,
+        bookBy: deadline.bookBy || "",
+        where: deadline.where || "",
+        category: "hotel",
+        price: price,
+        priority: deadline.priority,
+        note: deadline.note,
+        stayArea: hotel.area || "",
+        nights: hotel.nights,
+        bookingRequired: true,
+        booked: hotel.booked === true
+      };
+    });
+    deadlines.forEach(function (deadline, deadlineIndex) {
+      if (!assignments.usedDeadlines[deadlineIndex]) merged.push(deadline);
+    });
+    return merged;
+  }
+
+  function restaurantBookingItems(list) {
+    var deadlines = list.filter(function (item) { return bookingCategory(item) === "restaurant"; });
+    var meals = [];
+    var mealsByName = {};
+    (T.days || []).forEach(function (day) {
+      var meal = day.meal;
+      if (!meal || !meal.name) return;
+      var key = bookingItemKey(meal.name);
+      var item = mealsByName[key];
+      if (!item) {
+        item = {
+          item: meal.name,
+          category: "restaurant",
+          visitDates: [],
+          matchContext: day.title || ""
+        };
+        if (typeof meal.perPerson === "number" && isFinite(meal.perPerson) &&
+            meal.perPerson >= 0) {
+          item.price = {
+            amount: meal.perPerson, currency: cur, unit: "person", reliability: "estimate"
+          };
+        }
+        mealsByName[key] = item;
+        meals.push(item);
+      }
+      appendVisitDate(item, day.date);
+    });
+    if (!meals.length) return deadlines;
+
+    var assignments = bookingDeadlineAssignments(meals, deadlines);
+    var merged = meals.map(function (meal, mealIndex) {
+      var deadline = assignments.matches[mealIndex] || {};
+      return {
+        item: meal.item,
+        bookBy: deadline.bookBy || "",
+        where: deadline.where || "",
+        category: "restaurant",
+        price: deadline.price || meal.price,
+        priority: deadline.priority,
+        note: deadline.note,
+        visitDates: meal.visitDates,
+        bookingRequired: Boolean(deadline.bookBy)
+      };
+    });
+    deadlines.forEach(function (deadline, deadlineIndex) {
+      if (!assignments.usedDeadlines[deadlineIndex]) merged.push(deadline);
+    });
+    return merged;
+  }
+
+  function attractionBookingItems(list) {
+    var deadlines = list.filter(function (item) { return bookingCategory(item) === "attraction"; });
+    var excludedTypes = ["charge", "charging", "city", "food", "fuel", "gas", "hotel",
+      "lodging", "restaurant"];
+    var attractions = [];
+    var attractionsByName = {};
+    (T.days || []).forEach(function (day) {
+      (day.stops || []).forEach(function (stop) {
+        if (!stop || !stop.name || excludedTypes.indexOf(String(stop.type || "").toLowerCase()) >= 0) {
+          return;
+        }
+        var key = bookingItemKey(stop.name);
+        var item = attractionsByName[key];
+        if (!item) {
+          var admission = stop.admission && typeof stop.admission === "object"
+            ? stop.admission : {};
+          var admissionStatus = String(admission.status || "").toLowerCase();
+          if (["free", "included", "paid", "unknown"].indexOf(admissionStatus) < 0) {
+            var legacyTicket = String(stop.ticket || "").toLowerCase();
+            admissionStatus = legacyTicket.indexOf("free") >= 0 ? "free" :
+              (legacyTicket.indexOf("pass") >= 0 ? "included" :
+                (/ticket|fee|guided tour/.test(legacyTicket) ? "paid" : "unknown"));
+          }
+          item = {
+            item: stop.name,
+            category: "attraction",
+            visitDates: [],
+            matchContext: [day.title, stop.type, stop.ticket, admission.label].join(" "),
+            admissionStatus: admissionStatus,
+            admissionLabel: admission.label || "",
+            price: admission.price
+          };
+          attractionsByName[key] = item;
+          attractions.push(item);
+        }
+        appendVisitDate(item, day.date);
+      });
+    });
+    if (!attractions.length) return deadlines;
+
+    var assignments = bookingDeadlineAssignments(attractions, deadlines);
+    var merged = attractions.map(function (attraction, attractionIndex) {
+      var deadline = assignments.matches[attractionIndex] || {};
+      return {
+        item: attraction.item,
+        bookBy: deadline.bookBy || "",
+        where: deadline.where || "",
+        category: "attraction",
+        price: deadline.price || attraction.price,
+        admissionStatus: attraction.admissionStatus,
+        admissionLabel: attraction.admissionLabel,
+        priority: deadline.priority,
+        note: deadline.note,
+        visitDates: attraction.visitDates,
+        bookingRequired: Boolean(deadline.bookBy)
+      };
+    });
+    deadlines.forEach(function (deadline, deadlineIndex) {
+      if (!assignments.usedDeadlines[deadlineIndex]) merged.push(deadline);
+    });
+    return merged;
+  }
+
+  function bookingDateParts(value, bookingRequired) {
     var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
-    if (!match) return { short: esc(value || "—"), year: "", iso: "" };
+    if (!match) {
+      var noAdvanceBooking = bookingRequired === false;
+      return {
+        short: esc(value || (noAdvanceBooking
+          ? (isZh() ? "无需提前预约" : "No advance booking")
+          : (isZh() ? "暂时不知道截止日期" : "Deadline unknown"))),
+        year: "",
+        iso: ""
+      };
+    }
     var months = isZh()
       ? ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
       : ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -1078,8 +1358,21 @@ var TRIP_DATA = {
     if (typeof price === "number") price = { amount: price };
     if (!price || typeof price !== "object" || typeof price.amount !== "number" ||
         !isFinite(price.amount) || price.amount < 0) {
+      if (item.category === "attraction") {
+        if (item.admissionStatus === "free") {
+          return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";
+        }
+        if (item.admissionStatus === "included") {
+          return '<span class="booking-price">' +
+            (isZh() ? "公园通票已包含" : "Included in park pass") + "</span>";
+        }
+        if (item.admissionStatus === "paid") {
+          return '<span class="booking-price unknown">' +
+            (isZh() ? "收费 · 价格暂不可用" : "Paid · price unavailable") + "</span>";
+        }
+      }
       return '<span class="booking-price unknown">' +
-        (isZh() ? "价格待确认" : "Check price") + "</span>";
+        (isZh() ? "价格暂不可用" : "Price unavailable") + "</span>";
     }
     if (price.amount === 0) {
       return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";
@@ -1098,48 +1391,109 @@ var TRIP_DATA = {
       Number(price.amount).toLocaleString("en-US") + esc(units[unit] || ("/" + unit)) + "</span>";
   }
 
+  function tripDateLabel(value) {
+    var slash = /^(\d{1,2})\/(\d{1,2})$/.exec(String(value || ""));
+    if (slash) {
+      if (isZh()) return Number(slash[1]) + "月" + Number(slash[2]) + "日";
+      var months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+        "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      return months[Number(slash[1]) - 1] + " " + Number(slash[2]);
+    }
+    var iso = bookingDateParts(value);
+    return iso.iso ? iso.short : String(value || "");
+  }
+
+  function bookingItemMetaMarkup(item) {
+    var bits = [];
+    if (item.visitDates && item.visitDates.length) {
+      bits.push((isZh() ? "行程日期 " : "Trip date ") +
+        item.visitDates.map(tripDateLabel).join(", "));
+    }
+    if (item.stayArea) bits.push(esc(item.stayArea));
+    if (typeof item.nights === "number" && item.nights > 0) {
+      bits.push(isZh() ? item.nights + " 晚" :
+        item.nights + " night" + (item.nights === 1 ? "" : "s"));
+    }
+    return bits.length ? '<p class="booking-item-meta">' + bits.join(" · ") + "</p>" : "";
+  }
+
+  function bookingPanelTitle(category, items) {
+    var count = items.length;
+    if (category.id === "hotel") {
+      var totalNights = items.reduce(function (sum, item) {
+        return sum + (typeof item.nights === "number" && item.nights > 0 ? item.nights : 0);
+      }, 0);
+      if (totalNights) {
+        return isZh()
+          ? count + " 个住宿 · " + totalNights + " 晚"
+          : count + " stay" + (count === 1 ? "" : "s") + " · " + totalNights +
+            " night" + (totalNights === 1 ? "" : "s");
+      }
+    }
+    if (isZh()) {
+      if (category.id === "restaurant") return count + " 个用餐安排与预订截止日期";
+      if (category.id === "hotel") return count + " 个住宿安排与预订截止日期";
+      return count + " 个景点与预订截止日期";
+    }
+    var noun = category.id === "restaurant" ? "dining plan" :
+      (category.id === "hotel" ? "stay" : "attraction");
+    return count + " " + noun + (count === 1 ? "" : "s") + " and booking deadlines";
+  }
+
   function bookingPanelMarkup(category, items, active) {
     var label = isZh() ? category.zh : category.en;
-    var first = items.length ? bookingDateParts(items[0].bookBy) : null;
+    var first = null;
+    items.some(function (item) {
+      var date = bookingDateParts(item.bookBy, item.bookingRequired);
+      if (!date.iso) return false;
+      first = date;
+      return true;
+    });
     var earliest = first
       ? (isZh() ? "最早截止 · " : "Earliest deadline · ") + first.short
       : (isZh() ? "暂无截止日期" : "No deadlines yet");
-    var title = isZh()
-      ? items.length + " 个" + label + "预订需要安排"
-      : items.length + " " + (items.length === 1 ? category.singular : label.toLowerCase()) +
-        " booking" + (items.length === 1 ? "" : "s") +
-        " to schedule";
+    var title = bookingPanelTitle(category, items);
     var rows = items.map(function (item) {
-      var date = bookingDateParts(item.bookBy);
+      var date = bookingDateParts(item.bookBy, item.bookingRequired);
       var source = item.where
         ? "<p>" + (isZh() ? "预订渠道：" : "via ") + esc(item.where) + "</p>" : "";
+      var meta = bookingItemMetaMarkup(item);
       var note = item.note ? "<p>" + esc(item.note) + "</p>" : "";
       var price = bookingPriceMarkup(item);
       var priority = item.priority === "high" ? " pri-high" : "";
+      var deadlineLabel = date.iso
+        ? (isZh() ? "预订截止 " : "Book by ") + item.bookBy
+        : (item.bookingRequired === false
+          ? (isZh() ? "无需提前预约" : "No advance booking required")
+          : (isZh() ? "暂时不知道截止日期" : "Booking deadline unknown"));
       return '<article class="booking-timeline-row">' +
         '<time class="booking-timeline-date" datetime="' + esc(date.iso) + '" aria-label="' +
-          (isZh() ? "预订截止 " : "Book by ") + esc(item.bookBy) + '"><strong>' +
+          esc(deadlineLabel) + '"><strong>' +
           date.short + "</strong><span>" + date.year + "</span></time>" +
         '<span class="booking-timeline-dot' + priority + '" aria-hidden="true"></span>' +
         '<div class="booking-copy"><div class="booking-title-row"><h3>' + esc(item.item) +
-        "</h3>" + price + "</div>" + source + note + "</div></article>";
+        "</h3>" + price + "</div>" + meta + source + note + "</div></article>";
     }).join("");
     if (!rows) rows = '<p class="booking-empty">' +
-      (isZh() ? "这个分类暂时没有需要提前预订的项目。" :
-        "Nothing in this category needs advance booking yet.") + "</p>";
+      (isZh() ? "这个分类暂时没有项目。" : "Nothing in this category yet.") + "</p>";
     return '<section class="booking-panel" id="booking-panel-' + category.id +
       '" role="tabpanel" tabindex="0" aria-labelledby="booking-tab-' + category.id + '"' +
       (active ? "" : " hidden") + '><div class="booking-panel-head"><div>' +
-      '<p class="booking-kicker">' + label + (isZh() ? "预订" : " reservations") + "</p>" +
+      '<p class="booking-kicker">' + label + "</p>" +
       "<h2>" + title + '</h2></div><span class="booking-earliest">' + earliest + "</span></div>" +
       '<div class="booking-timeline">' + rows + "</div></section>";
   }
 
   function renderBookingTabs() {
     var list = T.bookingCountdown || [];
-    if (!list.length) { el("bookingTabs").innerHTML = ""; return; }
     var groups = { attraction: [], restaurant: [], hotel: [] };
-    list.forEach(function (item) { groups[bookingCategory(item)].push(item); });
+    groups.attraction = attractionBookingItems(list);
+    groups.restaurant = restaurantBookingItems(list);
+    groups.hotel = hotelBookingItems(list);
+    if (!groups.attraction.length && !groups.restaurant.length && !groups.hotel.length) {
+      el("bookingTabs").innerHTML = "";
+      return;
+    }
     BOOKING_CATEGORIES.forEach(function (category) {
       groups[category.id].sort(function (a, b) {
         return String(a.bookBy || "9999").localeCompare(String(b.bookBy || "9999"));

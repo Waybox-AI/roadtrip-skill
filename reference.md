@@ -44,6 +44,12 @@ missing.
           "lat": 37.2982, "lng": -113.0263,   // needed for the map + nav links
           "timedEntry": false,     // true → red "timed entry" badge
           "ticket": "park pass",   // free text badge (e.g. "guided tour required")
+          "admission": {
+            "status": "included", // free | included | paid | unknown
+            "label": "America the Beautiful pass"
+            // paid may add price: {amount, currency, unit, reliability};
+            // omit price when the amount is unsupported
+          },
           "permitNote": "...",
           "note": "Park at Springdale, ride the free shuttle."
         }
@@ -53,6 +59,8 @@ missing.
           "lat": 37.09, "lng": -113.56, "powerKW": 250, "note": "charge to 90%" }
       ],
       "meal": { "name": "Oscar's Cafe", "perPerson": 28 },
+      // every daily meal is rendered once in the Restaurants tab; a matching
+      // restaurant bookingCountdown deadline is merged in when present
       "risks": ["Town fills up by mid-morning in peak season — arrive early."]
     }
   ],
@@ -61,11 +69,12 @@ missing.
     { "name": "...", "area": "...", "nights": 2,
       "pricePerNight": 245, "rating": "4.6", "booked": false,
       "links": { "booking": "https://…", "airbnb": "https://…" } }
-      // lodging remains the planning/budget source; it is not rendered as a
-      // separate table because booking actions live in the tabs below
+      // lodging remains the planning/budget source. Every entry is rendered once
+      // in the Hotels tab, where a matching bookingCountdown deadline is merged in.
+      // It is not rendered as a separate table.
   ],
 
-  "bookingCountdown": [            // drives the categorized booking-deadline tabs
+  "bookingCountdown": [            // enriches complete attraction/restaurant/hotel lists
     { "item": "Watchman Campground", "bookBy": "2026-03-12",
       "where": "Recreation.gov", "category": "hotel",
       "price": { "amount": 35, "currency": "USD", "unit": "night",
@@ -75,6 +84,10 @@ missing.
       // category: attraction | restaurant | hotel; optional for backward compatibility
       // price.unit: person | night | vehicle | group | booking | total
       // amount 0 means free; omit price only when it is genuinely unknown
+      // the view shows a matched date, "no advance booking" for unmatched
+      // attractions/meals, or "deadline unknown" for unmatched lodging
+      // each attraction's price badge comes from stops[].admission; a matching
+      // bookingCountdown price overrides it when it is more specific
   ],
 
   "budget": {

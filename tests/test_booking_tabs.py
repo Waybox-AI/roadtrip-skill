@@ -51,7 +51,9 @@ def test_example_renders_explicit_categories_and_legacy_fallback():
     assert '"amount": 90' in html
     assert '"unit": "person"' in html
     assert 'function bookingPriceMarkup(item)' in html
-    assert 'Check price' in html
+    assert 'Included in park pass' in html
+    assert 'Price unavailable' in html
+    assert 'Check price' not in html
 
 
 def test_lodging_table_is_removed_but_budget_rendering_remains():
@@ -61,6 +63,120 @@ def test_lodging_table_is_removed_but_budget_rendering_remains():
     assert '🛏️ Lodging' not in template
     assert 'id="budget"' in template
     assert 'renderBudget(); renderTips(); renderShare();' in template
+
+
+def test_hotel_tab_merges_every_lodging_with_matching_deadlines():
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    hotel_deadlines = [
+        item for item in trip["bookingCountdown"] if item.get("category") == "hotel"
+    ]
+    assert len(trip["lodging"]) == 4
+    assert len(hotel_deadlines) == 2
+
+    template = _template()
+    assert "function hotelBookingItems(list)" in template
+    assert "var hotels = Array.isArray(T.lodging)" in template
+    assert 'groups.hotel = hotelBookingItems(list);' in template
+    assert 'stayArea: hotel.area || ""' in template
+    assert "nights: hotel.nights" in template
+    assert 'item.nights + " night"' in template
+
+
+def test_restaurant_tab_merges_every_daily_meal_with_deadlines():
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    meals = [day["meal"] for day in trip["days"] if day.get("meal")]
+    restaurant_deadlines = [
+        item for item in trip["bookingCountdown"] if item.get("category") == "restaurant"
+    ]
+    assert len(meals) == 7
+    assert len(restaurant_deadlines) == 1
+
+    template = _template()
+    assert "function restaurantBookingItems(list)" in template
+    assert "var meal = day.meal;" in template
+    assert "amount: meal.perPerson" in template
+    assert "groups.restaurant = restaurantBookingItems(list);" in template
+
+
+def test_attraction_tab_merges_visitable_stops_with_deadlines():
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    excluded = {"charge", "charging", "city", "food", "fuel", "gas", "hotel",
+                "lodging", "restaurant"}
+    attractions = [
+        stop for day in trip["days"] for stop in day.get("stops", [])
+        if stop.get("name") and str(stop.get("type", "")).lower() not in excluded
+    ]
+    attraction_deadlines = [
+        item for item in trip["bookingCountdown"] if item.get("category") == "attraction"
+    ]
+    assert len(attractions) == 13
+    assert len(attraction_deadlines) == 1
+
+    template = _template()
+    assert "function attractionBookingItems(list)" in template
+    assert "var excludedTypes =" in template
+    assert "groups.attraction = attractionBookingItems(list);" in template
+    assert "admissionStatus: admissionStatus" in template
+    assert "price: deadline.price || attraction.price" in template
+
+
+def test_every_sample_attraction_has_a_structured_admission_status():
+    excluded = {"charge", "charging", "city", "food", "fuel", "gas", "hotel",
+                "lodging", "restaurant"}
+    allowed = {"free", "included", "paid", "unknown"}
+    for filename in ("tripData.example.json", "tripData.tahoe.json", "tripData.pnw.json"):
+        trip = json.loads((ROOT / "assets" / filename).read_text(encoding="utf-8"))
+        attractions = [
+            stop for day in trip["days"] for stop in day.get("stops", [])
+            if stop.get("name") and str(stop.get("type", "")).lower() not in excluded
+        ]
+        assert attractions
+        for stop in attractions:
+            admission = stop.get("admission")
+            assert isinstance(admission, dict), (filename, stop["name"])
+            assert admission.get("status") in allowed, (filename, stop["name"])
+            price = admission.get("price")
+            if price is not None:
+                assert admission["status"] == "paid", (filename, stop["name"])
+                assert isinstance(price.get("amount"), (int, float))
+                assert price["amount"] >= 0
+
+
+def test_live_planner_requests_structured_attraction_admission():
+    prompt = planner.build_user({"start": "Las Vegas", "days": 3}, "desert")
+    assert '"admission":{"status":"free|included|paid|unknown"' in prompt
+    assert "Every planned park/hike/scenic/tour stop MUST include admission" in prompt
+    assert "Do not infer an individual stop price from an aggregate budget line" in prompt
+
+
+def test_booking_tabs_render_from_any_complete_source():
+    template = _template()
+    assert "if (!hotels.length) return deadlines;" in template
+    assert "if (!meals.length) return deadlines;" in template
+    assert "if (!attractions.length) return deadlines;" in template
+    assert "if (!groups.attraction.length && !groups.restaurant.length" in template
+
+
+def test_booking_items_show_trip_dates_and_honest_missing_deadlines():
+    template = _template()
+    assert "function tripDateLabel(value)" in template
+    assert "function bookingItemMetaMarkup(item)" in template
+    assert 'isZh() ? "无需提前预约" : "No advance booking"' in template
+    assert 'isZh() ? "暂时不知道截止日期" : "Deadline unknown"' in template
+    assert "bookingRequired: Boolean(deadline.bookBy)" in template
+
+
+def test_hotel_title_sums_stays_and_nights():
+    template = _template()
+    assert "var totalNights = items.reduce" in template
+    assert '" stay" + (count === 1 ? "" : "s") + " · " + totalNights' in template
+    assert '" night" + (totalNights === 1 ? "" : "s")' in template
 
 
 def test_parks_countdown_assigns_categories():
