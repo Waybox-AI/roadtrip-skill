@@ -346,6 +346,10 @@ var TRIP_DATA = {
           "lng": -113.0263,
           "timedEntry": false,
           "ticket": "park pass",
+          "admission": {
+            "status": "included",
+            "label": "America the Beautiful park pass"
+          },
           "note": "Park at Springdale, ride free shuttle into the canyon."
         }
       ],
@@ -385,6 +389,10 @@ var TRIP_DATA = {
           "type": "hike",
           "lat": 37.2853,
           "lng": -112.9479,
+          "admission": {
+            "status": "included",
+            "label": "Zion park admission"
+          },
           "note": "Easy paved walk; The Narrows if water levels & weather allow."
         },
         {
@@ -392,6 +400,10 @@ var TRIP_DATA = {
           "type": "hike",
           "lat": 37.2519,
           "lng": -112.9572,
+          "admission": {
+            "status": "included",
+            "label": "Zion park admission"
+          },
           "note": "Moderate loop, shaded."
         }
       ],
@@ -423,6 +435,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 37.2133,
           "lng": -112.9402,
+          "admission": {
+            "status": "included",
+            "label": "Zion park admission for a standard-size vehicle"
+          },
           "note": "Historic 1.1-mi tunnel; oversized vehicles need a permit."
         },
         {
@@ -431,6 +447,10 @@ var TRIP_DATA = {
           "lat": 37.6244,
           "lng": -112.1656,
           "ticket": "park pass",
+          "admission": {
+            "status": "included",
+            "label": "America the Beautiful park pass"
+          },
           "note": "Walk part of the Navajo Loop into the hoodoos."
         }
       ],
@@ -473,6 +493,16 @@ var TRIP_DATA = {
           "lng": -111.3743,
           "timedEntry": true,
           "ticket": "guided tour required",
+          "admission": {
+            "status": "paid",
+            "label": "Authorized guided tour",
+            "price": {
+              "amount": 90,
+              "currency": "USD",
+              "unit": "person",
+              "reliability": "reference"
+            }
+          },
           "note": "Bookable only via authorized Navajo tour operators — reserve ahead."
         },
         {
@@ -480,6 +510,16 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.8791,
           "lng": -111.5104,
+          "admission": {
+            "status": "paid",
+            "label": "Parking fee",
+            "price": {
+              "amount": 10,
+              "currency": "USD",
+              "unit": "vehicle",
+              "reliability": "reference"
+            }
+          },
           "note": "0.75-mi walk from lot; best light late afternoon. $10 parking."
         }
       ],
@@ -519,6 +559,9 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 35.853,
           "lng": -111.416,
+          "admission": {
+            "status": "free"
+          },
           "note": "Historic stop on US-89; good break point."
         },
         {
@@ -527,6 +570,10 @@ var TRIP_DATA = {
           "lat": 36.0441,
           "lng": -111.8266,
           "ticket": "park pass",
+          "admission": {
+            "status": "included",
+            "label": "America the Beautiful park pass"
+          },
           "note": "Enter via east gate; Watchtower + first canyon views."
         }
       ],
@@ -566,6 +613,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.0668,
           "lng": -112.1399,
+          "admission": {
+            "status": "included",
+            "label": "Grand Canyon park admission"
+          },
           "note": "Free shuttle along the west rim; cars restricted in season."
         },
         {
@@ -573,6 +624,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.0608,
           "lng": -112.1083,
+          "admission": {
+            "status": "included",
+            "label": "Grand Canyon park admission"
+          },
           "note": "Iconic first view near the visitor center."
         }
       ],
@@ -605,6 +660,9 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 35.2494,
           "lng": -112.191,
+          "admission": {
+            "status": "free"
+          },
           "note": "Classic Route 66 main street; lunch & legs stretch."
         },
         {
@@ -612,6 +670,10 @@ var TRIP_DATA = {
           "type": "scenic",
           "lat": 36.0161,
           "lng": -114.7377,
+          "admission": {
+            "status": "free",
+            "label": "Exterior visit; parking and tours extra"
+          },
           "note": "Short detour off US-93; allow time for the security checkpoint."
         },
         {
@@ -1220,12 +1282,23 @@ var TRIP_DATA = {
         var key = bookingItemKey(stop.name);
         var item = attractionsByName[key];
         if (!item) {
+          var admission = stop.admission && typeof stop.admission === "object"
+            ? stop.admission : {};
+          var admissionStatus = String(admission.status || "").toLowerCase();
+          if (["free", "included", "paid", "unknown"].indexOf(admissionStatus) < 0) {
+            var legacyTicket = String(stop.ticket || "").toLowerCase();
+            admissionStatus = legacyTicket.indexOf("free") >= 0 ? "free" :
+              (legacyTicket.indexOf("pass") >= 0 ? "included" :
+                (/ticket|fee|guided tour/.test(legacyTicket) ? "paid" : "unknown"));
+          }
           item = {
             item: stop.name,
             category: "attraction",
             visitDates: [],
-            matchContext: [day.title, stop.type, stop.ticket].join(" "),
-            priceLabel: stop.ticket || ""
+            matchContext: [day.title, stop.type, stop.ticket, admission.label].join(" "),
+            admissionStatus: admissionStatus,
+            admissionLabel: admission.label || "",
+            price: admission.price
           };
           attractionsByName[key] = item;
           attractions.push(item);
@@ -1243,8 +1316,9 @@ var TRIP_DATA = {
         bookBy: deadline.bookBy || "",
         where: deadline.where || "",
         category: "attraction",
-        price: deadline.price,
-        priceLabel: attraction.priceLabel,
+        price: deadline.price || attraction.price,
+        admissionStatus: attraction.admissionStatus,
+        admissionLabel: attraction.admissionLabel,
         priority: deadline.priority,
         note: deadline.note,
         visitDates: attraction.visitDates,
@@ -1284,11 +1358,21 @@ var TRIP_DATA = {
     if (typeof price === "number") price = { amount: price };
     if (!price || typeof price !== "object" || typeof price.amount !== "number" ||
         !isFinite(price.amount) || price.amount < 0) {
-      if (item.priceLabel) {
-        return '<span class="booking-price unknown">' + esc(item.priceLabel) + "</span>";
+      if (item.category === "attraction") {
+        if (item.admissionStatus === "free") {
+          return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";
+        }
+        if (item.admissionStatus === "included") {
+          return '<span class="booking-price">' +
+            (isZh() ? "公园通票已包含" : "Included in park pass") + "</span>";
+        }
+        if (item.admissionStatus === "paid") {
+          return '<span class="booking-price unknown">' +
+            (isZh() ? "收费 · 价格暂不可用" : "Paid · price unavailable") + "</span>";
+        }
       }
       return '<span class="booking-price unknown">' +
-        (isZh() ? "价格待确认" : "Check price") + "</span>";
+        (isZh() ? "价格暂不可用" : "Price unavailable") + "</span>";
     }
     if (price.amount === 0) {
       return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";

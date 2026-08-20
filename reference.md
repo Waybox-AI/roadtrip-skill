@@ -44,6 +44,12 @@ missing.
           "lat": 37.2982, "lng": -113.0263,   // needed for the map + nav links
           "timedEntry": false,     // true → red "timed entry" badge
           "ticket": "park pass",   // free text badge (e.g. "guided tour required")
+          "admission": {
+            "status": "included", // free | included | paid | unknown
+            "label": "America the Beautiful pass"
+            // paid may add price: {amount, currency, unit, reliability};
+            // omit price when the amount is unsupported
+          },
           "permitNote": "...",
           "note": "Park at Springdale, ride the free shuttle."
         }
@@ -80,6 +86,8 @@ missing.
       // amount 0 means free; omit price only when it is genuinely unknown
       // the view shows a matched date, "no advance booking" for unmatched
       // attractions/meals, or "deadline unknown" for unmatched lodging
+      // each attraction's price badge comes from stops[].admission; a matching
+      // bookingCountdown price overrides it when it is more specific
   ],
 
   "budget": {

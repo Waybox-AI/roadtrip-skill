@@ -148,6 +148,10 @@ The Attractions and Restaurants tabs likewise render the complete visitable `sto
 and daily `meal` list, then merge matching deadlines instead of hiding items without one.
 An unmatched attraction or meal is labeled as needing no advance booking; an unmatched
 stay is labeled with an unknown deadline because lodging still needs to be reserved.
+Every park, hike, scenic stop, and tour must carry an `admission` object whose `status`
+is `free`, `included`, `paid`, or `unknown`. Add a structured per-stop price for paid
+admission only when supportable; never derive it from an aggregate budget line. The view
+renders these as Free, Included in park pass, a concrete amount, or Price unavailable.
 Include a structured `price` when known: hotel per night, restaurant per person,
 and attraction ticket/permit price when required. Use amount `0` for a free reservation;
 never invent an exact live price when it cannot be supported.

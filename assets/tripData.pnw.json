@@ -224,6 +224,10 @@
           "lng": -122.757,
           "timedEntry": false,
           "ticket": "passport required",
+          "admission": {
+            "status": "free",
+            "label": "No attraction admission; valid travel documents required"
+          },
           "note": "Busiest BC crossing — check live wait; Nexus lane if eligible."
         },
         {
@@ -272,6 +276,9 @@
           "type": "scenic",
           "lat": 49.3019,
           "lng": -123.1417,
+          "admission": {
+            "status": "free"
+          },
           "note": "Seawall loop by bike or car; totem poles."
         },
         {
@@ -287,6 +294,10 @@
           "lat": 49.3429,
           "lng": -123.1149,
           "ticket": "timed ticket",
+          "admission": {
+            "status": "paid",
+            "label": "Timed admission ticket"
+          },
           "note": "Buy timed tickets online to skip the line."
         }
       ],
@@ -319,6 +330,10 @@
           "lat": 49.6766,
           "lng": -123.1556,
           "ticket": "gondola ticket",
+          "admission": {
+            "status": "paid",
+            "label": "Gondola ticket; falls visit is free"
+          },
           "note": "Stretch + huge falls; gondola for the view."
         },
         {
@@ -376,6 +391,10 @@
           "lat": 49.0027,
           "lng": -122.757,
           "ticket": "passport required",
+          "admission": {
+            "status": "free",
+            "label": "No attraction admission; valid travel documents required"
+          },
           "note": "Declare goods; US re-entry, have CBP declaration ready."
         },
         {

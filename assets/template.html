@@ -733,12 +733,23 @@ var TRIP_DATA = __TRIP_DATA__;
         var key = bookingItemKey(stop.name);
         var item = attractionsByName[key];
         if (!item) {
+          var admission = stop.admission && typeof stop.admission === "object"
+            ? stop.admission : {};
+          var admissionStatus = String(admission.status || "").toLowerCase();
+          if (["free", "included", "paid", "unknown"].indexOf(admissionStatus) < 0) {
+            var legacyTicket = String(stop.ticket || "").toLowerCase();
+            admissionStatus = legacyTicket.indexOf("free") >= 0 ? "free" :
+              (legacyTicket.indexOf("pass") >= 0 ? "included" :
+                (/ticket|fee|guided tour/.test(legacyTicket) ? "paid" : "unknown"));
+          }
           item = {
             item: stop.name,
             category: "attraction",
             visitDates: [],
-            matchContext: [day.title, stop.type, stop.ticket].join(" "),
-            priceLabel: stop.ticket || ""
+            matchContext: [day.title, stop.type, stop.ticket, admission.label].join(" "),
+            admissionStatus: admissionStatus,
+            admissionLabel: admission.label || "",
+            price: admission.price
           };
           attractionsByName[key] = item;
           attractions.push(item);
@@ -756,8 +767,9 @@ var TRIP_DATA = __TRIP_DATA__;
         bookBy: deadline.bookBy || "",
         where: deadline.where || "",
         category: "attraction",
-        price: deadline.price,
-        priceLabel: attraction.priceLabel,
+        price: deadline.price || attraction.price,
+        admissionStatus: attraction.admissionStatus,
+        admissionLabel: attraction.admissionLabel,
         priority: deadline.priority,
         note: deadline.note,
         visitDates: attraction.visitDates,
@@ -797,11 +809,21 @@ var TRIP_DATA = __TRIP_DATA__;
     if (typeof price === "number") price = { amount: price };
     if (!price || typeof price !== "object" || typeof price.amount !== "number" ||
         !isFinite(price.amount) || price.amount < 0) {
-      if (item.priceLabel) {
-        return '<span class="booking-price unknown">' + esc(item.priceLabel) + "</span>";
+      if (item.category === "attraction") {
+        if (item.admissionStatus === "free") {
+          return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";
+        }
+        if (item.admissionStatus === "included") {
+          return '<span class="booking-price">' +
+            (isZh() ? "公园通票已包含" : "Included in park pass") + "</span>";
+        }
+        if (item.admissionStatus === "paid") {
+          return '<span class="booking-price unknown">' +
+            (isZh() ? "收费 · 价格暂不可用" : "Paid · price unavailable") + "</span>";
+        }
       }
       return '<span class="booking-price unknown">' +
-        (isZh() ? "价格待确认" : "Check price") + "</span>";
+        (isZh() ? "价格暂不可用" : "Price unavailable") + "</span>";
     }
     if (price.amount === 0) {
       return '<span class="booking-price">' + (isZh() ? "免费" : "Free") + "</span>";

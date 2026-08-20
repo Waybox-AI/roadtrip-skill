@@ -51,7 +51,9 @@ def test_example_renders_explicit_categories_and_legacy_fallback():
     assert '"amount": 90' in html
     assert '"unit": "person"' in html
     assert 'function bookingPriceMarkup(item)' in html
-    assert 'Check price' in html
+    assert 'Included in park pass' in html
+    assert 'Price unavailable' in html
+    assert 'Check price' not in html
 
 
 def test_lodging_table_is_removed_but_budget_rendering_remains():
@@ -120,7 +122,37 @@ def test_attraction_tab_merges_visitable_stops_with_deadlines():
     assert "function attractionBookingItems(list)" in template
     assert "var excludedTypes =" in template
     assert "groups.attraction = attractionBookingItems(list);" in template
-    assert "priceLabel: stop.ticket" in template
+    assert "admissionStatus: admissionStatus" in template
+    assert "price: deadline.price || attraction.price" in template
+
+
+def test_every_sample_attraction_has_a_structured_admission_status():
+    excluded = {"charge", "charging", "city", "food", "fuel", "gas", "hotel",
+                "lodging", "restaurant"}
+    allowed = {"free", "included", "paid", "unknown"}
+    for filename in ("tripData.example.json", "tripData.tahoe.json", "tripData.pnw.json"):
+        trip = json.loads((ROOT / "assets" / filename).read_text(encoding="utf-8"))
+        attractions = [
+            stop for day in trip["days"] for stop in day.get("stops", [])
+            if stop.get("name") and str(stop.get("type", "")).lower() not in excluded
+        ]
+        assert attractions
+        for stop in attractions:
+            admission = stop.get("admission")
+            assert isinstance(admission, dict), (filename, stop["name"])
+            assert admission.get("status") in allowed, (filename, stop["name"])
+            price = admission.get("price")
+            if price is not None:
+                assert admission["status"] == "paid", (filename, stop["name"])
+                assert isinstance(price.get("amount"), (int, float))
+                assert price["amount"] >= 0
+
+
+def test_live_planner_requests_structured_attraction_admission():
+    prompt = planner.build_user({"start": "Las Vegas", "days": 3}, "desert")
+    assert '"admission":{"status":"free|included|paid|unknown"' in prompt
+    assert "Every planned park/hike/scenic/tour stop MUST include admission" in prompt
+    assert "Do not infer an individual stop price from an aggregate budget line" in prompt
 
 
 def test_booking_tabs_render_from_any_complete_source():
