@@ -15,7 +15,8 @@ def test_share_button_is_rendered_after_tips():
     assert 'aria-live="polite"' in template
 
 
-def test_share_change_keeps_existing_lodging_section():
+def test_share_change_keeps_budget_after_lodging_section_removal():
     template = (ROOT / "assets" / "template.html").read_text(encoding="utf-8")
-    assert 'id="lodging"' in template
-    assert 'renderLodging(); renderBudget(); renderTips(); renderShare();' in template
+    assert 'id="lodging"' not in template
+    assert 'id="budget"' in template
+    assert 'renderBudget(); renderTips(); renderShare();' in template

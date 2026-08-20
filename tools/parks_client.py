@@ -107,10 +107,12 @@ def countdown(arrival_date, items=None):
         ideal = (dt.date.fromisoformat(arrival_date) - dt.timedelta(days=RELEASE_RULES[rule]))
         note = ("book ASAP — already inside the normal booking window"
                 if ideal < today else "~T-%d days (verify exact rule)" % RELEASE_RULES[rule])
+        category = "hotel" if rule in ("campground", "in-park-lodge") else "attraction"
         out.append({
             "item": label,
             "bookBy": bb,
             "where": where,
+            "category": category,
             "priority": "high" if rule in ("campground", "in-park-lodge", "timed-entry") else "medium",
             "note": note,
         })

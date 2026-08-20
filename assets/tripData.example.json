@@ -151,10 +151,10 @@
     { "name": "Yavapai Lodge", "area": "Grand Canyon South Rim, AZ", "nights": 2, "pricePerNight": 230, "rating": "4.1", "booked": false }
   ],
   "bookingCountdown": [
-    { "item": "Antelope Canyon guided tour", "bookBy": "2026-08-12", "where": "Authorized Navajo tour operator", "priority": "high", "note": "Sells out weeks ahead in peak season." },
-    { "item": "Grand Canyon South Rim lodging (El Tovar / Yavapai)", "bookBy": "2026-03-18", "where": "Xanterra / GrandCanyonLodges.com", "priority": "high", "note": "In-park lodges can book ~13 months out." },
-    { "item": "El Tovar Dining Room reservation", "bookBy": "2026-08-18", "where": "GrandCanyonLodges.com", "priority": "medium", "note": "Dinner reservations open ahead of arrival." },
-    { "item": "Zion / Springdale hotel", "bookBy": "2026-06-12", "where": "Booking / hotel direct", "priority": "medium", "note": "Springdale is small; rooms tighten in fall." }
+    { "item": "Antelope Canyon guided tour", "bookBy": "2026-08-12", "where": "Authorized Navajo tour operator", "category": "attraction", "price": { "amount": 90, "currency": "USD", "unit": "person", "reliability": "reference" }, "priority": "high", "note": "Sells out weeks ahead in peak season." },
+    { "item": "Grand Canyon South Rim lodging (El Tovar / Yavapai)", "bookBy": "2026-03-18", "where": "Xanterra / GrandCanyonLodges.com", "category": "hotel", "price": { "amount": 230, "currency": "USD", "unit": "night", "reliability": "reference" }, "priority": "high", "note": "In-park lodges can book ~13 months out." },
+    { "item": "El Tovar Dining Room reservation", "bookBy": "2026-08-18", "where": "GrandCanyonLodges.com", "category": "restaurant", "price": { "amount": 45, "currency": "USD", "unit": "person", "reliability": "estimate" }, "priority": "medium", "note": "Dinner reservations open ahead of arrival." },
+    { "item": "Zion / Springdale hotel", "bookBy": "2026-06-12", "where": "Booking / hotel direct", "category": "hotel", "price": { "amount": 245, "currency": "USD", "unit": "night", "reliability": "reference" }, "priority": "medium", "note": "Springdale is small; rooms tighten in fall." }
   ],
   "budget": {
     "currency": "USD",

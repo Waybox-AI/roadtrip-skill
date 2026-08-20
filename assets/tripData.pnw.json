@@ -428,6 +428,7 @@
       "item": "Mexican/Canadian insurance — N/A; confirm US policy covers Canada",
       "bookBy": "2026-05-08",
       "where": "Your auto insurer",
+      "category": "attraction",
       "priority": "high",
       "note": "Get the Canadian Non-Resident insurance card before departure."
     },
@@ -435,6 +436,7 @@
       "item": "Rental cross-border authorization letter",
       "bookBy": "2026-05-08",
       "where": "Rental company",
+      "category": "attraction",
       "priority": "high",
       "note": "Must explicitly permit driving into Canada."
     },
@@ -442,6 +444,13 @@
       "item": "Vancouver + Whistler lodging",
       "bookBy": "2026-03-15",
       "where": "Booking / hotel direct",
+      "category": "hotel",
+      "price": {
+        "amount": 250,
+        "currency": "USD",
+        "unit": "night",
+        "reliability": "estimate"
+      },
       "priority": "medium",
       "note": "Whistler is cheap off-season but books up on weekends."
     },
@@ -449,6 +458,7 @@
       "item": "Capilano Suspension Bridge timed ticket",
       "bookBy": "2026-05-14",
       "where": "capbridge.com",
+      "category": "attraction",
       "priority": "low",
       "note": "Reserve a time slot online."
     }

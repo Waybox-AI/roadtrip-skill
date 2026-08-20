@@ -61,14 +61,20 @@ missing.
     { "name": "...", "area": "...", "nights": 2,
       "pricePerNight": 245, "rating": "4.6", "booked": false,
       "links": { "booking": "https://…", "airbnb": "https://…" } }
-      // optional platform deep links (lodging_client.search_links) — rendered
-      // as a small links row under the name
+      // lodging remains the planning/budget source; it is not rendered as a
+      // separate table because booking actions live in the tabs below
   ],
 
-  "bookingCountdown": [            // drives the top ⚠️ countdown banner
+  "bookingCountdown": [            // drives the categorized booking-deadline tabs
     { "item": "Watchman Campground", "bookBy": "2026-03-12",
-      "where": "Recreation.gov", "priority": "high", "note": "T-6 months.",
+      "where": "Recreation.gov", "category": "hotel",
+      "price": { "amount": 35, "currency": "USD", "unit": "night",
+                 "reliability": "reference" },
+      "priority": "high", "note": "T-6 months.",
       "source": "parks_client" }   // set when bookBy came from the release-rule table
+      // category: attraction | restaurant | hotel; optional for backward compatibility
+      // price.unit: person | night | vehicle | group | booking | total
+      // amount 0 means free; omit price only when it is genuinely unknown
   ],
 
   "budget": {
