@@ -5,26 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="generator" content="RoadTrip Navigator · Waybox AI · rtn-2607" />
 <title>RoadTrip Navigator</title>
+<meta name="theme-color" id="themeColor" content="#12171d" />
+<script>
+  (function () {
+    var theme = "dark";
+    try { if (localStorage.getItem("rtn_theme") === "light") theme = "light"; } catch (e) {}
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.style.colorScheme = theme;
+    var themeColor = document.getElementById("themeColor");
+    if (themeColor) themeColor.setAttribute("content", theme === "light" ? "#eeedea" : "#12171d");
+  })();
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
   :root {
-    --bg: #f7f5f0;
-    --card: #ffffff;
-    --ink: #2a2724;
-    --muted: #6b6258;
-    --line: #e7e1d6;
-    --accent: #c2641a;        /* desert orange default; overridden per region */
-    --accent-soft: #f6e7d6;
-    --ok: #2e7d4f;
-    --warn: #b3541e;
-    --danger: #b3261e;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.05);
+    color-scheme: dark;
+    --bg: #12171d; --card: #1d242c; --card-2: #171d24;
+    --ink: #e8eaed; --muted: #949ca6; --line: rgba(255,255,255,.13);
+    --accent: #fffbbb; --on-accent: #12171d; --accent-soft: #2b2a1c;
+    --ok: #a9d8bc; --warn: #f2cb78; --danger: #ff9e98;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 18px 36px -22px rgba(0,0,0,.75);
   }
-  [data-region="coast"]   { --accent:#1f6f8b; --accent-soft:#dceef2; }
-  [data-region="forest"]  { --accent:#3f7d3a; --accent-soft:#e3f0df; }
-  [data-region="autumn"]  { --accent:#b5531b; --accent-soft:#f6e3d4; }
-  [data-region="mountain"]{ --accent:#5a5c8a; --accent-soft:#e6e6f2; }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #eeedea; --card: #ffffff; --card-2: #f5f5f3;
+    --ink: #1f1f1e; --muted: #777671; --line: rgba(31,31,30,.14);
+    --accent: #4a4947; --on-accent: #ffffff; --accent-soft: #fffbbb;
+    --ok: #387052; --warn: #7a5b14; --danger: #a33a34;
+    --shadow: 0 2px 4px rgba(31,31,30,.04), 0 22px 46px -28px rgba(31,31,30,.22);
+  }
 
   * { box-sizing: border-box; }
   body {
@@ -32,18 +42,27 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
     line-height: 1.55; -webkit-font-smoothing: antialiased;
   }
+  body, .card, header.hero, .theme-toggle {
+    transition: background-color .25s, color .25s, border-color .25s, box-shadow .25s;
+  }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 64px; }
   a { color: var(--accent); }
 
   header.hero {
-    background: linear-gradient(135deg, var(--accent), #00000022), var(--accent);
-    color: #fff; border-radius: 16px; padding: 24px 22px; box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+    background: radial-gradient(circle at 85% 0, rgba(255,251,187,.16), transparent 38%), var(--card);
+    color: var(--ink); border: 1px solid var(--line); border-radius: 18px;
+    padding: 26px 22px; box-shadow: var(--shadow);
   }
   header.hero h1 { margin: 0 0 6px; font-size: 1.7rem; }
-  header.hero .sub { opacity: .92; font-size: 1rem; margin-bottom: 14px; }
+  header.hero .sub { color: var(--muted); font-size: 1rem; margin-bottom: 14px; }
   .facts { display: flex; flex-wrap: wrap; gap: 10px; }
-  .fact { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25);
+  .fact { background: var(--card-2); border: 1px solid var(--line);
     padding: 6px 12px; border-radius: 999px; font-size: .85rem; }
+  .theme-toggle { position: absolute; top: 16px; right: 16px; border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 12px; background: var(--card-2); color: var(--ink);
+    font: 600 .78rem/1 inherit; cursor: pointer; }
+  .theme-toggle:hover { border-color: var(--accent); }
 
   .section { margin-top: 26px; }
   .section h2 { font-size: 1.15rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
@@ -73,7 +92,7 @@
   /* Days */
   .day { padding: 16px 18px; margin-bottom: 14px; }
   .day-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
-  .day-badge { background: var(--accent); color: #fff; font-weight: 700; border-radius: 8px;
+  .day-badge { background: var(--accent); color: var(--on-accent); font-weight: 700; border-radius: 8px;
     padding: 2px 10px; font-size: .85rem; }
   .day-title { font-size: 1.05rem; font-weight: 700; }
   .day-meta { color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 0; }
@@ -89,7 +108,7 @@
   .tag.timed { background: #fdecec; color: var(--danger); }
   .stop-note { color: var(--muted); font-size: .87rem; }
   .fuel-row, .meal-row { font-size: .87rem; color: var(--muted); margin-top: 8px; }
-  .risks { margin: 10px 0 0; padding: 10px 12px; background: #fff7ed; border: 1px solid #f3d9b8;
+  .risks { margin: 10px 0 0; padding: 10px 12px; background: var(--accent-soft); border: 1px solid var(--line);
     border-radius: 10px; font-size: .85rem; }
   .risks b { color: var(--warn); }
 
@@ -99,9 +118,9 @@
   th { color: var(--muted); font-weight: 600; }
   .num { text-align: right; white-space: nowrap; }
   .rel { font-size: .72rem; padding: 1px 7px; border-radius: 999px; }
-  .rel.verified { background: #e3f0df; color: var(--ok); }
+  .rel.verified { background: var(--card-2); color: var(--ok); }
   .rel.reference { background: var(--accent-soft); color: var(--accent); }
-  .rel.estimate { background: #f0ede8; color: var(--muted); }
+  .rel.estimate { background: var(--card-2); color: var(--muted); }
   tfoot td { font-weight: 700; border-top: 2px solid var(--ink); border-bottom: 0; }
 
   .grid2 { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -110,8 +129,15 @@
   ul.tips { margin: 0; padding-left: 18px; }
   ul.tips li { margin: 6px 0; }
 
+  .share-button { width: 100%; border: 0; border-radius: 999px; padding: 13px 20px;
+    background: var(--accent); color: var(--on-accent); cursor: pointer;
+    font: 750 .95rem/1 inherit; box-shadow: var(--shadow); }
+  .share-button:hover { transform: translateY(-1px); }
+  .share-status { min-height: 1.4em; margin-top: 7px; text-align: center;
+    color: var(--muted); font-size: .8rem; }
+
   .disclaimer { margin-top: 26px; font-size: .82rem; color: var(--muted);
-    background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; }
+    background: var(--card); border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; }
   .footer-meta { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 14px; }
   .footer-meta a { color: inherit; }
 
@@ -133,26 +159,34 @@
   @media (min-width: 760px) { .border-grid { grid-template-columns: 1fr 1fr; } }
   .border-block h4 { margin: 0 0 4px; font-size: .85rem; color: var(--muted); }
   .border-block ul { margin: 0; padding-left: 18px; font-size: .85rem; }
-  .border-insurance { background: #fff7ed; border: 1px solid #f3d9b8; border-radius: 10px;
+  .border-insurance { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 10px;
     padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
-  .border-insurance.critical { background: #fdecec; border-color: #f3b8b8; }
+  .border-insurance.critical { background: var(--card-2); border-color: var(--danger); }
   .units-after { font-size: .82rem; color: var(--accent); margin-top: 6px; }
 
   /* EV corridor */
   .ev-card { padding: 6px 10px; }
   .soc-cell { min-width: 130px; }
-  .soc-bar { position: relative; height: 16px; background: #eee; border-radius: 8px; overflow: hidden; }
+  .soc-bar { position: relative; height: 16px; background: var(--card-2); border-radius: 8px; overflow: hidden; }
   .soc-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 8px; }
   .soc-fill.good { background: var(--ok); }
   .soc-fill.low { background: var(--warn); }
   .soc-fill.bad { background: var(--danger); }
   .soc-num { font-size: .78rem; color: var(--muted); }
-  .ev-warn { margin-top: 10px; padding: 10px 12px; background: #fdecec; border: 1px solid #f3b8b8;
+  tr.ev-mid td { background: rgba(0,0,0,.022); font-size: .88em; }
+  tr.ev-mid td:first-child { padding-left: 22px; }
+  .ev-midtag { font-size: .68rem; font-weight: 600; color: var(--muted);
+    border: 1px solid rgba(0,0,0,.14); border-radius: 999px; padding: 1px 7px;
+    margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+  .ev-stay { font-size: .8rem; color: var(--muted); font-weight: 500; }
+  .ev-warn { margin-top: 10px; padding: 10px 12px; background: var(--card-2); border: 1px solid var(--danger);
     border-radius: 10px; font-size: .85rem; }
   .ev-assume { font-size: .78rem; color: var(--muted); margin-top: 8px; }
   .charge-note { font-size: .8rem; color: var(--accent); }
 
   .scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.86) contrast(.92) saturate(.55); }
+  html[data-theme="light"] .leaflet-tile-pane { filter: none; }
 
   @media (max-width: 600px) {
     .wrap { padding: 14px 12px 48px; }
@@ -172,10 +206,18 @@
     th, td { padding: 7px 8px; }
     .routes-table { min-width: 600px; }   /* keep columns legible; scroll within .scrollx */
     .cd-by { white-space: normal; }
+    .theme-toggle { position: static; margin: 14px 0 0; }
   }
 
   @media print {
-    body { background: #fff; }
+    :root, html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #fff; --card: #fff; --card-2: #f5f5f3;
+      --ink: #1f1f1e; --muted: #5f5f5b; --line: rgba(31,31,30,.18);
+      --accent: #4a4947; --on-accent: #fff; --accent-soft: #f7f2d0;
+      --ok: #387052; --warn: #7a5b14; --danger: #a33a34; --shadow: none;
+    }
+    body { background: #fff; color: #1f1f1e; }
     #map { height: 320px; }
     .card, header.hero { box-shadow: none; }
     .countdown { break-inside: avoid; }
@@ -206,6 +248,7 @@
     <div id="budget"></div>
   </div>
   <div id="tips" class="section"></div>
+  <div id="share" class="section"></div>
   <div id="disclaimer"></div>
   <div class="footer-meta" id="footer-meta"></div>
 </div>
@@ -683,7 +726,7 @@ var TRIP_DATA = {
   var distUnit = U.distance || "mi";
   var tempUnit = U.temp || "F";
   var cur = (T.budget && T.budget.currency) || U.currency || "USD";
-  var curSym = ({ USD: "$", CAD: "C$", MXN: "MX$" })[cur] || "$";
+  var curSym = ({ USD: "$", CAD: "C$", MXN: "MX$", CNY: "¥", RMB: "¥" })[cur] || "$";
 
   function esc(s) {
     if (s === null || s === undefined) return "";
@@ -692,6 +735,26 @@ var TRIP_DATA = {
   }
   function el(id) { return document.getElementById(id); }
   function money(n) { return curSym + Number(n || 0).toLocaleString("en-US"); }
+  function isZh() { return T.lang === "zh"; }
+  var theme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+
+  function applyTheme(next, persist) {
+    theme = next === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.style.colorScheme = theme;
+    var meta = el("themeColor");
+    if (meta) meta.setAttribute("content", theme === "light" ? "#eeedea" : "#12171d");
+    if (persist) { try { localStorage.setItem("rtn_theme", theme); } catch (e) {} }
+    var button = el("themeToggle");
+    if (button) {
+      var toLight = theme === "dark";
+      button.textContent = (toLight ? "☀ " : "☾ ") +
+        (isZh() ? (toLight ? "日间" : "夜间") : (toLight ? "Day" : "Night"));
+      button.setAttribute("aria-label", isZh()
+        ? (toLight ? "切换到日间模式" : "切换到夜间模式")
+        : (toLight ? "Switch to day mode" : "Switch to night mode"));
+    }
+  }
 
   var WEATHER_ICONS = {
     "sunny": "☀️", "partly-cloudy": "⛅", "cloudy": "☁️",
@@ -713,10 +776,15 @@ var TRIP_DATA = {
     if (T.totalMiles) f.push(fact("🛣️", T.totalMiles.toLocaleString("en-US") + " " + distUnit));
     if (T.drivingDays) f.push(fact("📍", T.drivingDays + " days"));
     if (T.loopType) f.push(fact("🔁", T.loopType === "loop" ? "Loop" : "One-way"));
-    var h = "<h1>" + esc(T.title || "Road Trip") + "</h1>";
+    var h = '<button class="theme-toggle" id="themeToggle" type="button"></button>' +
+      "<h1>" + esc(T.title || "Road Trip") + "</h1>";
     if (T.subtitle) h += '<div class="sub">' + esc(T.subtitle) + "</div>";
     h += '<div class="facts">' + f.join("") + "</div>";
     el("hero").innerHTML = h;
+    el("themeToggle").addEventListener("click", function () {
+      applyTheme(theme === "dark" ? "light" : "dark", true);
+    });
+    applyTheme(theme, false);
   }
   function fact(icon, text) { return '<span class="fact">' + icon + " " + esc(text) + "</span>"; }
   function vehIcon(t) { return t === "EV" ? "🔌" : (t === "RV" ? "🚐" : "🚗"); }
@@ -788,9 +856,20 @@ var TRIP_DATA = {
       }
       return s + "</div>";
     }).join("");
+    var df = cb.dutyFree, dfHtml = "";
+    if (df && df.note) {
+      var zh = T.lang === "zh";
+      var conds = (zh ? df.conditionsZh : df.conditions) || [];
+      dfHtml = '<div class="border-crossing"><div class="border-route">🛍️ ' +
+        (zh ? "免税额度" : "Duty-free exemption") + "</div>" +
+        "<div class='stop-note'>" + esc(zh ? (df.noteZh || df.note) : df.note) +
+        (conds.length ? "<br>• " + conds.map(esc).join("<br>• ") : "") +
+        (df.verify ? "<br>" + (zh ? "核实：" : "Verify: ") + esc(df.verify) : "") +
+        "</div></div>";
+    }
     el("crossborder").innerHTML =
       '<div class="section"><h2>🛂 Border crossing</h2>' +
-      '<div class="card border-card">' + blocks +
+      '<div class="card border-card">' + blocks + dfHtml +
       "<div class='stop-note' style='margin-top:8px'>⚠️ Entry rules change — confirm with " +
       "CBP / CBSA / Mexican customs before you travel.</div></div></div>";
   }
@@ -805,34 +884,93 @@ var TRIP_DATA = {
   function renderEvPlan() {
     var ev = T.evPlan;
     if (!ev || !ev.legs || !ev.legs.length) { el("evplan").innerHTML = ""; return; }
+    var zh = T.lang === "zh";
+    var badCount = 0;
+    var stayTo = null, stayNight = 0;   // consecutive same-destination overnight rows
     var rows = ev.legs.map(function (l) {
       var p = l.arriveSoC;
       var cls = socClass(p);
       var w = Math.max(0, Math.min(100, p == null ? 0 : p));
+      // Negative SoC is a planning gap, not a physical state — show the
+      // shortfall in miles instead of a negative percentage.
+      var short = l.shortByMiles != null ? l.shortByMiles : (p != null && p < 0 ? Math.round(-p) : null);
+      var socTxt;
+      if (p == null) socTxt = "—";
+      else if (p < 0) socTxt = zh ? ("到达 0%（缺 ~" + short + " " + distUnit + "）")
+                                  : ("arrive 0% (short ~" + short + " " + distUnit + ")");
+      else socTxt = (zh ? "到达 " : "arrive ") + p + "%";
+      if (l.chargeTo != null) socTxt += (zh ? " → 充至 " : " → charge ") + l.chargeTo + "%";
       var bar = '<div class="soc-cell"><div class="soc-bar"><div class="soc-fill ' + cls +
-        '" style="width:' + w + '%"></div></div><span class="soc-num">' +
-        (p == null ? "—" : "arrive " + p + "%") +
-        (l.chargeTo != null ? " → charge " + l.chargeTo + "%" : "") + "</span></div>";
-      var note = l.note ? "<div class='charge-note' style='color:var(--danger)'>⚠️ " + esc(l.note) + "</div>" : "";
-      note += l.chargeNote ? "<div class='charge-note'>🔌 " + esc(l.chargeNote) + "</div>" : "";
-      return "<tr><td>" + esc(l.to) + (l.ok ? "" : " ❗") + "</td>" +
+        '" style="width:' + w + '%"></div></div><span class="soc-num">' + socTxt + "</span></div>";
+      var note = "";
+      if (!l.ok) {
+        badCount++;
+        var n = l.stopsNeeded || 1;
+        var failTxt;
+        if (p != null && p < 0) {
+          failTxt = zh ? ("本段一次充电跑不完 — 建议中途充电约 " + n + " 次")
+                       : ("Won't make it on one charge — add ~" + n +
+                          " mid-leg charging stop" + (n > 1 ? "s" : ""));
+        } else {
+          failTxt = zh ? "到达电量低于 10% 缓冲 — 建议在本段提前补电"
+                       : "Arrives below the 10% buffer — top up earlier on this stretch";
+        }
+        note = "<div class='charge-note' style='color:var(--danger)'>⚠️ " + failTxt + "</div>";
+      }
+      if (l.chargeTo != null) {
+        var kwTxt = l.chargerKW ? (zh ? "（" + l.chargerKW + "kW）" : " (" + l.chargerKW + "kW)") : "";
+        note += "<div class='charge-note'>🔌 " +
+          (l.midLeg
+            ? (zh ? ("此站充电至 ~" + l.chargeTo + "%" + kwTxt + " 再出发")
+                  : ("charge to ~" + l.chargeTo + "%" + kwTxt + " before the next leg"))
+            : (zh ? ("过夜充电至 ~" + l.chargeTo + "%" + kwTxt)
+                  : ("charge overnight to ~" + l.chargeTo + "%" + kwTxt))) +
+          "</div>";
+      } else if (l.chargeNote) {
+        note += "<div class='charge-note' style='color:var(--danger)'>🔌 " +
+          (zh ? ("此站没有充电桩，但下一段需要 ~" +
+                 (l.chargeTargetPct != null ? l.chargeTargetPct + "%" : "补电") + " — 请在附近找桩")
+              : esc(l.chargeNote)) + "</div>";
+      }
+      var name = esc(l.to) + (l.ok ? "" : " ❗");
+      if (l.midLeg) {
+        name = "⚡ " + name +
+          ' <span class="ev-midtag">' + (zh ? "中途充电" : "mid-leg charge") + "</span>";
+      } else {
+        // A multi-night stay repeats the same overnight destination on several
+        // rows; number them so they don't read as duplicate cities.
+        if (l.to === stayTo) { stayNight++; } else { stayTo = l.to; stayNight = 1; }
+        if (stayNight > 1) name += '<span class="ev-stay">' +
+          (zh ? " · 第" + stayNight + "晚" : " · night " + stayNight) + "</span>";
+      }
+      return "<tr" + (l.midLeg ? " class='ev-mid'" : "") + "><td>" + name + "</td>" +
         "<td class='num'>" + (l.miles != null ? l.miles + " " + distUnit : "—") + "</td>" +
         "<td>" + bar + note + "</td></tr>";
     }).join("");
-    var warns = (ev.warnings || []).length
-      ? '<div class="ev-warn"><b>⚠️ Range alerts:</b><br>' + ev.warnings.map(esc).join("<br>") + "</div>"
+    var warns = badCount
+      ? '<div class="ev-warn"><b>⚠️ ' +
+        (zh ? ("有 " + badCount + " 段一次充电跑不完 — 请为红色行安排中途充电。")
+            : (badCount + " leg" + (badCount > 1 ? "s" : "") + " won't make it on one charge — " +
+               "add mid-leg charging on the red rows.")) + "</b></div>"
       : "";
     var a = ev.assumptions || {};
-    var assume = '<div class="ev-assume">Assumptions: usable range ' +
-      esc(ev.usableRange) + distUnit +
-      (ev.winterDerate ? ", winter derate −" + Math.round(ev.winterDerate * 100) + "% (eff. " +
-        esc(ev.effectiveRange) + distUnit + ")" : "") +
-      ", start " + esc(a.startSoC) + "%, keep ≥ " + esc(a.minSoC) + "% buffer. " +
-      (ev.note || "") + "</div>";
+    var assume = zh
+      ? '<div class="ev-assume">假设：可用续航 ' + esc(ev.usableRange) + " " + distUnit +
+        (ev.winterDerate ? "，冬季衰减 −" + Math.round(ev.winterDerate * 100) + "%（有效 " +
+          esc(ev.effectiveRange) + " " + distUnit + "）" : "") +
+        "，出发电量 " + esc(a.startSoC) + "%，全程保留 ≥ " + esc(a.minSoC) +
+        "% 缓冲。线性估算仅供规划参考 — 请以车机 / ABRP 为准。</div>"
+      : '<div class="ev-assume">Assumptions: usable range ' +
+        esc(ev.usableRange) + distUnit +
+        (ev.winterDerate ? ", winter derate −" + Math.round(ev.winterDerate * 100) + "% (eff. " +
+          esc(ev.effectiveRange) + distUnit + ")" : "") +
+        ", start " + esc(a.startSoC) + "%, keep ≥ " + esc(a.minSoC) + "% buffer. " +
+        (ev.note || "") + "</div>";
     el("evplan").innerHTML =
-      '<div class="section"><h2>⚡ EV charging corridor</h2>' +
+      '<div class="section"><h2>⚡ ' + (zh ? "EV 充电走廊" : "EV charging corridor") + "</h2>" +
       '<div class="card ev-card"><table><thead><tr>' +
-      "<th>Arrive at</th><th class='num'>Leg</th><th>Battery on arrival → plan</th>" +
+      (zh ? "<th>到达</th><th class='num'>里程</th><th>到达电量 → 充电安排</th>"
+          : "<th>Arrive at</th><th class='num'>Leg</th><th>Battery on arrival → plan</th>") +
       "</tr></thead><tbody>" + rows + "</tbody></table></div>" + warns + assume + "</div>";
   }
 
@@ -972,9 +1110,17 @@ var TRIP_DATA = {
   function renderLodging() {
     var L = T.lodging || [];
     if (!L.length) { el("lodging").innerHTML = ""; return; }
+    var linkNames = [["booking", "Booking"], ["airbnb", "Airbnb"], ["google_hotels", "Hotels"],
+                     ["ctrip", "携程"],
+                     ["koa", "KOA"], ["hipcamp", "Hipcamp"], ["recreation_gov", "Rec.gov"]];
     var rows = L.map(function (h) {
+      var lk = h.links || {};
+      var links = linkNames.filter(function (p) { return lk[p[0]]; }).map(function (p) {
+        return '<a href="' + esc(lk[p[0]]) + '" target="_blank" rel="noopener">' + p[1] + "</a>";
+      }).join(" · ");
       return "<tr><td>" + esc(h.name) + (h.booked ? " ✅" : "") +
-        "<div class='stop-note'>" + esc(h.area || "") + "</div></td>" +
+        "<div class='stop-note'>" + esc(h.area || "") +
+        (links ? (h.area ? " · " : "") + links : "") + "</div></td>" +
         "<td class='num'>" + (h.nights || 1) + "</td>" +
         "<td class='num'>" + (h.rating ? "★ " + esc(h.rating) : "—") + "</td>" +
         "<td class='num'>" + money(h.pricePerNight) + "</td></tr>";
@@ -1016,6 +1162,22 @@ var TRIP_DATA = {
       "<ul class='tips'>" + t.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
   }
 
+  // ---------- Share ----------
+  function renderShare() {
+    var label = isZh() ? "分享这份行程" : "Share this trip";
+    el("share").innerHTML = '<button class="share-button" id="shareButton" type="button">↗ ' +
+      label + '</button><div class="share-status" id="shareStatus" aria-live="polite"></div>';
+    el("shareButton").addEventListener("click", function () {
+      var data = { title: T.title || "Road Trip", url: window.location.href };
+      if (navigator.share) { navigator.share(data).catch(function () {}); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(data.url).then(function () {
+          el("shareStatus").textContent = isZh() ? "链接已复制" : "Link copied";
+        }).catch(function () {});
+      }
+    });
+  }
+
   // ---------- Disclaimer ----------
   function renderDisclaimer() {
     var d = T.disclaimer || "Information assembled by AI; verify with official sources before travel.";
@@ -1029,7 +1191,7 @@ var TRIP_DATA = {
   try {
     renderHero(); renderRoutes(); renderCountdown(); renderCrossBorder();
     renderDays(); renderEvPlan();
-    renderLodging(); renderBudget(); renderTips(); renderDisclaimer();
+    renderLodging(); renderBudget(); renderTips(); renderShare(); renderDisclaimer();
     renderMap();
   } catch (err) {
     el("app").insertAdjacentHTML("afterbegin",
