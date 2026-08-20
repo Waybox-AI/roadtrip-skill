@@ -53,6 +53,8 @@ missing.
           "lat": 37.09, "lng": -113.56, "powerKW": 250, "note": "charge to 90%" }
       ],
       "meal": { "name": "Oscar's Cafe", "perPerson": 28 },
+      // every daily meal is rendered once in the Restaurants tab; a matching
+      // restaurant bookingCountdown deadline is merged in when present
       "risks": ["Town fills up by mid-morning in peak season — arrive early."]
     }
   ],
@@ -66,7 +68,7 @@ missing.
       // It is not rendered as a separate table.
   ],
 
-  "bookingCountdown": [            // drives attraction/restaurant tabs and enriches hotels
+  "bookingCountdown": [            // enriches complete attraction/restaurant/hotel lists
     { "item": "Watchman Campground", "bookBy": "2026-03-12",
       "where": "Recreation.gov", "category": "hotel",
       "price": { "amount": 35, "currency": "USD", "unit": "night",

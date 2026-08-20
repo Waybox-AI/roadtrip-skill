@@ -144,6 +144,8 @@ Populate `bookingCountdown[]` and set each item's optional `category` to
 `attraction`, `restaurant`, or `hotel` (use the closest category for legacy tasks).
 Every planned stay must also be present in `lodging[]`; the Hotels tab renders that
 complete list once and merges any matching hotel deadline from `bookingCountdown[]`.
+The Attractions and Restaurants tabs likewise render the complete visitable `stops[]`
+and daily `meal` list, then merge matching deadlines instead of hiding items without one.
 Include a structured `price` when known: hotel per night, restaurant per person,
 and attraction ticket/permit price when required. Use amount `0` for a free reservation;
 never invent an exact live price when it cannot be supported.

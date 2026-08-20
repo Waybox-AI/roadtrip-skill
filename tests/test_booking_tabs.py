@@ -82,10 +82,60 @@ def test_hotel_tab_merges_every_lodging_with_matching_deadlines():
     assert 'item.nights + " night"' in template
 
 
-def test_lodging_alone_still_renders_booking_tabs():
+def test_restaurant_tab_merges_every_daily_meal_with_deadlines():
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    meals = [day["meal"] for day in trip["days"] if day.get("meal")]
+    restaurant_deadlines = [
+        item for item in trip["bookingCountdown"] if item.get("category") == "restaurant"
+    ]
+    assert len(meals) == 7
+    assert len(restaurant_deadlines) == 1
+
     template = _template()
-    assert "if (!list.length && !lodging.length)" in template
+    assert "function restaurantBookingItems(list)" in template
+    assert "var meal = day.meal;" in template
+    assert "amount: meal.perPerson" in template
+    assert "groups.restaurant = restaurantBookingItems(list);" in template
+
+
+def test_attraction_tab_merges_visitable_stops_with_deadlines():
+    trip = json.loads(
+        (ROOT / "assets" / "tripData.example.json").read_text(encoding="utf-8")
+    )
+    excluded = {"charge", "charging", "city", "food", "fuel", "gas", "hotel",
+                "lodging", "restaurant"}
+    attractions = [
+        stop for day in trip["days"] for stop in day.get("stops", [])
+        if stop.get("name") and str(stop.get("type", "")).lower() not in excluded
+    ]
+    attraction_deadlines = [
+        item for item in trip["bookingCountdown"] if item.get("category") == "attraction"
+    ]
+    assert len(attractions) == 13
+    assert len(attraction_deadlines) == 1
+
+    template = _template()
+    assert "function attractionBookingItems(list)" in template
+    assert "var excludedTypes =" in template
+    assert "groups.attraction = attractionBookingItems(list);" in template
+    assert "priceLabel: stop.ticket" in template
+
+
+def test_booking_tabs_render_from_any_complete_source():
+    template = _template()
     assert "if (!hotels.length) return deadlines;" in template
+    assert "if (!meals.length) return deadlines;" in template
+    assert "if (!attractions.length) return deadlines;" in template
+    assert "if (!groups.attraction.length && !groups.restaurant.length" in template
+
+
+def test_booking_items_show_trip_dates_and_honest_missing_deadlines():
+    template = _template()
+    assert "function tripDateLabel(value)" in template
+    assert "function bookingItemMetaMarkup(item)" in template
+    assert 'isZh() ? "待确认" : "TBD"' in template
 
 
 def test_parks_countdown_assigns_categories():
