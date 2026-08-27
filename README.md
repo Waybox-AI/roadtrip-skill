@@ -213,6 +213,12 @@ Issues and pull requests are welcome. Useful contributions include regional clos
 
 Found a bad closure date, booking window, route, or charging assumption? [Open an issue](https://github.com/Waybox-AI/roadtrip-skill/issues). Those reports improve the checks for everyone.
 
+## Contributors
+
+<a href="https://github.com/Waybox-AI/roadtrip-skill/graphs/contributors"><img src="https://contrib.rocks/image?repo=Waybox-AI/roadtrip-skill" /></a>
+<a href="https://github.com/ziminpan"><img src="assets/contributors/ziminpan.svg" width="64" height="64" alt="ziminpan" /></a>
+<a href="https://github.com/cazermess"><img src="assets/contributors/cazermess.svg" width="64" height="64" alt="cazermess" /></a>
+
 ## License
 
 [MIT](LICENSE) © yang-hong

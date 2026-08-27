@@ -213,6 +213,12 @@ tests/             离线优先的行为与渲染测试
 
 发现了错误的封路日期、预订窗口、路线或充电假设？请[提交 Issue](https://github.com/Waybox-AI/roadtrip-skill/issues)。这些反馈会让之后的每一次检修更可靠。
 
+## 贡献者
+
+<a href="https://github.com/Waybox-AI/roadtrip-skill/graphs/contributors"><img src="https://contrib.rocks/image?repo=Waybox-AI/roadtrip-skill" /></a>
+<a href="https://github.com/ziminpan"><img src="assets/contributors/ziminpan.svg" width="64" height="64" alt="ziminpan" /></a>
+<a href="https://github.com/cazermess"><img src="assets/contributors/cazermess.svg" width="64" height="64" alt="cazermess" /></a>
+
 ## License
 
 [MIT](LICENSE) © yang-hong
