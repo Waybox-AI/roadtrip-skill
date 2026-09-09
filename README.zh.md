@@ -219,6 +219,20 @@ tests/             离线优先的行为与渲染测试
 <a href="https://github.com/ziminpan"><img src="assets/contributors/ziminpan.svg" width="64" height="64" alt="ziminpan" /></a>
 <a href="https://github.com/cazermess"><img src="assets/contributors/cazermess.svg" width="64" height="64" alt="cazermess" /></a>
 
+## ⭐ Star History
+
+如果 RoadTrip Navigator 帮你规划了下一次自驾旅行，欢迎给我们一颗 Star！⭐
+
+<div align="center">
+  <a href="https://www.star-history.com/?type=date&amp;repos=Waybox-AI%2Froadtrip-skill">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Waybox-AI/roadtrip-skill&amp;type=Date&amp;theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Waybox-AI/roadtrip-skill&amp;type=Date" />
+      <img alt="Waybox-AI/roadtrip-skill 的 Star 历史图表" src="https://api.star-history.com/svg?repos=Waybox-AI/roadtrip-skill&amp;type=Date" />
+    </picture>
+  </a>
+</div>
+
 ## License
 
 [MIT](LICENSE) © yang-hong

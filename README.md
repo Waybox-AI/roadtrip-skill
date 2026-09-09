@@ -219,6 +219,20 @@ Found a bad closure date, booking window, route, or charging assumption? [Open a
 <a href="https://github.com/ziminpan"><img src="assets/contributors/ziminpan.svg" width="64" height="64" alt="ziminpan" /></a>
 <a href="https://github.com/cazermess"><img src="assets/contributors/cazermess.svg" width="64" height="64" alt="cazermess" /></a>
 
+## ⭐ Star History
+
+If RoadTrip Navigator helps you plan your next road trip, give us a star! ⭐
+
+<div align="center">
+  <a href="https://www.star-history.com/?type=date&amp;repos=Waybox-AI%2Froadtrip-skill">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Waybox-AI/roadtrip-skill&amp;type=Date&amp;theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Waybox-AI/roadtrip-skill&amp;type=Date" />
+      <img alt="Star History Chart for Waybox-AI/roadtrip-skill" src="https://api.star-history.com/svg?repos=Waybox-AI/roadtrip-skill&amp;type=Date" />
+    </picture>
+  </a>
+</div>
+
 ## License
 
 [MIT](LICENSE) © yang-hong
